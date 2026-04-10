@@ -24981,12 +24981,6 @@ void main(void)\r
   };
   extensions$1.add(CanvasSpriteRenderer);
 
-  // const canvas = wx.createCanvas();
-  // // Force GameGlobal.canvas early
-  // const globalObj: any = typeof GameGlobal !== 'undefined' ? GameGlobal : window;
-  // globalObj.canvas = canvas;
-  // import 'wechat-adapter';
-  // 1️⃣ System info
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
   const width = info.screenWidth;
   const height = info.screenHeight;
@@ -24996,17 +24990,12 @@ void main(void)\r
   if (globalObj) {
       globalObj.canvas = canvas;
   }
-  // 2️⃣ Create canvas
-  // const canvas = wx.createCanvas();
-  // 3️⃣ Make a "safe" GameGlobal object for Pixi
-  // const fakeGlobal: any = { canvas };
-  // 4️⃣ Initialize Pixi using our canvas
   const app = new Application({
       view: canvas,
       width,
       height,
       backgroundColor: 0x1099bb,
-      forceCanvas: true, // 🔥 required for devtools
+      forceCanvas: true,
   });
   const container = new Container();
   app.stage.addChild(container);
@@ -25032,16 +25021,9 @@ void main(void)\r
   // Center the bunny sprites in local container coordinates
   container.pivot.x = container.width / 2;
   container.pivot.y = container.height / 2;
-  // // 5️⃣ Add graphics
-  // const g = new PIXI.Graphics();
-  // g.beginFill(0xff0000);
-  // g.drawRect(100, 100, 200, 200);
-  // g.endFill();
-  // app.stage.addChild(g);
-  // // 6️⃣ Animate
-  // app.ticker.add(() => {
-  //     g.rotation += 0.01;
-  // });
+  app.ticker.add(() => {
+      container.rotation += 0.01;
+  });
   console.log('Pixi running with fake GameGlobal');
 
 })();

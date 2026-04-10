@@ -55,16 +55,8 @@ image.onload = () => {
   container.pivot.x = container.width / 2;
   container.pivot.y = container.height / 2;
 
-// // 5️⃣ Add graphics
-// const g = new PIXI.Graphics();
-// g.beginFill(0xff0000);
-// g.drawRect(100, 100, 200, 200);
-// g.endFill();
-// app.stage.addChild(g);
-
-// // 6️⃣ Animate
-// app.ticker.add(() => {
-//     g.rotation += 0.01;
-// });
+app.ticker.add(() => {
+    container.rotation += 0.01;
+});
 
 console.log('Pixi running with fake GameGlobal');

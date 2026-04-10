@@ -1,45 +1,34 @@
-// description: This example demonstrates how to use a Container to group and manipulate multiple sprites
-import { Application, Assets, Container, Sprite } from 'pixi.js';
+import * as PIXI from 'pixi.js-legacy';
 
-(async () => {
-  // Create a new application
-  const app = new Application();
+window.onload = () => {
+  const app = new PIXI.Application({
+    width: 800,
+    height: 600,
+    backgroundColor: 0x1099bb,
+  });
 
-  // Initialize the application
-  await app.init({ background: '#1099bb', resizeTo: window });
+  console.log(app.view);
 
-  // Append the application canvas to the document body
-  document.body.appendChild(app.canvas);
+  document.body.appendChild(app.view as HTMLCanvasElement);
 
-  // Create and add a container to the stage
-  const container = new Container();
-
+  const container = new PIXI.Container();
   app.stage.addChild(container);
 
-  // Load the bunny texture
-  const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+  const texture = PIXI.Texture.from('assets/bunny.png');
 
-  // Create a 5x5 grid of bunnies in the container
   for (let i = 0; i < 25; i++) {
-    const bunny = new Sprite(texture);
-
+    const bunny = new PIXI.Sprite(texture);
     bunny.x = (i % 5) * 40;
     bunny.y = Math.floor(i / 5) * 40;
     container.addChild(bunny);
   }
 
-  // Move the container to the center
-  container.x = app.screen.width / 2;
-  container.y = app.screen.height / 2;
+  container.x = 400;
+  container.y = 300;
 
-  // Center the bunny sprites in local container coordinates
-  container.pivot.x = container.width / 2;
-  container.pivot.y = container.height / 2;
+  container.pivot.set(container.width / 2, container.height / 2);
 
-  // Listen for animate update
-  app.ticker.add((time) => {
-    // Continuously rotate the container!
-    // * use delta to create frame-independent transform *
-    container.rotation -= 0.01 * time.deltaTime;
+  app.ticker.add((delta) => {
+    container.rotation -= 0.01 * delta;
   });
-})();
+};
