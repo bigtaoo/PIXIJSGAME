@@ -8,7 +8,7 @@ module.exports = (env, argv) => {
 
     return {
         mode: isProd ? 'production' : 'development',
-        entry: './src/wechatIndex.ts',
+        entry: './src/index.ts',
         devtool: isProd ? false : 'source-map',
 
         module: {
@@ -38,7 +38,7 @@ module.exports = (env, argv) => {
         //     'pixi.js': 'PIXI',
         // },
         output: {
-            filename: 'pixigame.js', // single file for WeChat
+            filename: 'index.js', // single file for WeChat
             path: path.resolve(__dirname, 'wechatgame'),
             clean: true,
             library: {

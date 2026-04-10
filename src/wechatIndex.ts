@@ -1,15 +1,5 @@
-// const canvas = wx.createCanvas();
-
-// // Force GameGlobal.canvas early
-// const globalObj: any = typeof GameGlobal !== 'undefined' ? GameGlobal : window;
-// globalObj.canvas = canvas;
-
-
-
-// import 'wechat-adapter';
 import * as PIXI from 'pixi.js-legacy';
 
-// 1️⃣ System info
 const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
 const width = info.screenWidth;
 const height = info.screenHeight;
@@ -21,19 +11,12 @@ if (globalObj) {
     globalObj.canvas = canvas;
 }
 
-// 2️⃣ Create canvas
-// const canvas = wx.createCanvas();
-
-// 3️⃣ Make a "safe" GameGlobal object for Pixi
-// const fakeGlobal: any = { canvas };
-
-// 4️⃣ Initialize Pixi using our canvas
 const app = new PIXI.Application({
     view: canvas,
     width,
     height,
     backgroundColor: 0x1099bb,
-    forceCanvas: true, // 🔥 required for devtools
+    forceCanvas: true,
 });
 
 const container = new PIXI.Container();
