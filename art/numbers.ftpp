@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "version": "0.6.7"
+  },
+  "savePath": "/Users/wangtao/Desktop/PIXIJSGAME/art",
+  "images": [
+    {
+      "name": "0.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/0.png",
+      "folder": ""
+    },
+    {
+      "name": "1.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/1.png",
+      "folder": ""
+    },
+    {
+      "name": "2.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/2.png",
+      "folder": ""
+    },
+    {
+      "name": "3.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/3.png",
+      "folder": ""
+    },
+    {
+      "name": "4.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/4.png",
+      "folder": ""
+    },
+    {
+      "name": "5.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/5.png",
+      "folder": ""
+    },
+    {
+      "name": "6.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/6.png",
+      "folder": ""
+    },
+    {
+      "name": "7.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/7.png",
+      "folder": ""
+    },
+    {
+      "name": "8.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/8.png",
+      "folder": ""
+    },
+    {
+      "name": "9.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/9.png",
+      "folder": ""
+    },
+    {
+      "name": "Blue.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/Blue.png",
+      "folder": ""
+    },
+    {
+      "name": "brawn.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/brawn.png",
+      "folder": ""
+    }
+  ],
+  "folders": [],
+  "packOptions": {
+    "textureName": "numbers",
+    "textureFormat": "png",
+    "removeFileExtension": false,
+    "prependFolderName": true,
+    "base64Export": false,
+    "tinify": false,
+    "tinifyKey": "",
+    "scale": 1,
+    "filter": "none",
+    "exporter": "pixi.js",
+    "fileName": "pack-result",
+    "savePath": "/Users/wangtao/Desktop/PIXIJSGAME/art",
+    "width": 2048,
+    "height": 2048,
+    "fixedSize": false,
+    "powerOfTwo": true,
+    "padding": 2,
+    "extrude": 0,
+    "allowRotation": true,
+    "allowTrim": true,
+    "trimMode": "trim",
+    "alphaThreshold": "0",
+    "detectIdentical": true,
+    "packer": "MaxRectsBin",
+    "packerMethod": "BestShortSideFit"
+  }
+}

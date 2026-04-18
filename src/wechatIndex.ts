@@ -38,25 +38,25 @@ image.onload = () => {
 // const texture = PIXI.Texture.from('assets/bunny.png');
 
 
-    for (let i = 0; i < 25; i++) {
-        const bunny = new PIXI.Sprite(texture);
+        for (let i = 0; i < 25; i++) {
+            const bunny = new PIXI.Sprite(texture);
 
-        bunny.x = (i % 5) * 40;
-        bunny.y = Math.floor(i / 5) * 40;
-        container.addChild(bunny);
-    }
-  };
+            bunny.x = (i % 5) * 40;
+            bunny.y = Math.floor(i / 5) * 40;
+            container.addChild(bunny);
+        }
+    };
 
-  // Move the container to the center
-  container.x = app.screen.width / 2;
-  container.y = app.screen.height / 2;
+    // Move the container to the center
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
 
-  // Center the bunny sprites in local container coordinates
-  container.pivot.x = container.width / 2;
-  container.pivot.y = container.height / 2;
+    // Center the bunny sprites in local container coordinates
+    container.pivot.x = container.width / 2;
+    container.pivot.y = container.height / 2;
 
-app.ticker.add(() => {
-    container.rotation += 0.01;
+    app.ticker.add(() => {
+        container.rotation += 0.01;
 });
 
 console.log('Pixi running with fake GameGlobal');
