@@ -308,6 +308,7 @@ declare module wx {
 
   function createCanvas();
   function createImage();
+  function request(any);
 
   function onShow(opt: (opt: {
     scene: string

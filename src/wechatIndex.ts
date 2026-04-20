@@ -1,43 +1,39 @@
 import * as PIXI from 'pixi.js-legacy';
+import { wechatAssetsManager } from './wechatAssetsManager';
 
-const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
-const width = info.screenWidth;
-const height = info.screenHeight;
+async function Init() {
+    const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    const width = info.screenWidth;
+    const height = info.screenHeight;
 
-const canvas = wx.createCanvas();
-const globalObj: any = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
-console.log('global obj: ', globalObj);
-if (globalObj) {
-    globalObj.canvas = canvas;
-}
+    const canvas = wx.createCanvas();
+    const globalObj: any = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
+    console.log('global obj: ', globalObj);
+    if (globalObj) {
+        globalObj.canvas = canvas;
+    }
 
-const app = new PIXI.Application({
-    view: canvas,
-    width,
-    height,
-    backgroundColor: 0x1099bb,
-    forceCanvas: true,
-});
+    const app = new PIXI.Application({
+        view: canvas,
+        width,
+        height,
+        backgroundColor: 0x1099bb,
+        forceCanvas: true,
+    });
 
-const container = new PIXI.Container();
+    const container = new PIXI.Container();
 
-app.stage.addChild(container);
+    app.stage.addChild(container);
 
-const image = wx.createImage();
-image.src = 'assets/bunny.png';
+    const image = wx.createImage();
+    image.src = 'assets/bunny.png';
 
-image.onload = () => {
-    // console.log('Image on load: ', image);
-    const baseTexture = new PIXI.BaseTexture(
-        new PIXI.ImageResource(image)
-    );
-    const texture = PIXI.Texture.from(baseTexture);
-    // const sprite = new PIXI.Sprite(texture);
-    // app.stage.addChild(sprite);
-
-// const texture = PIXI.Texture.from('assets/bunny.png');
-
-
+    image.onload = () => {
+        // console.log('Image on load: ', image);
+        const baseTexture = new PIXI.BaseTexture(
+            new PIXI.ImageResource(image)
+        );
+        const texture = PIXI.Texture.from(baseTexture);
         for (let i = 0; i < 25; i++) {
             const bunny = new PIXI.Sprite(texture);
 
@@ -57,6 +53,13 @@ image.onload = () => {
 
     app.ticker.add(() => {
         container.rotation += 0.01;
-});
+    });
 
-console.log('Pixi running with fake GameGlobal');
+    await wechatAssetsManager.loadAssets();
+    const number1 = wechatAssetsManager.GetSpriteFromNumberAtlas("3.png");
+    container.addChild(number1);
+
+    console.log('Pixi running with fake GameGlobal');
+}
+
+Init();

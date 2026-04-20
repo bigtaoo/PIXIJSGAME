@@ -24981,50 +24981,399 @@ void main(void)\r
   };
   extensions$1.add(CanvasSpriteRenderer);
 
-  const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
-  const width = info.screenWidth;
-  const height = info.screenHeight;
-  const canvas = wx.createCanvas();
-  const globalObj = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
-  console.log('global obj: ', globalObj);
-  if (globalObj) {
-      globalObj.canvas = canvas;
-  }
-  const app = new Application({
-      view: canvas,
-      width,
-      height,
-      backgroundColor: 0x1099bb,
-      forceCanvas: true,
-  });
-  const container = new Container();
-  app.stage.addChild(container);
-  const image = wx.createImage();
-  image.src = 'assets/bunny.png';
-  image.onload = () => {
-      // console.log('Image on load: ', image);
-      const baseTexture = new BaseTexture(new ImageResource(image));
-      const texture = Texture.from(baseTexture);
-      // const sprite = new PIXI.Sprite(texture);
-      // app.stage.addChild(sprite);
-      // const texture = PIXI.Texture.from('assets/bunny.png');
-      for (let i = 0; i < 25; i++) {
-          const bunny = new Sprite(texture);
-          bunny.x = (i % 5) * 40;
-          bunny.y = Math.floor(i / 5) * 40;
-          container.addChild(bunny);
-      }
+  var frames = {
+  	"4.png": {
+  		frame: {
+  			x: 2,
+  			y: 2,
+  			w: 180,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 0,
+  			w: 180,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 180,
+  			h: 213
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"8.png": {
+  		frame: {
+  			x: 2,
+  			y: 218,
+  			w: 176,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 11,
+  			w: 176,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 176,
+  			h: 223
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"9.png": {
+  		frame: {
+  			x: 2,
+  			y: 434,
+  			w: 154,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 8,
+  			w: 154,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 172,
+  			h: 225
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"5.png": {
+  		frame: {
+  			x: 2,
+  			y: 650,
+  			w: 137,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 14,
+  			y: 13,
+  			w: 137,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 168,
+  			h: 225
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"7.png": {
+  		frame: {
+  			x: 2,
+  			y: 866,
+  			w: 175,
+  			h: 209
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 0,
+  			w: 175,
+  			h: 209
+  		},
+  		sourceSize: {
+  			w: 175,
+  			h: 216
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"0.png": {
+  		frame: {
+  			x: 143,
+  			y: 650,
+  			w: 160,
+  			h: 196
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 1,
+  			w: 160,
+  			h: 196
+  		},
+  		sourceSize: {
+  			w: 174,
+  			h: 208
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"3.png": {
+  		frame: {
+  			x: 160,
+  			y: 434,
+  			w: 146,
+  			h: 196
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 8,
+  			y: 7,
+  			w: 146,
+  			h: 196
+  		},
+  		sourceSize: {
+  			w: 164,
+  			h: 219
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"1.png": {
+  		frame: {
+  			x: 182,
+  			y: 218,
+  			w: 109,
+  			h: 195
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 10,
+  			y: 5,
+  			w: 109,
+  			h: 195
+  		},
+  		sourceSize: {
+  			w: 145,
+  			h: 226
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"6.png": {
+  		frame: {
+  			x: 295,
+  			y: 218,
+  			w: 150,
+  			h: 194
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 12,
+  			y: 10,
+  			w: 150,
+  			h: 194
+  		},
+  		sourceSize: {
+  			w: 177,
+  			h: 218
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"2.png": {
+  		frame: {
+  			x: 186,
+  			y: 2,
+  			w: 139,
+  			h: 191
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 10,
+  			w: 139,
+  			h: 191
+  		},
+  		sourceSize: {
+  			w: 153,
+  			h: 221
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"Blue.png": {
+  		frame: {
+  			x: 329,
+  			y: 2,
+  			w: 186,
+  			h: 186
+  		},
+  		rotated: false,
+  		trimmed: false,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 0,
+  			w: 186,
+  			h: 186
+  		},
+  		sourceSize: {
+  			w: 186,
+  			h: 186
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"brawn.png": {
+  		frame: {
+  			x: 2,
+  			y: 1079,
+  			w: 185,
+  			h: 182
+  		},
+  		rotated: true,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 2,
+  			w: 185,
+  			h: 182
+  		},
+  		sourceSize: {
+  			w: 186,
+  			h: 186
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	}
   };
-  // Move the container to the center
-  container.x = app.screen.width / 2;
-  container.y = app.screen.height / 2;
-  // Center the bunny sprites in local container coordinates
-  container.pivot.x = container.width / 2;
-  container.pivot.y = container.height / 2;
-  app.ticker.add(() => {
-      container.rotation += 0.01;
-  });
-  console.log('Pixi running with fake GameGlobal');
+  var meta = {
+  	app: "http://free-tex-packer.com",
+  	version: "0.6.7",
+  	image: "numbers.png",
+  	format: "RGBA8888",
+  	size: {
+  		w: 1024,
+  		h: 2048
+  	},
+  	scale: 1
+  };
+  var numbersJson = {
+  	frames: frames,
+  	meta: meta
+  };
+
+  class WechatAssetsManager {
+      constructor() {
+          this.textures = {};
+      }
+      loadImageWX(src) {
+          return new Promise((resolve, reject) => {
+              const img = wx.createImage();
+              img.onload = () => resolve(img);
+              img.onerror = reject;
+              img.src = src;
+          });
+      }
+      loadJSONWX(src) {
+          return Promise.resolve(numbersJson);
+      }
+      async loadAssets() {
+          const [image, atlasData] = await Promise.all([
+              this.loadImageWX('assets/numbers.png'),
+              this.loadJSONWX('assets/numbers.json')
+          ]);
+          console.log('image: w-', image.width);
+          console.log('json', atlasData);
+          const resource = new CanvasResource(image);
+          const baseTexture = new BaseTexture(resource);
+          for (const frameName in atlasData.frames) {
+              const frame = atlasData.frames[frameName].frame;
+              const rect = new Rectangle(frame.x, frame.y, frame.w, frame.h);
+              this.textures[frameName] = new Texture(baseTexture, rect);
+          }
+      }
+      GetSpriteFromNumberAtlas(key) {
+          const texture = this.textures[key];
+          if (!texture) {
+              throw new Error(`Missing texture: ${key}`);
+          }
+          return new Sprite(texture);
+      }
+  }
+  const wechatAssetsManager = new WechatAssetsManager();
+
+  async function Init() {
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const width = info.screenWidth;
+      const height = info.screenHeight;
+      const canvas = wx.createCanvas();
+      const globalObj = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
+      console.log('global obj: ', globalObj);
+      if (globalObj) {
+          globalObj.canvas = canvas;
+      }
+      const app = new Application({
+          view: canvas,
+          width,
+          height,
+          backgroundColor: 0x1099bb,
+          forceCanvas: true,
+      });
+      const container = new Container();
+      app.stage.addChild(container);
+      const image = wx.createImage();
+      image.src = 'assets/bunny.png';
+      image.onload = () => {
+          // console.log('Image on load: ', image);
+          const baseTexture = new BaseTexture(new ImageResource(image));
+          const texture = Texture.from(baseTexture);
+          for (let i = 0; i < 25; i++) {
+              const bunny = new Sprite(texture);
+              bunny.x = (i % 5) * 40;
+              bunny.y = Math.floor(i / 5) * 40;
+              container.addChild(bunny);
+          }
+      };
+      // Move the container to the center
+      container.x = app.screen.width / 2;
+      container.y = app.screen.height / 2;
+      // Center the bunny sprites in local container coordinates
+      container.pivot.x = container.width / 2;
+      container.pivot.y = container.height / 2;
+      app.ticker.add(() => {
+          container.rotation += 0.01;
+      });
+      await wechatAssetsManager.loadAssets();
+      const number1 = wechatAssetsManager.GetSpriteFromNumberAtlas("3.png");
+      container.addChild(number1);
+      console.log('Pixi running with fake GameGlobal');
+  }
+  Init();
 
 })();
 //# sourceMappingURL=pixigame.js.map

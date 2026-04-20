@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@pixi/unsafe-eval": "^7.4.3",
+    "@rollup/plugin-json": "^6.1.0",
     "pixi.js-legacy": "^7.4.3"
   }
 }
