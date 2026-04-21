@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import numberJsonUrl from '../assets/numbers.json';
 import numberPngUrl from '../assets/numbers.png';
+import backgroundPng from '../assets/background.png';
 import { IAssetsManager } from './IAssetsManager';
 
 export class WebAssetsManager implements IAssetsManager
@@ -9,20 +10,13 @@ export class WebAssetsManager implements IAssetsManager
 
     public async loadAssets(): Promise<void>
     {
-        // 1. Load JSON manually
         const res = await fetch(numberJsonUrl);
         const atlas = await res.json();
-
-        // 2. Load image manually (IMPORTANT: use real URL)
         const baseTexture = PIXI.BaseTexture.from(numberPngUrl);
-
         const frames = atlas.frames;
-
-        // 3. Build textures
         for (const key in frames)
         {
             const frame = frames[key].frame;
-
             const texture = new PIXI.Texture(
                 baseTexture,
                 new PIXI.Rectangle(
@@ -32,9 +26,11 @@ export class WebAssetsManager implements IAssetsManager
                     frame.h
                 )
             );
-
             this.textures[key] = texture;
         }
+
+        const background = PIXI.BaseTexture.from(backgroundPng);
+        this.textures['background.png'] = new PIXI.Texture(background);
     }
 
     public GetSpriteFromNumberAtlas(key: string): PIXI.Sprite

@@ -15,7 +15,7 @@ export class WechatAssetsManager implements IAssetsManager
         });
     }
 
-    private loadJSONWX(src: string): Promise<any> {
+    private loadJSONWX(): Promise<any> {
         return Promise.resolve(numbersJson);
     }
 
@@ -23,7 +23,7 @@ export class WechatAssetsManager implements IAssetsManager
     {
         const [image, atlasData] = await Promise.all([
             this.loadImageWX('assets/numbers.png'),
-            this.loadJSONWX('assets/numbers.json')
+            this.loadJSONWX()
         ]);
         // console.log('image: w-', image.width);
         // console.log('json', atlasData);
