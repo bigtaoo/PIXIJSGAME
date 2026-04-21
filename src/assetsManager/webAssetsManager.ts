@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js-legacy';
-import numberJsonUrl from './assets/numbers.json';
-import numberPngUrl from './assets/numbers.png';
+import numberJsonUrl from '../assets/numbers.json';
+import numberPngUrl from '../assets/numbers.png';
+import { IAssetsManager } from './IAssetsManager';
 
-class AssetsManager
+export class WebAssetsManager implements IAssetsManager
 {
     private textures: Record<string, PIXI.Texture> = {};
 
@@ -49,4 +50,4 @@ class AssetsManager
     }
 }
 
-export const assetsManager = new AssetsManager();
+// export const webAssetsManager = new WebAssetsManager();

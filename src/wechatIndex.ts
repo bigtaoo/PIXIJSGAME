@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js-legacy';
-import { wechatAssetsManager } from './wechatAssetsManager';
+import { WechatAssetsManager } from './assetsManager/wechatAssetsManager';
+import { AssetsManager, setAssetsManager } from './assetsManager/assetsManager';
 
 async function Init() {
     const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -55,8 +56,10 @@ async function Init() {
         container.rotation += 0.01;
     });
 
+    const wechatAssetsManager = new WechatAssetsManager();
     await wechatAssetsManager.loadAssets();
-    const number1 = wechatAssetsManager.GetSpriteFromNumberAtlas("3.png");
+    setAssetsManager(wechatAssetsManager);
+    const number1 = AssetsManager().GetSpriteFromNumberAtlas("3.png");
     container.addChild(number1);
 
     console.log('Pixi running with fake GameGlobal');

@@ -25307,8 +25307,8 @@ void main(void)\r
               this.loadImageWX('assets/numbers.png'),
               this.loadJSONWX('assets/numbers.json')
           ]);
-          console.log('image: w-', image.width);
-          console.log('json', atlasData);
+          // console.log('image: w-', image.width);
+          // console.log('json', atlasData);
           const resource = new CanvasResource(image);
           const baseTexture = new BaseTexture(resource);
           for (const frameName in atlasData.frames) {
@@ -25325,7 +25325,18 @@ void main(void)\r
           return new Sprite(texture);
       }
   }
-  const wechatAssetsManager = new WechatAssetsManager();
+  // export const wechatAssetsManager = new WechatAssetsManager();
+
+  let instance;
+  function setAssetsManager(manager) {
+      instance = manager;
+  }
+  function AssetsManager() {
+      if (!instance) {
+          throw new Error('AssetsManager not initialized');
+      }
+      return instance;
+  }
 
   async function Init() {
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -25368,8 +25379,10 @@ void main(void)\r
       app.ticker.add(() => {
           container.rotation += 0.01;
       });
+      const wechatAssetsManager = new WechatAssetsManager();
       await wechatAssetsManager.loadAssets();
-      const number1 = wechatAssetsManager.GetSpriteFromNumberAtlas("3.png");
+      setAssetsManager(wechatAssetsManager);
+      const number1 = AssetsManager().GetSpriteFromNumberAtlas("3.png");
       container.addChild(number1);
       console.log('Pixi running with fake GameGlobal');
   }

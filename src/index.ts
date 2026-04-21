@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js-legacy';
-import { assetsManager } from './assetsManager';
+import { WebAssetsManager } from './assetsManager/webAssetsManager';
+import { AssetsManager, setAssetsManager } from './assetsManager/assetsManager';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -29,8 +30,10 @@ window.onload = async () => {
     container.addChild(bunny);
   }
 
-  await assetsManager.loadAssets();
-  const number1 = assetsManager.GetSpriteFromNumberAtlas("3.png");
+  const webAssetsManager = new WebAssetsManager();
+  await webAssetsManager.loadAssets();
+  setAssetsManager(webAssetsManager);
+  const number1 = AssetsManager().GetSpriteFromNumberAtlas("3.png");
   container.addChild(number1);
 
   container.x = 400;

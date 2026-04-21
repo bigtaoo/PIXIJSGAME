@@ -1,7 +1,8 @@
 import * as PIXI from 'pixi.js-legacy';
-import numbersJson from './assets/numbers.json'
+import numbersJson from '../assets/numbers.json'
+import { IAssetsManager } from './IAssetsManager';
 
-class WechatAssetsManager
+export class WechatAssetsManager implements IAssetsManager
 {
     private textures: Record<string, PIXI.Texture> = {};
 
@@ -57,4 +58,4 @@ class WechatAssetsManager
     }
 }
 
-export const wechatAssetsManager = new WechatAssetsManager();
+// export const wechatAssetsManager = new WechatAssetsManager();
