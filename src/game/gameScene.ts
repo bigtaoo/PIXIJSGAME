@@ -54,6 +54,9 @@ export class GameScene extends PIXI.Container
         const background = AssetsManager().GetSpriteFromNumberAtlas("background.png");
         background.width = config.Width;
         background.height = config.Height;
+        background.x = this.x;
+        background.y = this.y;
         this.addChild(background);
+        console.log('background w: ', background.width, ' h: ', background.height, ' x: ', this.x, ' y: ', this.y);
     }
 }

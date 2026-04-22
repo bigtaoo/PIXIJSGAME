@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
+import { OFFSET_X, OFFSET_Y } from './consts';
 
 export class Numbers
 {
@@ -14,15 +15,17 @@ export class Numbers
     {
         for (let i = 0; i < 10; ++i)
         {
-            this.drawNumber(i, i * 150, 100);
+            this.drawNumber(i, i * 100, 100);
         }
     }
 
     private drawNumber(num: number, x: number, y: number) : void
     {
         const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
-        picture.x = x;
-        picture.y = y;
+        picture.width = 100;
+        picture.height = 100;
+        picture.x = x + OFFSET_X;
+        picture.y = y + OFFSET_Y;
         this.Container.addChild(picture);
     }
 }
