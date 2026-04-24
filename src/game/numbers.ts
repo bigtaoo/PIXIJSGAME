@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
-import { OFFSET_X, OFFSET_Y } from './consts';
+import { OFFSET_Y } from './consts';
+import { offset_x } from './helper';
 
 export class Numbers
 {
@@ -24,7 +25,7 @@ export class Numbers
         const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
         picture.width = 100;
         picture.height = 100;
-        picture.x = x + OFFSET_X;
+        picture.x = x + offset_x();
         picture.y = y + OFFSET_Y;
         this.Container.addChild(picture);
 

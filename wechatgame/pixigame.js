@@ -25299,13 +25299,20 @@ void main(void)\r
               img.src = src;
           });
       }
-      loadJSONWX(src) {
+      loadJSONWX() {
           return Promise.resolve(numbersJson);
+      }
+      async createTexture(src) {
+          const image = await this.loadImageWX(src);
+          const resource = new CanvasResource(image);
+          const baseTexture = new BaseTexture(resource);
+          const texture = new Texture(baseTexture);
+          return texture;
       }
       async loadAssets() {
           const [image, atlasData] = await Promise.all([
               this.loadImageWX('assets/numbers.png'),
-              this.loadJSONWX('assets/numbers.json')
+              this.loadJSONWX()
           ]);
           // console.log('image: w-', image.width);
           // console.log('json', atlasData);
@@ -25316,6 +25323,8 @@ void main(void)\r
               const rect = new Rectangle(frame.x, frame.y, frame.w, frame.h);
               this.textures[frameName] = new Texture(baseTexture, rect);
           }
+          const background = await this.createTexture('assets/background.png');
+          this.textures['background.png'] = background;
       }
       GetSpriteFromNumberAtlas(key) {
           const texture = this.textures[key];
@@ -25338,13 +25347,100 @@ void main(void)\r
       return instance;
   }
 
+  const GAME_WIDTH = 1080;
+  const GAME_HEIGHT = 1920;
+  const OFFSET_Y = 100;
+
+  var Orientation;
+  (function (Orientation) {
+      Orientation[Orientation["Landscape"] = 0] = "Landscape";
+      Orientation[Orientation["Portrait"] = 1] = "Portrait";
+  })(Orientation || (Orientation = {}));
+
+  class Config {
+      constructor() {
+          this.Width = 100;
+          this.Height = 100;
+          this.Scale = 1;
+          this.Orientation = Orientation.Portrait;
+      }
+  }
+  const config = new Config();
+
+  const offset_x = () => {
+      if (config.Orientation === Orientation.Landscape) {
+          return 400;
+      }
+      return 100;
+  };
+
+  class Numbers {
+      constructor(container) {
+          this.Container = container;
+      }
+      DrawNumbers() {
+          for (let i = 0; i < 10; ++i) {
+              this.drawNumber(i, i * 100, 100);
+          }
+      }
+      drawNumber(num, x, y) {
+          const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
+          picture.width = 100;
+          picture.height = 100;
+          picture.x = x + offset_x();
+          picture.y = y + OFFSET_Y;
+          this.Container.addChild(picture);
+          picture.eventMode = 'static';
+          picture.on('pointertap', () => { console.log('onclick: ', num); });
+      }
+  }
+
+  class GameScene extends Container {
+      constructor() {
+          super();
+          this.numbers = new Numbers(this);
+      }
+      Resize(windowWidth, windowHeight) {
+          if (windowWidth > windowHeight) {
+              config.Width = GAME_HEIGHT;
+              config.Height = GAME_WIDTH;
+          }
+          else {
+              config.Width = GAME_WIDTH;
+              config.Height = GAME_HEIGHT;
+          }
+          const scale = Math.min(windowWidth / config.Width, windowHeight / config.Height);
+          config.Scale = scale;
+          this.x = (windowWidth - config.Width * scale) / 2;
+          this.y = (windowHeight - config.Height * scale) / 2;
+          this.width = config.Width;
+          this.height = config.Height;
+          this.scale.set(scale);
+          console.log('window w: ', windowWidth, 'window h: ', windowHeight, 'scale: ', scale);
+          console.log('w: ', this.width, ' h: ', config.Height, 'x: ', this.x, 'y: ', this.y);
+      }
+      Draw() {
+          this.drawBackground();
+          this.numbers.DrawNumbers();
+      }
+      drawBackground() {
+          const background = AssetsManager().GetSpriteFromNumberAtlas("background.png");
+          background.width = config.Width;
+          background.height = config.Height;
+          background.x = this.x;
+          background.y = this.y;
+          this.addChild(background);
+          // console.log('background w: ', background.width, ' h: ', background.height, ' x: ', this.x, ' y: ', this.y);
+      }
+  }
+
   async function Init() {
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const width = info.screenWidth;
       const height = info.screenHeight;
       const canvas = wx.createCanvas();
       const globalObj = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
-      console.log('global obj: ', globalObj);
+      // console.log('global obj: ', globalObj);
       if (globalObj) {
           globalObj.canvas = canvas;
       }
@@ -25355,36 +25451,13 @@ void main(void)\r
           backgroundColor: 0x1099bb,
           forceCanvas: true,
       });
-      const container = new Container();
-      app.stage.addChild(container);
-      const image = wx.createImage();
-      image.src = 'assets/bunny.png';
-      image.onload = () => {
-          // console.log('Image on load: ', image);
-          const baseTexture = new BaseTexture(new ImageResource(image));
-          const texture = Texture.from(baseTexture);
-          for (let i = 0; i < 25; i++) {
-              const bunny = new Sprite(texture);
-              bunny.x = (i % 5) * 40;
-              bunny.y = Math.floor(i / 5) * 40;
-              container.addChild(bunny);
-          }
-      };
-      // Move the container to the center
-      container.x = app.screen.width / 2;
-      container.y = app.screen.height / 2;
-      // Center the bunny sprites in local container coordinates
-      container.pivot.x = container.width / 2;
-      container.pivot.y = container.height / 2;
-      app.ticker.add(() => {
-          container.rotation += 0.01;
-      });
       const wechatAssetsManager = new WechatAssetsManager();
       await wechatAssetsManager.loadAssets();
       setAssetsManager(wechatAssetsManager);
-      const number1 = AssetsManager().GetSpriteFromNumberAtlas("3.png");
-      container.addChild(number1);
-      console.log('Pixi running with fake GameGlobal');
+      const container = new GameScene();
+      app.stage.addChild(container);
+      container.Resize(width, height);
+      container.Draw();
   }
   Init();
 

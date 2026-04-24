@@ -19,6 +19,15 @@ export class WechatAssetsManager implements IAssetsManager
         return Promise.resolve(numbersJson);
     }
 
+    private async createTexture(src: string): Promise<PIXI.Texture>{
+        const image = await this.loadImageWX(src);
+        const resource = new PIXI.CanvasResource(image);
+        const baseTexture = new PIXI.BaseTexture(resource);
+        const texture = new PIXI.Texture(baseTexture);
+        
+        return texture;
+    }
+
     public async loadAssets(): Promise<void>
     {
         const [image, atlasData] = await Promise.all([
@@ -43,6 +52,9 @@ export class WechatAssetsManager implements IAssetsManager
 
             this.textures[frameName] = new PIXI.Texture(baseTexture, rect);
         }
+
+        const background = await this.createTexture('assets/background.png');
+        this.textures['background.png'] = background;
     }
 
     public GetSpriteFromNumberAtlas(key: string): PIXI.Sprite

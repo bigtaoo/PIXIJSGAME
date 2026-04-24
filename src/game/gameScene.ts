@@ -40,7 +40,7 @@ export class GameScene extends PIXI.Container
         this.scale.set(scale);
 
         console.log('window w: ', windowWidth, 'window h: ', windowHeight, 'scale: ', scale);
-        console.log('w: ', this.width, ' h: ', this.height, 'x: ', this.x, 'y: ', this.y);
+        console.log('w: ', this.width, ' h: ', config.Height, 'x: ', this.x, 'y: ', this.y);
     }
 
     public Draw() : void
@@ -57,6 +57,6 @@ export class GameScene extends PIXI.Container
         background.x = this.x;
         background.y = this.y;
         this.addChild(background);
-        console.log('background w: ', background.width, ' h: ', background.height, ' x: ', this.x, ' y: ', this.y);
+        // console.log('background w: ', background.width, ' h: ', background.height, ' x: ', this.x, ' y: ', this.y);
     }
 }
