@@ -27,5 +27,8 @@ export class Numbers
         picture.x = x + OFFSET_X;
         picture.y = y + OFFSET_Y;
         this.Container.addChild(picture);
+
+        picture.eventMode = 'static';
+        picture.on('pointertap', () => { console.log('onclick: ', num); });
     }
 }
