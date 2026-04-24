@@ -2,6 +2,8 @@ import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { OFFSET_Y } from './consts';
 import { offset_x } from './helper';
+import { UIElement } from '../inputSystem/uiElement';
+import { Input } from '../inputSystem/inputManager';
 
 export class Numbers
 {
@@ -29,7 +31,15 @@ export class Numbers
         picture.y = y + OFFSET_Y;
         this.Container.addChild(picture);
 
-        picture.eventMode = 'static';
-        picture.on('pointertap', () => { console.log('onclick: ', num); });
+        // picture.eventMode = 'static';
+        // picture.on('pointertap', () => { console.log('onclick: ', num); });
+        var uiButton = new UIElement({
+            zIndex: 10,
+            bounds: () => picture.getBounds(),
+            onTap: () => {
+                console.log('clicked number: ', num);
+            },
+        });
+        Input.registerUI(uiButton);
     }
 }

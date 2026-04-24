@@ -2,6 +2,8 @@ import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
 import { setAssetsManager } from './assetsManager/assetsManager';
 import { GameScene } from './game/gameScene';
+import { Input } from './inputSystem/inputManager';
+import { setupWebInput } from './inputSystem/webAdapter';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -10,7 +12,8 @@ window.onload = async () => {
     backgroundColor: 0x1099bb,
   });
 
-  document.body.appendChild(app.view as HTMLCanvasElement);
+  const canvas = app.view as HTMLCanvasElement;
+  document.body.appendChild(canvas);
 
   const webAssetsManager = new WebAssetsManager();
   await webAssetsManager.loadAssets();
@@ -31,4 +34,6 @@ window.onload = async () => {
   // app.ticker.add((delta) => {
   //   container.rotation -= 0.01 * delta;
   // });
+
+  setupWebInput(canvas, Input);
 };

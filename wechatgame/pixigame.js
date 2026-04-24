@@ -25374,6 +25374,69 @@ void main(void)\r
       return 100;
   };
 
+  class UIElement {
+      constructor(options) {
+          this.zIndex = 0;
+          this.visible = true;
+          this.zIndex = options.zIndex ?? 0;
+          this.boundsProvider = options.bounds;
+          this.onTap = options.onTap;
+      }
+      contains(x, y) {
+          const b = this.boundsProvider();
+          return (x >= b.x &&
+              x <= b.x + b.width &&
+              y >= b.y &&
+              y <= b.y + b.height);
+      }
+      handle(e) {
+          if (e.type === 'tap' && this.onTap) {
+              this.onTap();
+          }
+      }
+  }
+
+  class InputManager {
+      constructor() {
+          this.handlers = new Map();
+          this.uiElements = [];
+          this.handlers.set('down', []);
+          this.handlers.set('up', []);
+          this.handlers.set('tap', []);
+      }
+      // ---------- Public API ----------
+      on(type, handler) {
+          this.handlers.get(type).push(handler);
+      }
+      registerUI(element) {
+          this.uiElements.push(element);
+          this.sortUI();
+      }
+      unregisterUI(element) {
+          this.uiElements = this.uiElements.filter(e => e !== element);
+      }
+      emit(e) {
+          // 1️⃣ UI priority (top-most first)
+          for (let i = this.uiElements.length - 1; i >= 0; i--) {
+              const el = this.uiElements[i];
+              if (!el.visible)
+                  continue;
+              if (el.contains(e.x, e.y)) {
+                  el.handle(e);
+                  return; // 🔥 stop propagation
+              }
+          }
+          // 2️⃣ fallback to global handlers
+          const list = this.handlers.get(e.type);
+          for (const h of list)
+              h(e);
+      }
+      sortUI() {
+          this.uiElements.sort((a, b) => a.zIndex - b.zIndex);
+      }
+  }
+  const Input = new InputManager();
+
   class Numbers {
       constructor(container) {
           this.Container = container;
@@ -25390,8 +25453,16 @@ void main(void)\r
           picture.x = x + offset_x();
           picture.y = y + OFFSET_Y;
           this.Container.addChild(picture);
-          picture.eventMode = 'static';
-          picture.on('pointertap', () => { console.log('onclick: ', num); });
+          // picture.eventMode = 'static';
+          // picture.on('pointertap', () => { console.log('onclick: ', num); });
+          var uiButton = new UIElement({
+              zIndex: 10,
+              bounds: () => picture.getBounds(),
+              onTap: () => {
+                  console.log('clicked number: ', num);
+              },
+          });
+          Input.registerUI(uiButton);
       }
   }
 
@@ -25434,6 +25505,26 @@ void main(void)\r
       }
   }
 
+  function setupWeChatInput(input) {
+      wx.onTouchStart((res) => {
+          const t = res.changedTouches[0];
+          input.emit({
+              x: t.clientX,
+              y: t.clientY,
+              type: 'down',
+          });
+      });
+      wx.onTouchEnd((res) => {
+          const t = res.changedTouches[0];
+          // console.log('wechat touch end x: ', t.clientX, ' y: ', t.clientY);
+          input.emit({
+              x: t.clientX,
+              y: t.clientY,
+              type: 'tap',
+          });
+      });
+  }
+
   async function Init() {
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const width = info.screenWidth;
@@ -25458,6 +25549,8 @@ void main(void)\r
       app.stage.addChild(container);
       container.Resize(width, height);
       container.Draw();
+      // wx.onTouchEnd((res) => {console.log('on touch end: ', res.touches, ' x: ', res.changedTouches)})
+      setupWeChatInput(Input);
   }
   Init();
 
