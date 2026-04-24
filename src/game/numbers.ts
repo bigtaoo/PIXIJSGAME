@@ -35,7 +35,7 @@ export class Numbers
         // picture.on('pointertap', () => { console.log('onclick: ', num); });
         var uiButton = new UIElement({
             zIndex: 10,
-            bounds: () => picture.getBounds(),
+            sprite: picture,
             onTap: () => {
                 console.log('clicked number: ', num);
             },

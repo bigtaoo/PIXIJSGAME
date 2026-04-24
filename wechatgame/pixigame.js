@@ -25379,7 +25379,8 @@ void main(void)\r
           this.zIndex = 0;
           this.visible = true;
           this.zIndex = options.zIndex ?? 0;
-          this.boundsProvider = options.bounds;
+          this.sprite = options.sprite;
+          this.boundsProvider = () => this.sprite.getBounds();
           this.onTap = options.onTap;
       }
       contains(x, y) {
@@ -25457,7 +25458,7 @@ void main(void)\r
           // picture.on('pointertap', () => { console.log('onclick: ', num); });
           var uiButton = new UIElement({
               zIndex: 10,
-              bounds: () => picture.getBounds(),
+              sprite: picture,
               onTap: () => {
                   console.log('clicked number: ', num);
               },
