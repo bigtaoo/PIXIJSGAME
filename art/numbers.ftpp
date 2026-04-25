@@ -63,6 +63,66 @@
       "name": "brawn.png",
       "path": "/Users/wangtao/Desktop/SumQuest/Art/brawn.png",
       "folder": ""
+    },
+    {
+      "name": "button.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/button.png",
+      "folder": ""
+    },
+    {
+      "name": "clock.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/clock.png",
+      "folder": ""
+    },
+    {
+      "name": "disable.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/disable.png",
+      "folder": ""
+    },
+    {
+      "name": "equa.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/equa.png",
+      "folder": ""
+    },
+    {
+      "name": "green.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/green.png",
+      "folder": ""
+    },
+    {
+      "name": "music.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/music.png",
+      "folder": ""
+    },
+    {
+      "name": "next.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/next.png",
+      "folder": ""
+    },
+    {
+      "name": "purple.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/purple.png",
+      "folder": ""
+    },
+    {
+      "name": "retry.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/retry.png",
+      "folder": ""
+    },
+    {
+      "name": "select.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/select.png",
+      "folder": ""
+    },
+    {
+      "name": "sound.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/sound.png",
+      "folder": ""
+    },
+    {
+      "name": "yellow.png",
+      "path": "/Users/wangtao/Desktop/SumQuest/Art/yellow.png",
+      "folder": ""
     }
   ],
   "folders": [],
@@ -85,7 +145,7 @@
     "powerOfTwo": true,
     "padding": 2,
     "extrude": 0,
-    "allowRotation": true,
+    "allowRotation": false,
     "allowTrim": true,
     "trimMode": "trim",
     "alphaThreshold": "0",

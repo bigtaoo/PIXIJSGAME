@@ -3,16 +3,20 @@ import { GAME_HEIGHT, GAME_WIDTH } from './consts';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { config } from './config';
 import { Numbers } from './numbers';
+import { Grid } from './grid';
+import { Orientation } from './enums';
 
 export class GameScene extends PIXI.Container
 {
     private numbers: Numbers;
+    private grids: Grid;
 
     constructor()
     {
         super();
 
         this.numbers = new Numbers(this);
+        this.grids = new Grid(this);
     }
 
     public Resize(windowWidth: number, windowHeight: number) : void
@@ -21,11 +25,13 @@ export class GameScene extends PIXI.Container
         {
             config.Width = GAME_HEIGHT;
             config.Height = GAME_WIDTH;
+            config.Orientation = Orientation.Landscape;
         }
         else
         {
             config.Width = GAME_WIDTH;
             config.Height = GAME_HEIGHT;
+            config.Orientation = Orientation.Portrait;
         }
         const scale = Math.min(
             windowWidth / config.Width,
@@ -46,6 +52,7 @@ export class GameScene extends PIXI.Container
     public Draw() : void
     {
         this.drawBackground();
+        this.grids.DrawGrids();
         this.numbers.DrawNumbers();
     }
 
