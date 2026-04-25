@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { OFFSET_Y } from './consts';
-import { offset_x } from './helper';
+import { grid_count_h, grid_count_w, grid_size, offset_x } from './helper';
 import { UIElement } from '../inputSystem/uiElement';
 import { Input } from '../inputSystem/inputManager';
+import { logic } from './logic';
 
 export class Numbers
 {
@@ -16,9 +17,15 @@ export class Numbers
 
     public DrawNumbers() : void
     {
-        for (let i = 0; i < 10; ++i)
-        {
-            this.drawNumber(i, i * 100, 100);
+        const w = grid_count_w();
+        const h = grid_count_h();
+        for (let i = 0; i < w; ++i){
+            for (let j = 0; j < h; ++j){
+                const n = logic.getNumber(i, j);
+                const x = i * grid_size();
+                const y = j * grid_size();
+                this.drawNumber(n, x, y);
+            }
         }
     }
 
