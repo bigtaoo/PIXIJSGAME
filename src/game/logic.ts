@@ -8,7 +8,7 @@ class Logic
         this.numbers.clear();
         const w = grid_count_w();
         const h = grid_count_h();
-        console.log('logic w: ', w, 'h:', h);
+        // console.log('logic w: ', w, 'h:', h);
         const n: number[] = [];
         const count = w * h / 2;
         for (let i = 0; i < count; ++i){
@@ -31,7 +31,7 @@ class Logic
     public getNumber(x: number, y: number): number{
         const s = index(x, y);
         const v = this.numbers.get(s) ?? 0;
-        console.log('get number, s: ', s, 'v: ', v);
+        // console.log('get number, s: ', s, 'v: ', v);
         return v;
     }
 

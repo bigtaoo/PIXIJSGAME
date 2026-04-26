@@ -2,6 +2,9 @@ import * as PIXI from 'pixi.js-legacy';
 import { grid_count_h, grid_count_w, grid_size, index, offset_x } from './helper';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { OFFSET_Y } from './consts';
+import { UIElement } from '../inputSystem/uiElement';
+import { Input } from '../inputSystem/inputManager';
+import { display } from './display';
 
 export class Grid
 {
@@ -26,6 +29,16 @@ export class Grid
                 s.height = grid_size();
                 this.Container.addChild(s);
                 this.Grids.set(c, s);
+
+                var uiButton = new UIElement({
+                    zIndex: 10,
+                    sprite: s,
+                    onTap: () => {
+                        // console.log('clicked number: ', c);
+                        display.OnClick(c);
+                    },
+                });
+                Input.registerUI(uiButton);
             }
         }
     }

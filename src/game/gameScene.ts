@@ -5,7 +5,7 @@ import { config } from './config';
 import { Numbers } from './numbers';
 import { Grid } from './grid';
 import { Orientation } from './enums';
-import { logic } from './logic';
+import { display } from './display';
 
 export class GameScene extends PIXI.Container
 {
@@ -18,6 +18,8 @@ export class GameScene extends PIXI.Container
 
         this.numbers = new Numbers(this);
         this.grids = new Grid(this);
+
+        display.Initialize(this.grids, this.numbers);
     }
 
     public Resize(windowWidth: number, windowHeight: number) : void
