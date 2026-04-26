@@ -18,7 +18,6 @@ export class GameScene extends PIXI.Container
 
         this.numbers = new Numbers(this);
         this.grids = new Grid(this);
-        logic.Initialize(10);
     }
 
     public Resize(windowWidth: number, windowHeight: number) : void

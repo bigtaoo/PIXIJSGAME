@@ -27,5 +27,5 @@ export const grid_count_h = () => {
 }
 
 export const index = (x: number, y: number): number => {
-    return y * 1000 + x;
+    return x * 1000 + y;
 }
