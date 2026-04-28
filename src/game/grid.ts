@@ -10,6 +10,7 @@ export class Grid
 {
     private Container: PIXI.Container;
     private Grids: Map<number, PIXI.Sprite> = new Map();
+    private selectedImage: PIXI.Sprite | undefined;
 
     constructor(container: PIXI.Container){
         this.Container = container;
@@ -18,7 +19,7 @@ export class Grid
     public DrawGrids(): void{
         const w = grid_count_w();
         const h = grid_count_h();
-        console.log('grid w: ', w, ' h: ', h);
+        // console.log('grid w: ', w, ' h: ', h);
         for (let i = 0; i < w; ++i){
             for (let j = 0; j < h; ++j){
                 const c = index(i, j);
@@ -40,6 +41,34 @@ export class Grid
                 });
                 Input.registerUI(uiButton);
             }
+        }
+    }
+
+    public DrawSelectedImage(index: number): void{
+        if (this.selectedImage === undefined){
+            this.selectedImage = AssetsManager().GetSpriteFromNumberAtlas('select.png');
+            this.selectedImage.width = grid_size();
+            this.selectedImage.height = grid_size();
+            this.Container.addChild(this.selectedImage);
+        }
+        this.selectedImage.visible = true;
+        const x = Math.floor(index / 1000);
+        const y = index - x * 1000;
+        this.selectedImage.x = x * grid_size() + offset_x();
+        this.selectedImage.y = y * grid_size() + OFFSET_Y;
+        // console.log('select image x: ', x, 'y:',y, 'self: ', this.selectedImage)
+    }
+
+    public HideSelctedImage(): void{
+        if (this.selectedImage != undefined){
+            this.selectedImage.visible = false;
+        }
+    }
+
+    public HideGrid(index: number): void{
+        const grid = this.Grids.get(index);
+        if (grid !== undefined){
+            grid.visible = false;
         }
     }
 }

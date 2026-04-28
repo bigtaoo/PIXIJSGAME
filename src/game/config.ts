@@ -6,6 +6,7 @@ class Config
     public Height: number = 100;
     public Scale: number = 1;
     public Orientation: Orientation = Orientation.Portrait;
+    public Target: number = 10;
 }
 
 export const config = new Config();

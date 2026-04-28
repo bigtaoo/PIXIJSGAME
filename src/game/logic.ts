@@ -35,6 +35,10 @@ class Logic
         return v;
     }
 
+    public getNumberByIndex(index: number): number {
+        return this.numbers.get(index) ?? 0;
+    }
+
     private shuffle(arr: number[]): void {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
