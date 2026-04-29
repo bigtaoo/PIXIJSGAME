@@ -36,6 +36,10 @@ export class Grid
                     sprite: s,
                     onTap: () => {
                         // console.log('clicked number: ', c);
+                        if (!s.visible){
+                            // console.log('invisible grid.');
+                            return;
+                        }
                         display.OnClick(c);
                     },
                 });

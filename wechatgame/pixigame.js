@@ -24982,240 +24982,144 @@ void main(void)\r
   extensions$1.add(CanvasSpriteRenderer);
 
   var frames = {
-  	"4.png": {
+  	"next.png": {
   		frame: {
   			x: 2,
   			y: 2,
-  			w: 180,
-  			h: 212
+  			w: 332,
+  			h: 236
   		},
   		rotated: false,
   		trimmed: true,
   		spriteSourceSize: {
-  			x: 0,
+  			x: 4,
   			y: 0,
-  			w: 180,
-  			h: 212
+  			w: 332,
+  			h: 236
   		},
   		sourceSize: {
-  			w: 180,
-  			h: 213
+  			w: 336,
+  			h: 256
   		},
   		pivot: {
   			x: 0.5,
   			y: 0.5
   		}
   	},
-  	"8.png": {
+  	"retry.png": {
+  		frame: {
+  			x: 338,
+  			y: 2,
+  			w: 294,
+  			h: 239
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 9,
+  			y: 10,
+  			w: 294,
+  			h: 239
+  		},
+  		sourceSize: {
+  			w: 312,
+  			h: 256
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"clock.png": {
   		frame: {
   			x: 2,
-  			y: 218,
-  			w: 176,
-  			h: 212
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 0,
-  			y: 11,
-  			w: 176,
-  			h: 212
-  		},
-  		sourceSize: {
-  			w: 176,
-  			h: 223
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"9.png": {
-  		frame: {
-  			x: 2,
-  			y: 434,
-  			w: 154,
-  			h: 212
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 6,
-  			y: 8,
-  			w: 154,
-  			h: 212
-  		},
-  		sourceSize: {
-  			w: 172,
-  			h: 225
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"5.png": {
-  		frame: {
-  			x: 2,
-  			y: 650,
-  			w: 137,
-  			h: 212
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 14,
-  			y: 13,
-  			w: 137,
-  			h: 212
-  		},
-  		sourceSize: {
-  			w: 168,
-  			h: 225
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"7.png": {
-  		frame: {
-  			x: 2,
-  			y: 866,
-  			w: 175,
-  			h: 209
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 0,
-  			y: 0,
-  			w: 175,
-  			h: 209
-  		},
-  		sourceSize: {
-  			w: 175,
-  			h: 216
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"0.png": {
-  		frame: {
-  			x: 143,
-  			y: 650,
-  			w: 160,
-  			h: 196
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 6,
-  			y: 1,
-  			w: 160,
-  			h: 196
-  		},
-  		sourceSize: {
-  			w: 174,
-  			h: 208
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"3.png": {
-  		frame: {
-  			x: 160,
-  			y: 434,
-  			w: 146,
-  			h: 196
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 8,
-  			y: 7,
-  			w: 146,
-  			h: 196
-  		},
-  		sourceSize: {
-  			w: 164,
-  			h: 219
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"1.png": {
-  		frame: {
-  			x: 182,
-  			y: 218,
-  			w: 109,
-  			h: 195
-  		},
-  		rotated: false,
-  		trimmed: true,
-  		spriteSourceSize: {
-  			x: 10,
-  			y: 5,
-  			w: 109,
-  			h: 195
-  		},
-  		sourceSize: {
-  			w: 145,
-  			h: 226
-  		},
-  		pivot: {
-  			x: 0.5,
-  			y: 0.5
-  		}
-  	},
-  	"6.png": {
-  		frame: {
-  			x: 295,
-  			y: 218,
-  			w: 150,
-  			h: 194
+  			y: 242,
+  			w: 278,
+  			h: 248
   		},
   		rotated: false,
   		trimmed: true,
   		spriteSourceSize: {
   			x: 12,
-  			y: 10,
-  			w: 150,
-  			h: 194
+  			y: 5,
+  			w: 278,
+  			h: 248
   		},
   		sourceSize: {
-  			w: 177,
-  			h: 218
+  			w: 290,
+  			h: 253
   		},
   		pivot: {
   			x: 0.5,
   			y: 0.5
   		}
   	},
-  	"2.png": {
+  	"equa.png": {
   		frame: {
-  			x: 186,
+  			x: 636,
   			y: 2,
-  			w: 139,
-  			h: 191
+  			w: 248,
+  			h: 197
   		},
   		rotated: false,
   		trimmed: true,
   		spriteSourceSize: {
-  			x: 6,
-  			y: 10,
-  			w: 139,
-  			h: 191
+  			x: 0,
+  			y: 0,
+  			w: 248,
+  			h: 197
   		},
   		sourceSize: {
-  			w: 153,
-  			h: 221
+  			w: 256,
+  			h: 197
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"button.png": {
+  		frame: {
+  			x: 888,
+  			y: 2,
+  			w: 245,
+  			h: 154
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 4,
+  			w: 245,
+  			h: 154
+  		},
+  		sourceSize: {
+  			w: 256,
+  			h: 182
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"select.png": {
+  		frame: {
+  			x: 1137,
+  			y: 2,
+  			w: 189,
+  			h: 193
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 1,
+  			y: 4,
+  			w: 189,
+  			h: 193
+  		},
+  		sourceSize: {
+  			w: 192,
+  			h: 197
   		},
   		pivot: {
   			x: 0.5,
@@ -25224,8 +25128,8 @@ void main(void)\r
   	},
   	"Blue.png": {
   		frame: {
-  			x: 329,
-  			y: 2,
+  			x: 888,
+  			y: 160,
   			w: 186,
   			h: 186
   		},
@@ -25248,12 +25152,12 @@ void main(void)\r
   	},
   	"brawn.png": {
   		frame: {
-  			x: 2,
-  			y: 1079,
+  			x: 636,
+  			y: 203,
   			w: 185,
   			h: 182
   		},
-  		rotated: true,
+  		rotated: false,
   		trimmed: true,
   		spriteSourceSize: {
   			x: 0,
@@ -25269,6 +25173,390 @@ void main(void)\r
   			x: 0.5,
   			y: 0.5
   		}
+  	},
+  	"green.png": {
+  		frame: {
+  			x: 284,
+  			y: 245,
+  			w: 183,
+  			h: 184
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 2,
+  			w: 183,
+  			h: 184
+  		},
+  		sourceSize: {
+  			w: 186,
+  			h: 186
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"0.png": {
+  		frame: {
+  			x: 471,
+  			y: 245,
+  			w: 160,
+  			h: 196
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 1,
+  			w: 160,
+  			h: 196
+  		},
+  		sourceSize: {
+  			w: 174,
+  			h: 208
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"yellow.png": {
+  		frame: {
+  			x: 284,
+  			y: 433,
+  			w: 182,
+  			h: 184
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 2,
+  			w: 182,
+  			h: 184
+  		},
+  		sourceSize: {
+  			w: 186,
+  			h: 186
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"4.png": {
+  		frame: {
+  			x: 2,
+  			y: 494,
+  			w: 180,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 0,
+  			w: 180,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 180,
+  			h: 213
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"purple.png": {
+  		frame: {
+  			x: 1330,
+  			y: 2,
+  			w: 178,
+  			h: 181
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 3,
+  			y: 3,
+  			w: 178,
+  			h: 181
+  		},
+  		sourceSize: {
+  			w: 186,
+  			h: 186
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"8.png": {
+  		frame: {
+  			x: 1512,
+  			y: 2,
+  			w: 176,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 11,
+  			w: 176,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 176,
+  			h: 223
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"7.png": {
+  		frame: {
+  			x: 1330,
+  			y: 187,
+  			w: 175,
+  			h: 209
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 0,
+  			y: 0,
+  			w: 175,
+  			h: 209
+  		},
+  		sourceSize: {
+  			w: 175,
+  			h: 216
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"9.png": {
+  		frame: {
+  			x: 1078,
+  			y: 199,
+  			w: 154,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 8,
+  			w: 154,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 172,
+  			h: 225
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"6.png": {
+  		frame: {
+  			x: 825,
+  			y: 350,
+  			w: 150,
+  			h: 194
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 12,
+  			y: 10,
+  			w: 150,
+  			h: 194
+  		},
+  		sourceSize: {
+  			w: 177,
+  			h: 218
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"3.png": {
+  		frame: {
+  			x: 635,
+  			y: 389,
+  			w: 146,
+  			h: 196
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 8,
+  			y: 7,
+  			w: 146,
+  			h: 196
+  		},
+  		sourceSize: {
+  			w: 164,
+  			h: 219
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"sound.png": {
+  		frame: {
+  			x: 470,
+  			y: 445,
+  			w: 146,
+  			h: 117
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 4,
+  			y: 12,
+  			w: 146,
+  			h: 117
+  		},
+  		sourceSize: {
+  			w: 155,
+  			h: 136
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"2.png": {
+  		frame: {
+  			x: 470,
+  			y: 566,
+  			w: 139,
+  			h: 191
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 6,
+  			y: 10,
+  			w: 139,
+  			h: 191
+  		},
+  		sourceSize: {
+  			w: 153,
+  			h: 221
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"5.png": {
+  		frame: {
+  			x: 186,
+  			y: 621,
+  			w: 137,
+  			h: 212
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 14,
+  			y: 13,
+  			w: 137,
+  			h: 212
+  		},
+  		sourceSize: {
+  			w: 168,
+  			h: 225
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"music.png": {
+  		frame: {
+  			x: 327,
+  			y: 621,
+  			w: 135,
+  			h: 112
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 8,
+  			y: 0,
+  			w: 135,
+  			h: 112
+  		},
+  		sourceSize: {
+  			w: 152,
+  			h: 130
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"disable.png": {
+  		frame: {
+  			x: 327,
+  			y: 737,
+  			w: 119,
+  			h: 124
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 16,
+  			y: 3,
+  			w: 119,
+  			h: 124
+  		},
+  		sourceSize: {
+  			w: 151,
+  			h: 138
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
+  	},
+  	"1.png": {
+  		frame: {
+  			x: 2,
+  			y: 710,
+  			w: 109,
+  			h: 195
+  		},
+  		rotated: false,
+  		trimmed: true,
+  		spriteSourceSize: {
+  			x: 10,
+  			y: 5,
+  			w: 109,
+  			h: 195
+  		},
+  		sourceSize: {
+  			w: 145,
+  			h: 226
+  		},
+  		pivot: {
+  			x: 0.5,
+  			y: 0.5
+  		}
   	}
   };
   var meta = {
@@ -25277,8 +25565,8 @@ void main(void)\r
   	image: "numbers.png",
   	format: "RGBA8888",
   	size: {
-  		w: 1024,
-  		h: 2048
+  		w: 2048,
+  		h: 1024
   	},
   	scale: 1
   };
@@ -25363,16 +25651,118 @@ void main(void)\r
           this.Height = 100;
           this.Scale = 1;
           this.Orientation = Orientation.Portrait;
+          this.Target = 10;
       }
   }
   const config = new Config();
 
   const offset_x = () => {
       if (config.Orientation === Orientation.Landscape) {
-          return 400;
+          return 300;
       }
       return 100;
   };
+  const grid_size = () => {
+      return 120;
+  };
+  const grid_count_w = () => {
+      if (config.Orientation === Orientation.Landscape) {
+          return 12;
+      }
+      return 6;
+  };
+  const grid_count_h = () => {
+      if (config.Orientation === Orientation.Landscape) {
+          return 6;
+      }
+      return 12;
+  };
+  const index = (x, y) => {
+      return x * 1000 + y;
+  };
+
+  class Logic {
+      constructor() {
+          this.numbers = new Map();
+      }
+      Initialize(target) {
+          this.numbers.clear();
+          const w = grid_count_w();
+          const h = grid_count_h();
+          // console.log('logic w: ', w, 'h:', h);
+          const n = [];
+          const count = w * h / 2;
+          for (let i = 0; i < count; ++i) {
+              // const rdm = Math.random() * 100000 % 9;
+              // console.log('random: ', rdm);
+              const first = Math.floor(Math.random() * 1000000 % 9) + 1;
+              const second = target - first;
+              n.push(first, second);
+          }
+          this.shuffle(n);
+          for (let i = 0; i < w; ++i) {
+              for (let j = 0; j < h; ++j) {
+                  const s = index(i, j);
+                  this.numbers.set(s, n.pop() ?? 0);
+              }
+          }
+          // console.log('nums: ', this.numbers, ' n: ', n);
+      }
+      getNumber(x, y) {
+          const s = index(x, y);
+          const v = this.numbers.get(s) ?? 0;
+          // console.log('get number, s: ', s, 'v: ', v);
+          return v;
+      }
+      getNumberByIndex(index) {
+          return this.numbers.get(index) ?? 0;
+      }
+      shuffle(arr) {
+          for (let i = arr.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+          }
+      }
+  }
+  const logic = new Logic();
+
+  class Numbers {
+      constructor(container) {
+          this.numberSprites = new Map();
+          this.Container = container;
+      }
+      DrawNumbers() {
+          logic.Initialize(10);
+          const w = grid_count_w();
+          const h = grid_count_h();
+          // console.log('number w: ', w, 'h:',h);
+          for (let i = 0; i < w; ++i) {
+              for (let j = 0; j < h; ++j) {
+                  const n = logic.getNumber(i, j);
+                  const x = i * grid_size();
+                  const y = j * grid_size();
+                  const sprite = this.drawNumber(n, x, y);
+                  const s = index(i, j);
+                  this.numberSprites.set(s, sprite);
+              }
+          }
+      }
+      HideNumber(index) {
+          const sprite = this.numberSprites.get(index);
+          if (sprite !== undefined) {
+              sprite.visible = false;
+          }
+      }
+      drawNumber(num, x, y) {
+          const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
+          picture.width = 80;
+          picture.height = 80;
+          picture.x = x + offset_x() + 20;
+          picture.y = y + OFFSET_Y + 20;
+          this.Container.addChild(picture);
+          return picture;
+      }
+  }
 
   class UIElement {
       constructor(options) {
@@ -25438,32 +25828,99 @@ void main(void)\r
   }
   const Input = new InputManager();
 
-  class Numbers {
-      constructor(container) {
-          this.Container = container;
+  class Display {
+      constructor() {
+          this.slectedIndex = -1;
       }
-      DrawNumbers() {
-          for (let i = 0; i < 10; ++i) {
-              this.drawNumber(i, i * 100, 100);
+      Initialize(g, n) {
+          this.grids = g;
+          this.numbers = n;
+      }
+      OnClick(index) {
+          // console.log('clicked index: ', index);
+          if (this.slectedIndex === -1) {
+              this.slectedIndex = index;
+              this.grids?.DrawSelectedImage(index);
+          }
+          else {
+              const selectedValue = logic.getNumberByIndex(this.slectedIndex);
+              const currentValue = logic.getNumberByIndex(index);
+              if (selectedValue + currentValue === config.Target) {
+                  this.grids?.HideSelctedImage();
+                  this.grids?.HideGrid(this.slectedIndex);
+                  this.grids?.HideGrid(index);
+                  this.numbers?.HideNumber(this.slectedIndex);
+                  this.numbers?.HideNumber(index);
+                  this.slectedIndex = -1;
+              }
+              else {
+                  this.slectedIndex = index;
+                  this.grids?.DrawSelectedImage(index);
+              }
           }
       }
-      drawNumber(num, x, y) {
-          const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
-          picture.width = 100;
-          picture.height = 100;
-          picture.x = x + offset_x();
-          picture.y = y + OFFSET_Y;
-          this.Container.addChild(picture);
-          // picture.eventMode = 'static';
-          // picture.on('pointertap', () => { console.log('onclick: ', num); });
-          var uiButton = new UIElement({
-              zIndex: 10,
-              sprite: picture,
-              onTap: () => {
-                  console.log('clicked number: ', num);
-              },
-          });
-          Input.registerUI(uiButton);
+  }
+  const display = new Display();
+
+  class Grid {
+      constructor(container) {
+          this.Grids = new Map();
+          this.Container = container;
+      }
+      DrawGrids() {
+          const w = grid_count_w();
+          const h = grid_count_h();
+          // console.log('grid w: ', w, ' h: ', h);
+          for (let i = 0; i < w; ++i) {
+              for (let j = 0; j < h; ++j) {
+                  const c = index(i, j);
+                  const s = AssetsManager().GetSpriteFromNumberAtlas('Blue.png');
+                  s.x = i * grid_size() + offset_x();
+                  s.y = j * grid_size() + OFFSET_Y;
+                  s.width = grid_size();
+                  s.height = grid_size();
+                  this.Container.addChild(s);
+                  this.Grids.set(c, s);
+                  var uiButton = new UIElement({
+                      zIndex: 10,
+                      sprite: s,
+                      onTap: () => {
+                          // console.log('clicked number: ', c);
+                          if (!s.visible) {
+                              console.log('invisible grid.');
+                              return;
+                          }
+                          display.OnClick(c);
+                      },
+                  });
+                  Input.registerUI(uiButton);
+              }
+          }
+      }
+      DrawSelectedImage(index) {
+          if (this.selectedImage === undefined) {
+              this.selectedImage = AssetsManager().GetSpriteFromNumberAtlas('select.png');
+              this.selectedImage.width = grid_size();
+              this.selectedImage.height = grid_size();
+              this.Container.addChild(this.selectedImage);
+          }
+          this.selectedImage.visible = true;
+          const x = Math.floor(index / 1000);
+          const y = index - x * 1000;
+          this.selectedImage.x = x * grid_size() + offset_x();
+          this.selectedImage.y = y * grid_size() + OFFSET_Y;
+          // console.log('select image x: ', x, 'y:',y, 'self: ', this.selectedImage)
+      }
+      HideSelctedImage() {
+          if (this.selectedImage != undefined) {
+              this.selectedImage.visible = false;
+          }
+      }
+      HideGrid(index) {
+          const grid = this.Grids.get(index);
+          if (grid !== undefined) {
+              grid.visible = false;
+          }
       }
   }
 
@@ -25471,15 +25928,19 @@ void main(void)\r
       constructor() {
           super();
           this.numbers = new Numbers(this);
+          this.grids = new Grid(this);
+          display.Initialize(this.grids, this.numbers);
       }
       Resize(windowWidth, windowHeight) {
           if (windowWidth > windowHeight) {
               config.Width = GAME_HEIGHT;
               config.Height = GAME_WIDTH;
+              config.Orientation = Orientation.Landscape;
           }
           else {
               config.Width = GAME_WIDTH;
               config.Height = GAME_HEIGHT;
+              config.Orientation = Orientation.Portrait;
           }
           const scale = Math.min(windowWidth / config.Width, windowHeight / config.Height);
           config.Scale = scale;
@@ -25493,6 +25954,7 @@ void main(void)\r
       }
       Draw() {
           this.drawBackground();
+          this.grids.DrawGrids();
           this.numbers.DrawNumbers();
       }
       drawBackground() {

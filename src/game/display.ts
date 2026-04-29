@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { EffectManager } from "./effectManager";
 import { Grid } from "./grid";
 import { logic } from "./logic";
 import { Numbers } from "./numbers";
@@ -7,15 +8,17 @@ class Display
 {
     private grids : Grid | undefined;
     private numbers : Numbers | undefined;
+    private effects: EffectManager | undefined;
     private slectedIndex: number = -1;
 
     constructor(){
 
     }
 
-    public Initialize(g: Grid, n: Numbers): void{
+    public Initialize(g: Grid, n: Numbers, e: EffectManager): void{
         this.grids = g;
         this.numbers = n;
+        this.effects = e;
     }
 
     public OnClick(index: number){
@@ -32,6 +35,7 @@ class Display
                 this.grids?.HideGrid(index);
                 this.numbers?.HideNumber(this.slectedIndex);
                 this.numbers?.HideNumber(index);
+                this.effects?.PlayEffect(index);
                 this.slectedIndex = -1;
             }else{
                 this.slectedIndex = index;

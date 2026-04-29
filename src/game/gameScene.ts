@@ -6,11 +6,13 @@ import { Numbers } from './numbers';
 import { Grid } from './grid';
 import { Orientation } from './enums';
 import { display } from './display';
+import { EffectManager } from './effectManager';
 
 export class GameScene extends PIXI.Container
 {
     private numbers: Numbers;
     private grids: Grid;
+    private effectManager: EffectManager;
 
     constructor()
     {
@@ -18,8 +20,9 @@ export class GameScene extends PIXI.Container
 
         this.numbers = new Numbers(this);
         this.grids = new Grid(this);
+        this.effectManager = new EffectManager(this);
 
-        display.Initialize(this.grids, this.numbers);
+        display.Initialize(this.grids, this.numbers, this.effectManager);
     }
 
     public Resize(windowWidth: number, windowHeight: number) : void
@@ -57,6 +60,10 @@ export class GameScene extends PIXI.Container
         this.drawBackground();
         this.grids.DrawGrids();
         this.numbers.DrawNumbers();
+    }
+
+    public Update(delta: number): void{
+        this.effectManager.Update(delta);
     }
 
     private drawBackground() : void

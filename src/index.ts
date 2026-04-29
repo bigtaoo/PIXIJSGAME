@@ -30,10 +30,11 @@ window.onload = async () => {
   container.Resize(window.innerWidth, window.innerHeight);
   container.Draw();
   // container.pivot.set(container.width / 2, container.height / 2);
-
-  // app.ticker.add((delta) => {
-  //   container.rotation -= 0.01 * delta;
-  // });
+  app.ticker.add(() => {
+    // console.log('ticker delta: ', app.ticker.elapsedMS);
+    
+    container.Update(app.ticker.elapsedMS);
+  });
 
   setupWebInput(canvas, Input);
 };

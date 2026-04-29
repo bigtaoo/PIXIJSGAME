@@ -3,6 +3,8 @@ import numberJsonUrl from '../assets/numbers.json';
 import numberPngUrl from '../assets/numbers.png';
 import backgroundPng from '../assets/background.png';
 import { IAssetsManager } from './IAssetsManager';
+import boomJsonUrl from '../assets/boom.json';
+import boomPngUrl from '../assets/boom.png';
 
 export class WebAssetsManager implements IAssetsManager
 {
@@ -10,9 +12,21 @@ export class WebAssetsManager implements IAssetsManager
 
     public async loadAssets(): Promise<void>
     {
-        const res = await fetch(numberJsonUrl);
-        const atlas = await res.json();
-        const baseTexture = PIXI.BaseTexture.from(numberPngUrl);
+        const numberRes = await fetch(numberJsonUrl);
+        const numberAtlas = await numberRes.json();
+        const numberBaseTexture = PIXI.BaseTexture.from(numberPngUrl);
+        this.parseAtlas(numberAtlas, numberBaseTexture);
+
+        const boomRes = await fetch(boomJsonUrl);
+        const boomAtlas = await boomRes.json();
+        const boomBaseTexture = PIXI.BaseTexture.from(boomPngUrl);
+        this.parseAtlas(boomAtlas, boomBaseTexture);
+
+        const background = PIXI.BaseTexture.from(backgroundPng);
+        this.textures['background.png'] = new PIXI.Texture(background);
+    }
+
+    private parseAtlas(atlas:any, baseTexture:any){
         const frames = atlas.frames;
         for (const key in frames)
         {
@@ -28,9 +42,6 @@ export class WebAssetsManager implements IAssetsManager
             );
             this.textures[key] = texture;
         }
-
-        const background = PIXI.BaseTexture.from(backgroundPng);
-        this.textures['background.png'] = new PIXI.Texture(background);
     }
 
     public GetSpriteFromNumberAtlas(key: string): PIXI.Sprite
