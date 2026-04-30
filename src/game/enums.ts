@@ -1,5 +1,4 @@
-export enum Orientation
-{
-    Landscape,
-    Portrait,
+export enum Orientation {
+  Landscape,
+  Portrait,
 }

@@ -26,13 +26,13 @@ window.onload = async () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     container.Resize(window.innerWidth, window.innerHeight);
   });
-  
+
   container.Resize(window.innerWidth, window.innerHeight);
   container.Draw();
   // container.pivot.set(container.width / 2, container.height / 2);
   app.ticker.add(() => {
     // console.log('ticker delta: ', app.ticker.elapsedMS);
-    
+
     container.Update(app.ticker.elapsedMS);
   });
 

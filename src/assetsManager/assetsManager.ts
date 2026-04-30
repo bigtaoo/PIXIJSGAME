@@ -1,4 +1,4 @@
-import { IAssetsManager } from "./IAssetsManager";
+import { IAssetsManager } from './IAssetsManager';
 
 let instance: IAssetsManager;
 
