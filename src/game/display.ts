@@ -36,6 +36,7 @@ class Display
                 this.numbers?.HideNumber(this.slectedIndex);
                 this.numbers?.HideNumber(index);
                 this.effects?.PlayEffect(index);
+                this.effects?.PlayEffect(this.slectedIndex);
                 this.slectedIndex = -1;
             }else{
                 this.slectedIndex = index;

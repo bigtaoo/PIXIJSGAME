@@ -68,6 +68,10 @@ export class WechatAssetsManager implements IAssetsManager
 
         return new PIXI.Sprite(texture);
     }
+
+    public GetTexture(key: string): PIXI.Texture {
+        return this.textures[key];
+    }
 }
 
 // export const wechatAssetsManager = new WechatAssetsManager();

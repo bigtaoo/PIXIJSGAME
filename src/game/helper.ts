@@ -32,9 +32,10 @@ export const index = (x: number, y: number): number => {
 }
 
 export const get_pos = (ix: number) : any => {
-    const w = ix / 1000;
+    const w = Math.floor(ix / 1000);
     const h = ix - w * 1000;
     const x = w * grid_size() + offset_x();
     const y = h * grid_size() + OFFSET_Y;
+    // console.log(`get pos x: ${x}, y: ${y}, index: ${ix}, w: ${w}, h: ${h}`)
     return {x, y};
 }

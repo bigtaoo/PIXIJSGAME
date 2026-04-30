@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { Effect } from './effect';
 import { AssetsManager } from '../assetsManager/assetsManager';
-import { get_pos } from './helper';
+import { get_pos, grid_size } from './helper';
 
 export class EffectManager
 {
@@ -16,6 +16,8 @@ export class EffectManager
         let effect = this.effects.find(e => !e.IsVisible());
         if (effect === undefined){
             const sprite = AssetsManager().GetSpriteFromNumberAtlas('boom-1.png');
+            sprite.width = grid_size();
+            sprite.height = grid_size();
             this.container.addChild(sprite);
             effect = new Effect(sprite);
             this.effects.push(effect);

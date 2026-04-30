@@ -55,6 +55,10 @@ export class WebAssetsManager implements IAssetsManager
 
         return new PIXI.Sprite(texture);
     }
+
+    public GetTexture(key: string) : PIXI.Texture{
+        return this.textures[key];
+    }
 }
 
 // export const webAssetsManager = new WebAssetsManager();
