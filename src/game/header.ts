@@ -24,8 +24,6 @@ export class Header extends PIXI.Container {
     test.height = 3;
 
     if (config.Orientation === Orientation.Landscape) {
-      // this.width = Math.floor(config.Width * 2 / 3);
-      // this.height = 500;
       this.x = 350;
       this.y = 10;
       console.log(`header landscape width: ${this.width}, x: ${this.x}`);
@@ -33,10 +31,54 @@ export class Header extends PIXI.Container {
       this.background.width = 1350;
       this.background.height = 250;
     }
+
+    this.drawTip();
   }
 
   private drawTip(): void {
+    const width = 60;
+    const height = 80;
+    const y = 85;
     const first = Math.floor((Math.random() * 10000) % 9) + 1;
     const second = 10 - first;
+    const firstSprite = AssetsManager().GetSpriteFromNumberAtlas(`${first}.png`);
+    this.addChild(firstSprite);
+    firstSprite.width = width;
+    firstSprite.height = height;
+    firstSprite.y = y;
+    const secondSprite = AssetsManager().GetSpriteFromNumberAtlas(`${second}.png`);
+    this.addChild(secondSprite);
+    secondSprite.width = width;
+    secondSprite.height = height;
+    secondSprite.y = y;
+    const plus = AssetsManager().GetSpriteFromNumberAtlas('plus.png');
+    this.addChild(plus);
+    plus.width = width;
+    plus.height = height;
+    plus.y = y;
+    const num1 = AssetsManager().GetSpriteFromNumberAtlas('1.png');
+    this.addChild(num1);
+    num1.width = width;
+    num1.height = height;
+    num1.y = y;
+    const num2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
+    this.addChild(num2);
+    num2.width = width;
+    num2.height = height;
+    num2.y = y;
+    const equal = AssetsManager().GetSpriteFromNumberAtlas('equa.png');
+    this.addChild(equal);
+    equal.width = width;
+    equal.height = height;
+    equal.y = y;
+
+    const s = 50;
+    const add = 70;
+    firstSprite.x = s;
+    plus.x = s + add;
+    secondSprite.x = s + add * 2;
+    equal.x = s + add * 3;
+    num1.x = s + add * 4;
+    num2.x = s + add * 5;
   }
 }
