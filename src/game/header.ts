@@ -5,6 +5,8 @@ import { Orientation } from './enums';
 
 export class Header extends PIXI.Container {
   private background: PIXI.NineSlicePlane;
+  private time1: PIXI.Sprite;
+  private time2: PIXI.Sprite;
 
   constructor() {
     super();
@@ -32,7 +34,30 @@ export class Header extends PIXI.Container {
       this.background.height = 250;
     }
 
+    this.time1 = AssetsManager().GetSpriteFromNumberAtlas('1.png');
+    this.time2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
     this.drawTip();
+    this.drawTime();
+  }
+
+  private drawTime(): void {
+    this.time1.width = 100;
+    this.time1.height = 120;
+    this.time2.width = 100;
+    this.time2.height = 120;
+    this.addChild(this.time1);
+    this.addChild(this.time2);
+    this.time1.y = 73;
+    this.time2.y = 73;
+    this.time1.x = 800;
+    this.time2.x = 920;
+
+    const clock = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
+    this.addChild(clock);
+    clock.width = 170;
+    clock.height = 170;
+    clock.x = 610;
+    clock.y = 55;
   }
 
   private drawTip(): void {
