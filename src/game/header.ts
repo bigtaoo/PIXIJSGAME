@@ -40,6 +40,8 @@ export class Header extends PIXI.Container {
     this.drawTime();
   }
 
+  private drawSettings(): void {}
+
   private drawTime(): void {
     this.time1.width = 100;
     this.time1.height = 120;
@@ -56,13 +58,13 @@ export class Header extends PIXI.Container {
     this.addChild(clock);
     clock.width = 170;
     clock.height = 170;
-    clock.x = 610;
-    clock.y = 55;
+    clock.x = 600;
+    clock.y = 50;
   }
 
   private drawTip(): void {
-    const width = 60;
-    const height = 80;
+    const width = 80;
+    const height = 100;
     const y = 85;
     const first = Math.floor((Math.random() * 10000) % 9) + 1;
     const second = 10 - first;
@@ -97,8 +99,8 @@ export class Header extends PIXI.Container {
     equal.height = height;
     equal.y = y;
 
-    const s = 50;
-    const add = 70;
+    const s = 70;
+    const add = 85;
     firstSprite.x = s;
     plus.x = s + add;
     secondSprite.x = s + add * 2;
