@@ -65,6 +65,9 @@ class Display {
   }
 
   public OnClick(index: number) {
+    if (config.isGameEnd) {
+      return;
+    }
     // console.log('clicked index: ', index);
     if (this.slectedIndex === -1) {
       this.slectedIndex = index;
