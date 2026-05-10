@@ -3,12 +3,9 @@ import { AssetsManager } from '../assetsManager/assetsManager';
 import { OFFSET_Y } from './consts';
 import { grid_count_h, grid_count_w, grid_size, index, offset_x } from './helper';
 import { logic } from './logic';
-import { GameResult } from './gameResult';
 
 export class Numbers extends PIXI.Container {
   private numberSprites: Map<number, PIXI.Sprite> = new Map();
-
-  private gameResult: GameResult | undefined;
 
   constructor() {
     super();
@@ -31,29 +28,12 @@ export class Numbers extends PIXI.Container {
         this.numberSprites.set(s, sprite);
       }
     }
-
-    this.AddGameResult(true);
   }
 
   public HideNumber(index: number): void {
     const sprite = this.numberSprites.get(index);
     if (sprite !== undefined) {
       sprite.visible = false;
-    }
-  }
-
-  public AddGameResult(win: boolean): void {
-    if (this.gameResult === undefined) {
-      this.gameResult = new GameResult(win);
-    }
-    this.addChild(this.gameResult);
-  }
-
-  public RemoveGameResult(): void {
-    if (this.gameResult !== undefined) {
-      this.removeChild(this.gameResult);
-      this.gameResult.destroy({ children: true });
-      this.gameResult = undefined;
     }
   }
 

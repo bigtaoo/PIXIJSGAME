@@ -2,26 +2,14 @@ import * as PIXI from 'pixi.js-legacy';
 import { GAME_HEIGHT, GAME_WIDTH } from './consts';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { config } from './config';
-import { Numbers } from './numbers';
-import { Grid } from './grid';
 import { Orientation } from './enums';
 import { display } from './display';
-import { EffectManager } from './effectManager';
-import { Header } from './header';
 
 export class GameScene extends PIXI.Container {
-  private numbers: Numbers;
-  private grids: Grid;
-  private effectManager: EffectManager;
-
   constructor() {
     super();
 
-    this.numbers = new Numbers();
-    this.grids = new Grid();
-    this.effectManager = new EffectManager();
-
-    display.Initialize(this.grids, this.numbers, this.effectManager);
+    display.Initialize(this);
   }
 
   public Resize(windowWidth: number, windowHeight: number): void {
@@ -49,18 +37,11 @@ export class GameScene extends PIXI.Container {
 
   public Draw(): void {
     this.drawBackground();
-    this.addChild(this.grids);
-    this.grids.DrawGrids();
-    this.addChild(this.numbers);
-    this.numbers.DrawNumbers();
-
-    const header = new Header();
-    this.addChild(header);
-    this.addChild(this.effectManager);
+    display.Draw();
   }
 
   public Update(delta: number): void {
-    this.effectManager.Update(delta);
+    display.Update(delta);
   }
 
   private drawBackground(): void {

@@ -1,21 +1,54 @@
+import * as PIXI from 'pixi.js-legacy';
 import { config } from './config';
 import { EffectManager } from './effectManager';
 import { Grid } from './grid';
 import { logic } from './logic';
 import { Numbers } from './numbers';
+import { Header } from './header';
+import { GameResult } from './gameResult';
 
 class Display {
   private grids: Grid | undefined;
   private numbers: Numbers | undefined;
   private effects: EffectManager | undefined;
+  private header: Header | undefined;
+  private gameResult: GameResult | undefined;
+
   private slectedIndex: number = -1;
+  private gameScene: PIXI.Container | undefined;
 
   constructor() {}
 
-  public Initialize(g: Grid, n: Numbers, e: EffectManager): void {
-    this.grids = g;
-    this.numbers = n;
-    this.effects = e;
+  public Initialize(gameScene: PIXI.Container): void {
+    this.gameScene = gameScene;
+  }
+
+  public Draw() {
+    if (!this.grids) {
+      this.grids = new Grid();
+      this.gameScene?.addChild(this.grids);
+    }
+    this.grids.DrawGrids();
+
+    if (!this.numbers) {
+      this.numbers = new Numbers();
+      this.gameScene?.addChild(this.numbers);
+    }
+    this.numbers.DrawNumbers();
+
+    if (!this.header) {
+      this.header = new Header();
+      this.gameScene?.addChild(this.header);
+    }
+
+    if (!this.effects) {
+      this.effects = new EffectManager();
+      this.gameScene?.addChild(this.effects);
+    }
+  }
+
+  public Update(delta: number) {
+    this.effects?.Update(delta);
   }
 
   public OnClick(index: number) {
