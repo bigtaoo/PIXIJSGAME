@@ -68,6 +68,7 @@ class Display {
   public NewGame(): void {
     config.GameTime = 0;
     config.isGameEnd = false;
+    config.TimeCount = 30 * 1000;
     logic.Initialize(config.Target);
     this.grids?.NewGame();
     this.numbers?.NewGame();
@@ -97,9 +98,11 @@ class Display {
         logic.removeNumber(this.slectedIndex);
         logic.removeNumber(index);
         this.slectedIndex = -1;
+        config.TimeCount += 1 * 1000;
 
         if (logic.isRemovedAllNumber()) {
           config.isGameEnd = true;
+          this.gameResult!.visible = true;
           this.gameResult?.Draw(true);
         }
       } else {
