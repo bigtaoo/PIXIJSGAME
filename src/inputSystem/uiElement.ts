@@ -26,4 +26,8 @@ export class UIElement {
       this.onTap();
     }
   }
+
+  public isSpriteVisible(): boolean {
+    return this.sprite.visible;
+  }
 }

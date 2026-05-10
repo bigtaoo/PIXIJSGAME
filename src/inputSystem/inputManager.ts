@@ -40,7 +40,7 @@ export class InputManager {
     for (let i = this.uiElements.length - 1; i >= 0; i--) {
       const el = this.uiElements[i];
 
-      if (!el.visible) continue;
+      if (!el.visible || !el.isSpriteVisible()) continue;
 
       if (el.contains(e.x, e.y)) {
         el.handle(e);

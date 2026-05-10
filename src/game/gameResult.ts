@@ -45,6 +45,7 @@ export class GameResult extends PIXI.Container {
           //   if (!this.retry!.visible) {
           //     return;
           //   }
+          console.log('retry new game!!');
           this.startNewGame();
         },
       });
@@ -76,5 +77,7 @@ export class GameResult extends PIXI.Container {
     config.GameTime = 0;
     config.isGameEnd = false;
     this.visible = false;
+    this.retry!.visible = false;
+    this.next!.visible = false;
   }
 }

@@ -34,10 +34,10 @@ export class Grid extends PIXI.Container {
           sprite: s,
           onTap: () => {
             // console.log('clicked number: ', c);
-            if (!s.visible) {
-              // console.log('invisible grid.');
-              return;
-            }
+            // if (!s.visible) {
+            //   // console.log('invisible grid.');
+            //   return;
+            // }
             display.OnClick(c);
           },
         });
