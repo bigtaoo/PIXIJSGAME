@@ -29,7 +29,7 @@ export class Grid extends PIXI.Container {
         this.addChild(s);
         this.Grids.set(c, s);
 
-        var uiButton = new UIElement({
+        const uiButton = new UIElement({
           zIndex: 10,
           sprite: s,
           onTap: () => {

@@ -1,5 +1,8 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
+import { config } from './config';
+import { UIElement } from '../inputSystem/uiElement';
+import { Input } from '../inputSystem/inputManager';
 
 export class GameResult extends PIXI.Container {
   private background: PIXI.Sprite | undefined;
@@ -35,6 +38,17 @@ export class GameResult extends PIXI.Container {
       this.retry.x = x;
       this.retry.y = y;
       this.addChild(this.retry);
+      const uiButton = new UIElement({
+        zIndex: 10,
+        sprite: this.retry,
+        onTap: () => {
+          //   if (!this.retry!.visible) {
+          //     return;
+          //   }
+          this.startNewGame();
+        },
+      });
+      Input.registerUI(uiButton);
     }
 
     if (!this.next) {
@@ -44,6 +58,23 @@ export class GameResult extends PIXI.Container {
       this.next.x = x;
       this.next.y = y;
       this.addChild(this.next);
+      const uiButton = new UIElement({
+        zIndex: 10,
+        sprite: this.next,
+        onTap: () => {
+          if (!this.next!.visible) {
+            return;
+          }
+          this.startNewGame();
+        },
+      });
+      Input.registerUI(uiButton);
     }
+  }
+
+  private startNewGame(): void {
+    config.GameTime = 0;
+    config.isGameEnd = false;
+    this.visible = false;
   }
 }
