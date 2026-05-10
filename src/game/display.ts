@@ -45,6 +45,13 @@ class Display {
       this.effects = new EffectManager();
       this.gameScene?.addChild(this.effects);
     }
+
+    if (!this.gameResult) {
+      this.gameResult = new GameResult();
+      this.gameScene?.addChild(this.gameResult);
+    }
+
+    // console.log('children: ', this.gameScene?.children);
   }
 
   public Update(delta: number) {
