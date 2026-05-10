@@ -3,13 +3,15 @@ import { AssetsManager } from '../assetsManager/assetsManager';
 import { OFFSET_Y } from './consts';
 import { grid_count_h, grid_count_w, grid_size, index, offset_x } from './helper';
 import { logic } from './logic';
+import { GameResult } from './gameResult';
 
-export class Numbers {
-  private Container: PIXI.Container;
+export class Numbers extends PIXI.Container {
   private numberSprites: Map<number, PIXI.Sprite> = new Map();
 
-  constructor(container: PIXI.Container) {
-    this.Container = container;
+  private gameResult: GameResult | undefined;
+
+  constructor() {
+    super();
   }
 
   public DrawNumbers(): void {
@@ -29,6 +31,8 @@ export class Numbers {
         this.numberSprites.set(s, sprite);
       }
     }
+
+    this.AddGameResult(true);
   }
 
   public HideNumber(index: number): void {
@@ -38,13 +42,28 @@ export class Numbers {
     }
   }
 
+  public AddGameResult(win: boolean): void {
+    if (this.gameResult === undefined) {
+      this.gameResult = new GameResult(win);
+    }
+    this.addChild(this.gameResult);
+  }
+
+  public RemoveGameResult(): void {
+    if (this.gameResult !== undefined) {
+      this.removeChild(this.gameResult);
+      this.gameResult.destroy({ children: true });
+      this.gameResult = undefined;
+    }
+  }
+
   private drawNumber(num: number, x: number, y: number): PIXI.Sprite {
     const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
     picture.width = 80;
     picture.height = 80;
     picture.x = x + offset_x() + 20;
     picture.y = y + OFFSET_Y + 20;
-    this.Container.addChild(picture);
+    this.addChild(picture);
 
     return picture;
   }

@@ -17,9 +17,9 @@ export class GameScene extends PIXI.Container {
   constructor() {
     super();
 
-    this.numbers = new Numbers(this);
-    this.grids = new Grid(this);
-    this.effectManager = new EffectManager(this);
+    this.numbers = new Numbers();
+    this.grids = new Grid();
+    this.effectManager = new EffectManager();
 
     display.Initialize(this.grids, this.numbers, this.effectManager);
   }
@@ -49,11 +49,14 @@ export class GameScene extends PIXI.Container {
 
   public Draw(): void {
     this.drawBackground();
+    this.addChild(this.grids);
     this.grids.DrawGrids();
+    this.addChild(this.numbers);
     this.numbers.DrawNumbers();
 
     const header = new Header();
     this.addChild(header);
+    this.addChild(this.effectManager);
   }
 
   public Update(delta: number): void {

@@ -3,12 +3,11 @@ import { Effect } from './effect';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { get_pos, grid_size } from './helper';
 
-export class EffectManager {
-  private container: PIXI.Container;
+export class EffectManager extends PIXI.Container {
   private effects: Effect[] = [];
 
-  constructor(container: PIXI.Container) {
-    this.container = container;
+  constructor() {
+    super();
   }
 
   public PlayEffect(index: number) {
@@ -17,7 +16,7 @@ export class EffectManager {
       const sprite = AssetsManager().GetSpriteFromNumberAtlas('boom-1.png');
       sprite.width = grid_size();
       sprite.height = grid_size();
-      this.container.addChild(sprite);
+      this.addChild(sprite);
       effect = new Effect(sprite);
       this.effects.push(effect);
     }

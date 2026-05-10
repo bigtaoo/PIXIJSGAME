@@ -38,6 +38,19 @@ class Logic {
     return this.numbers.get(index) ?? 0;
   }
 
+  public removeNumber(index: number): void {
+    this.numbers.set(index, 0);
+  }
+
+  public isRemovedAllNumber(): boolean {
+    for (const v of this.numbers.values()) {
+      if (v !== 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private shuffle(arr: number[]): void {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

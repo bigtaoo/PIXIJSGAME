@@ -36,7 +36,12 @@ class Display {
         this.numbers?.HideNumber(index);
         this.effects?.PlayEffect(index);
         this.effects?.PlayEffect(this.slectedIndex);
+        logic.removeNumber(this.slectedIndex);
+        logic.removeNumber(index);
         this.slectedIndex = -1;
+
+        if (logic.isRemovedAllNumber()) {
+        }
       } else {
         this.slectedIndex = index;
         this.grids?.DrawSelectedImage(index);
