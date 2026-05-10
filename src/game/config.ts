@@ -8,6 +8,7 @@ class Config {
   public Target: number = 10;
   public TimeCount: number = 30 * 1000;
   public GameTime: number = 0;
+  public isGameEnd: boolean = false;
 }
 
 export const config = new Config();

@@ -42,6 +42,9 @@ export class Header extends PIXI.Container {
   }
 
   public UpdateTime(): void {
+    if (config.isGameEnd) {
+      return;
+    }
     const remainingTime = Math.floor((config.TimeCount - config.GameTime) / 1000);
     if (remainingTime === this.displayTime) {
       return;

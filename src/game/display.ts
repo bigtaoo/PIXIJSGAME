@@ -57,6 +57,11 @@ class Display {
   public Update(delta: number) {
     this.effects?.Update(delta);
     this.header?.UpdateTime();
+
+    if (config.TimeCount - config.GameTime < 100) {
+      config.isGameEnd = true;
+      this.gameResult?.Draw(false);
+    }
   }
 
   public OnClick(index: number) {
@@ -82,6 +87,8 @@ class Display {
         this.slectedIndex = -1;
 
         if (logic.isRemovedAllNumber()) {
+          config.isGameEnd = true;
+          this.gameResult?.Draw(true);
         }
       } else {
         this.slectedIndex = index;
