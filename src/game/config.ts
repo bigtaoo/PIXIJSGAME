@@ -9,6 +9,7 @@ class Config {
   public TimeCount: number = 30 * 1000;
   public GameTime: number = 0;
   public isGameEnd: boolean = false;
+  public isPause: boolean = false;
 }
 
 export const config = new Config();

@@ -6,6 +6,7 @@ import { logic } from './logic';
 import { Numbers } from './numbers';
 import { Header } from './header';
 import { GameResult } from './gameResult';
+import { Settings } from './settings';
 
 class Display {
   private grids: Grid | undefined;
@@ -13,6 +14,7 @@ class Display {
   private effects: EffectManager | undefined;
   private header: Header | undefined;
   private gameResult: GameResult | undefined;
+  private settings: Settings | undefined;
 
   private slectedIndex: number = -1;
   private gameScene: PIXI.Container | undefined;
@@ -62,7 +64,18 @@ class Display {
       config.isGameEnd = true;
       this.gameResult!.visible = true;
       this.gameResult?.Draw(false);
+      this.slectedIndex = -1;
+      this.grids?.HideSelctedImage();
     }
+  }
+
+  public OpenSettings(): void {
+    if (!this.settings) {
+      this.settings = new Settings();
+      this.gameScene?.addChild(this.settings);
+    }
+    this.settings.visible = true;
+    config.isPause = true;
   }
 
   public NewGame(): void {
@@ -75,7 +88,7 @@ class Display {
   }
 
   public OnClick(index: number) {
-    if (config.isGameEnd) {
+    if (config.isGameEnd || config.isPause) {
       return;
     }
     // console.log('clicked index: ', index);

@@ -2,6 +2,9 @@ import * as PIXI from 'pixi.js-legacy';
 import { AssetsManager } from '../assetsManager/assetsManager';
 import { config } from './config';
 import { Orientation } from './enums';
+import { UIElement } from '../inputSystem/uiElement';
+import { display } from './display';
+import { Input } from '../inputSystem/inputManager';
 
 export class Header extends PIXI.Container {
   private background: PIXI.NineSlicePlane;
@@ -39,6 +42,7 @@ export class Header extends PIXI.Container {
     this.time2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
     this.drawTip();
     this.drawTime();
+    this.drawSettings();
   }
 
   public UpdateTime(): void {
@@ -62,7 +66,29 @@ export class Header extends PIXI.Container {
     }
   }
 
-  private drawSettings(): void {}
+  private drawSettings(): void {
+    const settings = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
+    settings.width = 120;
+    settings.height = 120;
+    settings.x = 1050;
+    settings.y = 70;
+    this.addChild(settings);
+    const uiButton = new UIElement({
+      zIndex: 10,
+      sprite: settings,
+      onTap: () => {
+        display.OpenSettings();
+      },
+    });
+    Input.registerUI(uiButton);
+
+    const rankings = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
+    rankings.width = 120;
+    rankings.height = 120;
+    rankings.x = 1170;
+    rankings.y = 70;
+    this.addChild(rankings);
+  }
 
   private drawTime(): void {
     this.time1.width = 100;
