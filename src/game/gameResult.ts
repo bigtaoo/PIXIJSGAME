@@ -3,6 +3,7 @@ import { AssetsManager } from '../assetsManager/assetsManager';
 import { config } from './config';
 import { UIElement } from '../inputSystem/uiElement';
 import { Input } from '../inputSystem/inputManager';
+import { display } from './display';
 
 export class GameResult extends PIXI.Container {
   private background: PIXI.Sprite | undefined;
@@ -74,8 +75,7 @@ export class GameResult extends PIXI.Container {
   }
 
   private startNewGame(): void {
-    config.GameTime = 0;
-    config.isGameEnd = false;
+    display.NewGame();
     this.visible = false;
     this.retry!.visible = false;
     this.next!.visible = false;

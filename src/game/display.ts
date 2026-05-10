@@ -65,6 +65,11 @@ class Display {
     }
   }
 
+  public NewGame(): void {
+    config.GameTime = 0;
+    config.isGameEnd = false;
+  }
+
   public OnClick(index: number) {
     if (config.isGameEnd) {
       return;
