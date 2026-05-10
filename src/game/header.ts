@@ -77,6 +77,9 @@ export class Header extends PIXI.Container {
       zIndex: 10,
       sprite: settings,
       onTap: () => {
+        if (config.isPause) {
+          return;
+        }
         display.OpenSettings();
       },
     });
