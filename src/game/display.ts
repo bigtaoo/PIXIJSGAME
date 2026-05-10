@@ -60,6 +60,7 @@ class Display {
 
     if (config.TimeCount - config.GameTime < 100) {
       config.isGameEnd = true;
+      this.gameResult!.visible = true;
       this.gameResult?.Draw(false);
     }
   }
