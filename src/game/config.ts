@@ -6,7 +6,8 @@ class Config {
   public Scale: number = 1;
   public Orientation: Orientation = Orientation.Portrait;
   public Target: number = 10;
-  public TimeCount: number = 30;
+  public TimeCount: number = 30 * 1000;
+  public GameTime: number = 0;
 }
 
 export const config = new Config();

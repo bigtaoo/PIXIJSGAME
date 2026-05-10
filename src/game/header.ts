@@ -7,6 +7,7 @@ export class Header extends PIXI.Container {
   private background: PIXI.NineSlicePlane;
   private time1: PIXI.Sprite;
   private time2: PIXI.Sprite;
+  private displayTime: number = 0;
 
   constructor() {
     super();
@@ -38,6 +39,24 @@ export class Header extends PIXI.Container {
     this.time2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
     this.drawTip();
     this.drawTime();
+  }
+
+  public UpdateTime(): void {
+    const remainingTime = Math.floor((config.TimeCount - config.GameTime) / 1000);
+    if (remainingTime === this.displayTime) {
+      return;
+    }
+    this.displayTime = remainingTime;
+    if (this.displayTime < 10) {
+      this.time2.visible = false;
+      this.time1.texture = AssetsManager().GetTexture(`${this.displayTime}.png`);
+    } else if (this.displayTime >= 10 && this.displayTime < 100) {
+      const ten = Math.floor(this.displayTime / 10);
+      const digit = this.displayTime - ten * 10;
+      this.time2.visible = true;
+      this.time1.texture = AssetsManager().GetTexture(`${ten}.png`);
+      this.time2.texture = AssetsManager().GetTexture(`${digit}.png`);
+    }
   }
 
   private drawSettings(): void {}

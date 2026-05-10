@@ -56,6 +56,7 @@ class Display {
 
   public Update(delta: number) {
     this.effects?.Update(delta);
+    this.header?.UpdateTime();
   }
 
   public OnClick(index: number) {

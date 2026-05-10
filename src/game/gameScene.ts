@@ -41,6 +41,7 @@ export class GameScene extends PIXI.Container {
   }
 
   public Update(delta: number): void {
+    config.GameTime += delta;
     display.Update(delta);
   }
 
