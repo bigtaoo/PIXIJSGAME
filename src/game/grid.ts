@@ -33,11 +33,6 @@ export class Grid extends PIXI.Container {
           zIndex: 10,
           sprite: s,
           onTap: () => {
-            // console.log('clicked number: ', c);
-            // if (!s.visible) {
-            //   // console.log('invisible grid.');
-            //   return;
-            // }
             display.OnClick(c);
           },
         });
@@ -69,8 +64,14 @@ export class Grid extends PIXI.Container {
 
   public HideGrid(index: number): void {
     const grid = this.Grids.get(index);
-    if (grid !== undefined) {
+    if (grid) {
       grid.visible = false;
+    }
+  }
+
+  public NewGame(): void {
+    for (const v of this.Grids.values()) {
+      v.visible = true;
     }
   }
 }

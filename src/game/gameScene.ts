@@ -4,6 +4,7 @@ import { AssetsManager } from '../assetsManager/assetsManager';
 import { config } from './config';
 import { Orientation } from './enums';
 import { display } from './display';
+import { logic } from './logic';
 
 export class GameScene extends PIXI.Container {
   constructor() {
@@ -36,6 +37,7 @@ export class GameScene extends PIXI.Container {
   }
 
   public Draw(): void {
+    logic.Initialize(config.Target);
     this.drawBackground();
     display.Draw();
   }

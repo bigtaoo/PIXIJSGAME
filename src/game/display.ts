@@ -68,6 +68,9 @@ class Display {
   public NewGame(): void {
     config.GameTime = 0;
     config.isGameEnd = false;
+    logic.Initialize(config.Target);
+    this.grids?.NewGame();
+    this.numbers?.NewGame();
   }
 
   public OnClick(index: number) {
