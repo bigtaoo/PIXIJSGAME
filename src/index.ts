@@ -4,6 +4,8 @@ import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
 import { GameScene } from './game/gameScene';
+import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
+import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -14,6 +16,9 @@ window.onload = async () => {
 
   const canvas = app.view as HTMLCanvasElement;
   document.body.appendChild(canvas);
+
+  // 最先初始化存储，其他系统可能在启动时读取存档
+  setPlayerPrefsImpl(new WebPlayerPrefs());
 
   const assets = new WebAssetsManager();
   await assets.loadAssets();

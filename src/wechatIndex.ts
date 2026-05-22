@@ -4,6 +4,8 @@ import { InputManager } from './inputSystem/inputManager';
 import { setupWeChatInput } from './inputSystem/wechatAdapter';
 import { AppContext } from './game/appContext';
 import { GameScene } from './game/gameScene';
+import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
+import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
 
 async function Init() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -21,6 +23,9 @@ async function Init() {
     backgroundColor: 0x1099bb,
     forceCanvas: true,
   });
+
+  // 最先初始化存储
+  setPlayerPrefsImpl(new WechatPlayerPrefs());
 
   const assets = new WechatAssetsManager();
   await assets.loadAssets();
