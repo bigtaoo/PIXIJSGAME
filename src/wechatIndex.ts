@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js-legacy';
 import { WechatAssetsManager } from './assetsManager/wechatAssetsManager';
-import { setAssetsManager } from './assetsManager/assetsManager';
-import { GameScene } from './game/gameScene';
-import { Input } from './inputSystem/inputManager';
+import { InputManager } from './inputSystem/inputManager';
 import { setupWeChatInput } from './inputSystem/wechatAdapter';
+import { AppContext } from './game/appContext';
+import { GameScene } from './game/gameScene';
 
 async function Init() {
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
@@ -12,10 +12,7 @@ async function Init() {
 
   const canvas = wx.createCanvas();
   const globalObj: any = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
-  // console.log('global obj: ', globalObj);
-  if (globalObj) {
-    globalObj.canvas = canvas;
-  }
+  if (globalObj) globalObj.canvas = canvas;
 
   const app = new PIXI.Application({
     view: canvas,
@@ -25,18 +22,19 @@ async function Init() {
     forceCanvas: true,
   });
 
-  const wechatAssetsManager = new WechatAssetsManager();
-  await wechatAssetsManager.loadAssets();
-  setAssetsManager(wechatAssetsManager);
+  const assets = new WechatAssetsManager();
+  await assets.loadAssets();
 
-  const container = new GameScene();
-  app.stage.addChild(container);
+  const input = new InputManager();
+  setupWeChatInput(input);
 
-  container.Resize(width, height);
-  container.Draw();
+  const ctx: AppContext = { assets, input };
 
-  // wx.onTouchEnd((res) => {console.log('on touch end: ', res.touches, ' x: ', res.changedTouches)})
-  setupWeChatInput(Input);
+  const scene = new GameScene(ctx);
+  app.stage.addChild(scene);
+  scene.resize(width, height);
+
+  app.ticker.add(() => scene.update(app.ticker.elapsedMS));
 }
 
 Init();

@@ -1,83 +1,62 @@
 import * as PIXI from 'pixi.js-legacy';
-import { AssetsManager } from '../assetsManager/assetsManager';
-import { config } from './config';
+import { AppContext } from './appContext';
 import { UIElement } from '../inputSystem/uiElement';
-import { Input } from '../inputSystem/inputManager';
-import { display } from './display';
 
-export class GameResult extends PIXI.Container {
-  private background: PIXI.Sprite | undefined;
-  private retry: PIXI.Sprite | undefined;
-  private next: PIXI.Sprite | undefined;
-  constructor() {
+/**
+ * 游戏结果浮层（胜利/失败）。
+ * 重构：移除对 display/config 的全局引用，改用回调函数。
+ * 构造时即创建所有子节点，可见性由 show()/hide() 控制。
+ */
+export class GameResultOverlay extends PIXI.Container {
+  private retryBtn: PIXI.Sprite;
+  private nextBtn: PIXI.Sprite;
+
+  constructor(
+    ctx: AppContext,
+    onRetry: () => void,
+    onNext: () => void,
+  ) {
     super();
-  }
-
-  public Draw(win: boolean): void {
-    this.ensureResource();
-
-    this.retry!.visible = !win;
-    this.next!.visible = win;
-  }
-
-  private ensureResource(): void {
-    if (!this.background) {
-      this.background = AssetsManager().GetSpriteFromNumberAtlas('note.png');
-      this.background.width = 600;
-      this.background.height = 700;
-      this.background.x = 720;
-      this.background.y = 270;
-      this.addChild(this.background);
-    }
-
-    const x = 830;
-    const y = 410;
-    if (!this.retry) {
-      this.retry = AssetsManager().GetSpriteFromNumberAtlas('retry.png');
-      this.retry.width = 400;
-      this.retry.height = 400;
-      this.retry.x = x;
-      this.retry.y = y;
-      this.addChild(this.retry);
-      const uiButton = new UIElement({
-        zIndex: 10,
-        sprite: this.retry,
-        onTap: () => {
-          //   if (!this.retry!.visible) {
-          //     return;
-          //   }
-          console.log('retry new game!!');
-          this.startNewGame();
-        },
-      });
-      Input.registerUI(uiButton);
-    }
-
-    if (!this.next) {
-      this.next = AssetsManager().GetSpriteFromNumberAtlas('next.png');
-      this.next.width = 400;
-      this.next.height = 400;
-      this.next.x = x;
-      this.next.y = y;
-      this.addChild(this.next);
-      const uiButton = new UIElement({
-        zIndex: 10,
-        sprite: this.next,
-        onTap: () => {
-          if (!this.next!.visible) {
-            return;
-          }
-          this.startNewGame();
-        },
-      });
-      Input.registerUI(uiButton);
-    }
-  }
-
-  private startNewGame(): void {
-    display.NewGame();
     this.visible = false;
-    this.retry!.visible = false;
-    this.next!.visible = false;
+
+    const bg = ctx.assets.GetSpriteFromNumberAtlas('note.png');
+    bg.width = 600;
+    bg.height = 700;
+    bg.x = 720;
+    bg.y = 270;
+    this.addChild(bg);
+
+    const btnX = 830;
+    const btnY = 410;
+
+    this.retryBtn = ctx.assets.GetSpriteFromNumberAtlas('retry.png');
+    this.retryBtn.width = 400;
+    this.retryBtn.height = 400;
+    this.retryBtn.x = btnX;
+    this.retryBtn.y = btnY;
+    this.addChild(this.retryBtn);
+    ctx.input.registerUI(
+      new UIElement({ zIndex: 20, sprite: this.retryBtn, onTap: onRetry }),
+    );
+
+    this.nextBtn = ctx.assets.GetSpriteFromNumberAtlas('next.png');
+    this.nextBtn.width = 400;
+    this.nextBtn.height = 400;
+    this.nextBtn.x = btnX;
+    this.nextBtn.y = btnY;
+    this.addChild(this.nextBtn);
+    ctx.input.registerUI(
+      new UIElement({ zIndex: 20, sprite: this.nextBtn, onTap: onNext }),
+    );
+  }
+
+  public show(win: boolean): void {
+    this.visible = true;
+    this.retryBtn.visible = !win;
+    this.nextBtn.visible = win;
+  }
+
+  public hide(): void {
+    this.visible = false;
   }
 }

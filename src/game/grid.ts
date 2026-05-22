@@ -1,77 +1,71 @@
 import * as PIXI from 'pixi.js-legacy';
-import { grid_count_h, grid_count_w, grid_size, index, offset_x } from './helper';
-import { AssetsManager } from '../assetsManager/assetsManager';
-import { OFFSET_Y } from './consts';
+import { AppContext } from './appContext';
+import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
-import { Input } from '../inputSystem/inputManager';
-import { display } from './display';
 
 export class Grid extends PIXI.Container {
-  private Grids: Map<number, PIXI.Sprite> = new Map();
-  private selectedImage: PIXI.Sprite | undefined;
+  private cells: Map<number, PIXI.Sprite> = new Map();
+  private selectionHighlight: PIXI.Sprite | undefined;
 
-  constructor() {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly screen: ScreenConfig,
+    onCellClick: (index: number) => void,
+  ) {
     super();
+    this.buildCells(onCellClick);
   }
 
-  public DrawGrids(): void {
-    const w = grid_count_w();
-    const h = grid_count_h();
-    // console.log('grid w: ', w, ' h: ', h);
-    for (let i = 0; i < w; ++i) {
-      for (let j = 0; j < h; ++j) {
-        const c = index(i, j);
-        const s = AssetsManager().GetSpriteFromNumberAtlas('Blue.png');
-        s.x = i * grid_size() + offset_x();
-        s.y = j * grid_size() + OFFSET_Y;
-        s.width = grid_size();
-        s.height = grid_size();
-        this.addChild(s);
-        this.Grids.set(c, s);
+  private buildCells(onCellClick: (index: number) => void): void {
+    const { gridCountW: w, gridCountH: h, gridSize, offsetX, offsetY } = this.screen;
 
-        const uiButton = new UIElement({
-          zIndex: 10,
-          sprite: s,
-          onTap: () => {
-            display.OnClick(c);
-          },
-        });
-        Input.registerUI(uiButton);
+    for (let col = 0; col < w; ++col) {
+      for (let row = 0; row < h; ++row) {
+        const idx = this.screen.cellIndex(col, row);
+        const sprite = this.ctx.assets.GetSpriteFromNumberAtlas('Blue.png');
+        sprite.x = col * gridSize + offsetX;
+        sprite.y = row * gridSize + offsetY;
+        sprite.width = gridSize;
+        sprite.height = gridSize;
+        this.addChild(sprite);
+        this.cells.set(idx, sprite);
+
+        this.ctx.input.registerUI(
+          new UIElement({
+            zIndex: 10,
+            sprite,
+            onTap: () => onCellClick(idx),
+          }),
+        );
       }
     }
   }
 
-  public DrawSelectedImage(index: number): void {
-    if (this.selectedImage === undefined) {
-      this.selectedImage = AssetsManager().GetSpriteFromNumberAtlas('select.png');
-      this.selectedImage.width = grid_size();
-      this.selectedImage.height = grid_size();
-      this.addChild(this.selectedImage);
+  public showSelection(index: number): void {
+    if (!this.selectionHighlight) {
+      this.selectionHighlight = this.ctx.assets.GetSpriteFromNumberAtlas('select.png');
+      this.selectionHighlight.width = this.screen.gridSize;
+      this.selectionHighlight.height = this.screen.gridSize;
+      this.addChild(this.selectionHighlight);
     }
-    this.selectedImage.visible = true;
-    const x = Math.floor(index / 1000);
-    const y = index - x * 1000;
-    this.selectedImage.x = x * grid_size() + offset_x();
-    this.selectedImage.y = y * grid_size() + OFFSET_Y;
-    // console.log('select image x: ', x, 'y:',y, 'self: ', this.selectedImage)
+    const { x, y } = this.screen.indexToPos(index);
+    this.selectionHighlight.x = x;
+    this.selectionHighlight.y = y;
+    this.selectionHighlight.visible = true;
   }
 
-  public HideSelctedImage(): void {
-    if (this.selectedImage != undefined) {
-      this.selectedImage.visible = false;
-    }
+  public hideSelection(): void {
+    if (this.selectionHighlight) this.selectionHighlight.visible = false;
   }
 
-  public HideGrid(index: number): void {
-    const grid = this.Grids.get(index);
-    if (grid) {
-      grid.visible = false;
-    }
+  public hideCell(index: number): void {
+    const cell = this.cells.get(index);
+    if (cell) cell.visible = false;
   }
 
-  public NewGame(): void {
-    for (const v of this.Grids.values()) {
-      v.visible = true;
-    }
+  /** 新游戏时恢复所有格子并清除选中状态 */
+  public reset(): void {
+    for (const cell of this.cells.values()) cell.visible = true;
+    this.hideSelection();
   }
 }

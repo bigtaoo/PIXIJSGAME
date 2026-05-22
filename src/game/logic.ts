@@ -1,37 +1,38 @@
-import { grid_count_h, grid_count_w, index } from './helper';
+import { ScreenConfig } from './screenConfig';
 
-class Logic {
+export class Logic {
   private numbers: Map<number, number> = new Map();
 
-  public Initialize(target: number): void {
+  /**
+   * 初始化棋盘数字。
+   * 修复：确保生成的两个数字都在 1-9 范围内（原代码仅靠 target=10 保证，换 target 会出负数）
+   */
+  public initialize(screen: ScreenConfig, target: number): void {
     this.numbers.clear();
-    const w = grid_count_w();
-    const h = grid_count_h();
-    // console.log('logic w: ', w, 'h:', h);
-    const n: number[] = [];
+    const { gridCountW: w, gridCountH: h } = screen;
+    const pairs: number[] = [];
     const count = (w * h) / 2;
+
     for (let i = 0; i < count; ++i) {
-      // const rdm = Math.random() * 100000 % 9;
-      // console.log('random: ', rdm);
-      const first = Math.floor((Math.random() * 1000000) % 9) + 1;
+      // 保证 first 和 second 均落在 1-9 的有效图片范围内
+      const maxFirst = Math.min(9, target - 1);
+      const minFirst = Math.max(1, target - 9);
+      const first = minFirst + Math.floor(Math.random() * (maxFirst - minFirst + 1));
       const second = target - first;
-      n.push(first, second);
+      pairs.push(first, second);
     }
-    this.shuffle(n);
-    for (let i = 0; i < w; ++i) {
-      for (let j = 0; j < h; ++j) {
-        const s = index(i, j);
-        this.numbers.set(s, n.pop() ?? 0);
+
+    this.shuffle(pairs);
+
+    for (let col = 0; col < w; ++col) {
+      for (let row = 0; row < h; ++row) {
+        this.numbers.set(screen.cellIndex(col, row), pairs.pop()!);
       }
     }
-    // console.log('nums: ', this.numbers, ' n: ', n);
   }
 
-  public getNumber(x: number, y: number): number {
-    const s = index(x, y);
-    const v = this.numbers.get(s) ?? 0;
-    // console.log('get number, s: ', s, 'v: ', v);
-    return v;
+  public getNumber(screen: ScreenConfig, col: number, row: number): number {
+    return this.numbers.get(screen.cellIndex(col, row)) ?? 0;
   }
 
   public getNumberByIndex(index: number): number {
@@ -42,11 +43,9 @@ class Logic {
     this.numbers.set(index, 0);
   }
 
-  public isRemovedAllNumber(): boolean {
+  public isAllRemoved(): boolean {
     for (const v of this.numbers.values()) {
-      if (v !== 0) {
-        return false;
-      }
+      if (v !== 0) return false;
     }
     return true;
   }
@@ -58,5 +57,3 @@ class Logic {
     }
   }
 }
-
-export const logic = new Logic();

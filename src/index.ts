@@ -1,9 +1,9 @@
 import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
-import { setAssetsManager } from './assetsManager/assetsManager';
-import { GameScene } from './game/gameScene';
-import { Input } from './inputSystem/inputManager';
+import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
+import { AppContext } from './game/appContext';
+import { GameScene } from './game/gameScene';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -15,26 +15,25 @@ window.onload = async () => {
   const canvas = app.view as HTMLCanvasElement;
   document.body.appendChild(canvas);
 
-  const webAssetsManager = new WebAssetsManager();
-  await webAssetsManager.loadAssets();
-  setAssetsManager(webAssetsManager);
+  const assets = new WebAssetsManager();
+  await assets.loadAssets();
 
-  const container = new GameScene();
-  app.stage.addChild(container);
+  const input = new InputManager();
+  setupWebInput(canvas, input);
+
+  const ctx: AppContext = { assets, input };
+
+  const scene = new GameScene(ctx);
+  app.stage.addChild(scene);
+
+  scene.resize(window.innerWidth, window.innerHeight);
 
   window.addEventListener('resize', () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
-    container.Resize(window.innerWidth, window.innerHeight);
+    scene.resize(window.innerWidth, window.innerHeight);
   });
 
-  container.Resize(window.innerWidth, window.innerHeight);
-  container.Draw();
-  // container.pivot.set(container.width / 2, container.height / 2);
   app.ticker.add(() => {
-    // console.log('ticker delta: ', app.ticker.elapsedMS);
-
-    container.Update(app.ticker.elapsedMS);
+    scene.update(app.ticker.elapsedMS);
   });
-
-  setupWebInput(canvas, Input);
 };

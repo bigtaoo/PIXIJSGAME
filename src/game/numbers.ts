@@ -1,59 +1,50 @@
 import * as PIXI from 'pixi.js-legacy';
-import { AssetsManager } from '../assetsManager/assetsManager';
-import { OFFSET_Y } from './consts';
-import { grid_count_h, grid_count_w, grid_size, index, offset_x } from './helper';
-import { logic } from './logic';
+import { AppContext } from './appContext';
+import { ScreenConfig } from './screenConfig';
+import { Logic } from './logic';
 
-export class Numbers extends PIXI.Container {
-  private numberSprites: Map<number, PIXI.Sprite> = new Map();
+export class NumberLayer extends PIXI.Container {
+  private sprites: Map<number, PIXI.Sprite> = new Map();
 
-  constructor() {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly screen: ScreenConfig,
+  ) {
     super();
   }
 
-  public DrawNumbers(): void {
-    const w = grid_count_w();
-    const h = grid_count_h();
-    // console.log('number w: ', w, 'h:',h);
-    for (let i = 0; i < w; ++i) {
-      for (let j = 0; j < h; ++j) {
-        const n = logic.getNumber(i, j);
-        const s = index(i, j);
-        let sprite = this.numberSprites.get(s);
+  public draw(logic: Logic): void {
+    const { gridCountW: w, gridCountH: h, gridSize, offsetX, offsetY } = this.screen;
+
+    for (let col = 0; col < w; ++col) {
+      for (let row = 0; row < h; ++row) {
+        const n = logic.getNumber(this.screen, col, row);
+        const idx = this.screen.cellIndex(col, row);
+        let sprite = this.sprites.get(idx);
+
         if (!sprite) {
-          const x = i * grid_size();
-          const y = j * grid_size();
-          sprite = this.drawNumber(n, x, y);
-          this.numberSprites.set(s, sprite);
+          sprite = this.ctx.assets.GetSpriteFromNumberAtlas(`${n}.png`);
+          sprite.x = col * gridSize + offsetX;
+          sprite.y = row * gridSize + offsetY;
+          sprite.width = gridSize;
+          sprite.height = gridSize;
+          this.addChild(sprite);
+          this.sprites.set(idx, sprite);
         } else {
-          sprite.texture = AssetsManager().GetTexture(`${n}.png`);
+          sprite.texture = this.ctx.assets.GetTexture(`${n}.png`);
+          sprite.visible = true;
         }
       }
     }
   }
 
-  public HideNumber(index: number): void {
-    const sprite = this.numberSprites.get(index);
-    if (sprite) {
-      sprite.visible = false;
-    }
+  public hideNumber(index: number): void {
+    const sprite = this.sprites.get(index);
+    if (sprite) sprite.visible = false;
   }
 
-  public NewGame(): void {
-    for (const v of this.numberSprites.values()) {
-      v.visible = true;
-    }
-    this.DrawNumbers();
-  }
-
-  private drawNumber(num: number, x: number, y: number): PIXI.Sprite {
-    const picture = AssetsManager().GetSpriteFromNumberAtlas(num + '.png');
-    picture.width = 80;
-    picture.height = 80;
-    picture.x = x + offset_x() + 20;
-    picture.y = y + OFFSET_Y + 20;
-    this.addChild(picture);
-
-    return picture;
+  /** 新游戏时重新设置所有数字贴图并显示 */
+  public reset(logic: Logic): void {
+    this.draw(logic);
   }
 }

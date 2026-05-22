@@ -1,162 +1,125 @@
 import * as PIXI from 'pixi.js-legacy';
-import { AssetsManager } from '../assetsManager/assetsManager';
-import { config } from './config';
-import { Orientation } from './enums';
+import { AppContext } from './appContext';
+import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
-import { display } from './display';
-import { Input } from '../inputSystem/inputManager';
+import { Orientation } from './enums';
 
 export class Header extends PIXI.Container {
-  private background: PIXI.NineSlicePlane;
-  private time1: PIXI.Sprite;
-  private time2: PIXI.Sprite;
-  private displayTime: number = 0;
+  /** 最多 3 位数字 Sprite，支持 0–999 秒显示，修复原来只支持两位数的 bug */
+  private timeSprites: PIXI.Sprite[] = [];
+  private lastDisplayedSeconds = -1;
 
-  constructor() {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly screen: ScreenConfig,
+    private readonly target: number,
+    onSettings: () => void,
+  ) {
     super();
+    this.buildBackground();
+    this.buildTip();
+    this.buildTime();
+    this.buildSettingsButton(onSettings);
+  }
 
-    this.width = config.Width;
-    this.height = 500;
+  private buildBackground(): void {
+    const tex = this.ctx.assets.GetTexture('note.png');
+    const bg = new PIXI.NineSlicePlane(tex, 220, 200, 220, 200);
+    bg.height = 250;
 
-    const backgroundTexture = AssetsManager().GetTexture('note.png');
-    this.background = new PIXI.NineSlicePlane(backgroundTexture, 220, 200, 220, 200);
-    this.addChild(this.background);
-    this.background.texture = backgroundTexture;
-
-    const testt = AssetsManager().GetTexture('note.png');
-    const test = new PIXI.Sprite(testt);
-    this.addChild(test);
-    test.width = 3;
-    test.height = 3;
-
-    if (config.Orientation === Orientation.Landscape) {
+    if (this.screen.orientation === Orientation.Landscape) {
       this.x = 350;
       this.y = 10;
-      console.log(`header landscape width: ${this.width}, x: ${this.x}`);
-
-      this.background.width = 1350;
-      this.background.height = 250;
+      bg.width = 1350;
+    } else {
+      bg.width = this.screen.width - 200;
     }
-
-    this.time1 = AssetsManager().GetSpriteFromNumberAtlas('1.png');
-    this.time2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
-    this.drawTip();
-    this.drawTime();
-    this.drawSettings();
+    this.addChild(bg);
   }
 
-  public UpdateTime(): void {
-    if (config.isGameEnd) {
-      return;
-    }
-    const remainingTime = Math.floor((config.TimeCount - config.GameTime) / 1000);
-    if (remainingTime === this.displayTime) {
-      return;
-    }
-    this.displayTime = remainingTime;
-    if (this.displayTime < 10) {
-      this.time2.visible = false;
-      this.time1.texture = AssetsManager().GetTexture(`${this.displayTime}.png`);
-    } else if (this.displayTime >= 10 && this.displayTime < 100) {
-      const ten = Math.floor(this.displayTime / 10);
-      const digit = this.displayTime - ten * 10;
-      this.time2.visible = true;
-      this.time1.texture = AssetsManager().GetTexture(`${ten}.png`);
-      this.time2.texture = AssetsManager().GetTexture(`${digit}.png`);
+  /**
+   * 顶部提示区：显示本局目标公式，例如 "3 + 7 = 10"
+   * 修复：通过 target 参数动态生成，而非写死 10
+   */
+  private buildTip(): void {
+    const w = 80, h = 100, y = 85;
+    const maxFirst = Math.min(9, this.target - 1);
+    const minFirst = Math.max(1, this.target - 9);
+    const first = minFirst + Math.floor(Math.random() * (maxFirst - minFirst + 1));
+    const second = this.target - first;
+
+    const targetStr = this.target.toString();
+    const items: [string, number][] = [
+      [`${first}.png`, 70],
+      ['plus.png', 155],
+      [`${second}.png`, 240],
+      ['equa.png', 325],
+    ];
+    targetStr.split('').forEach((ch, i) => items.push([`${ch}.png`, 410 + i * 85]));
+
+    for (const [key, x] of items) {
+      const s = this.ctx.assets.GetSpriteFromNumberAtlas(key);
+      s.width = w;
+      s.height = h;
+      s.x = x;
+      s.y = y;
+      this.addChild(s);
     }
   }
 
-  private drawSettings(): void {
-    const settings = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
-    settings.width = 120;
-    settings.height = 120;
-    settings.x = 1050;
-    settings.y = 70;
-    this.addChild(settings);
-    const uiButton = new UIElement({
-      zIndex: 10,
-      sprite: settings,
-      onTap: () => {
-        if (config.isPause) {
-          return;
-        }
-        display.OpenSettings();
-      },
-    });
-    Input.registerUI(uiButton);
-
-    const rankings = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
-    rankings.width = 120;
-    rankings.height = 120;
-    rankings.x = 1170;
-    rankings.y = 70;
-    this.addChild(rankings);
-  }
-
-  private drawTime(): void {
-    this.time1.width = 100;
-    this.time1.height = 120;
-    this.time2.width = 100;
-    this.time2.height = 120;
-    this.addChild(this.time1);
-    this.addChild(this.time2);
-    this.time1.y = 73;
-    this.time2.y = 73;
-    this.time1.x = 800;
-    this.time2.x = 920;
-
-    const clock = AssetsManager().GetSpriteFromNumberAtlas('clock.png');
-    this.addChild(clock);
+  private buildTime(): void {
+    const clock = this.ctx.assets.GetSpriteFromNumberAtlas('clock.png');
     clock.width = 170;
     clock.height = 170;
     clock.x = 600;
     clock.y = 50;
+    this.addChild(clock);
+
+    // 3 位数字 Sprite，右对齐排列
+    for (let i = 0; i < 3; i++) {
+      const d = this.ctx.assets.GetSpriteFromNumberAtlas('0.png');
+      d.width = 100;
+      d.height = 120;
+      d.x = 800 + i * 110;
+      d.y = 73;
+      d.visible = false;
+      this.addChild(d);
+      this.timeSprites.push(d);
+    }
   }
 
-  private drawTip(): void {
-    const width = 80;
-    const height = 100;
-    const y = 85;
-    const first = Math.floor((Math.random() * 10000) % 9) + 1;
-    const second = 10 - first;
-    const firstSprite = AssetsManager().GetSpriteFromNumberAtlas(`${first}.png`);
-    this.addChild(firstSprite);
-    firstSprite.width = width;
-    firstSprite.height = height;
-    firstSprite.y = y;
-    const secondSprite = AssetsManager().GetSpriteFromNumberAtlas(`${second}.png`);
-    this.addChild(secondSprite);
-    secondSprite.width = width;
-    secondSprite.height = height;
-    secondSprite.y = y;
-    const plus = AssetsManager().GetSpriteFromNumberAtlas('plus.png');
-    this.addChild(plus);
-    plus.width = width;
-    plus.height = height;
-    plus.y = y;
-    const num1 = AssetsManager().GetSpriteFromNumberAtlas('1.png');
-    this.addChild(num1);
-    num1.width = width;
-    num1.height = height;
-    num1.y = y;
-    const num2 = AssetsManager().GetSpriteFromNumberAtlas('0.png');
-    this.addChild(num2);
-    num2.width = width;
-    num2.height = height;
-    num2.y = y;
-    const equal = AssetsManager().GetSpriteFromNumberAtlas('equa.png');
-    this.addChild(equal);
-    equal.width = width;
-    equal.height = height;
-    equal.y = y;
+  private buildSettingsButton(onSettings: () => void): void {
+    const btn = this.ctx.assets.GetSpriteFromNumberAtlas('clock.png');
+    btn.width = 120;
+    btn.height = 120;
+    btn.x = 1050;
+    btn.y = 70;
+    this.addChild(btn);
+    this.ctx.input.registerUI(
+      new UIElement({
+        zIndex: 10,
+        sprite: btn,
+        onTap: onSettings,
+      }),
+    );
+  }
 
-    const s = 70;
-    const add = 85;
-    firstSprite.x = s;
-    plus.x = s + add;
-    secondSprite.x = s + add * 2;
-    equal.x = s + add * 3;
-    num1.x = s + add * 4;
-    num2.x = s + add * 5;
+  /**
+   * 每帧由 GameScene 调用，传入剩余秒数。
+   * 修复：支持 3 位数（原代码仅支持 <100 秒）
+   */
+  public updateTime(seconds: number): void {
+    if (seconds === this.lastDisplayedSeconds) return;
+    this.lastDisplayedSeconds = seconds;
+
+    const s = Math.max(0, seconds).toString();
+    // 先全部隐藏
+    for (const d of this.timeSprites) d.visible = false;
+    // 从右往左填入各位数字
+    for (let i = 0; i < s.length && i < this.timeSprites.length; i++) {
+      const sprite = this.timeSprites[this.timeSprites.length - 1 - i];
+      sprite.texture = this.ctx.assets.GetTexture(`${s[s.length - 1 - i]}.png`);
+      sprite.visible = true;
+    }
   }
 }
