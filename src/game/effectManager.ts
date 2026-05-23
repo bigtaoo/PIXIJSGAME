@@ -8,6 +8,12 @@ export class EffectManager extends PIXI.Container {
   private effects: Effect[] = [];
   private flyingBonuses: FlyingBonus[] = [];
 
+  /**
+   * Separate container for flying-bonus labels.
+   * Add this to the scene AFTER the Header so it always renders on top.
+   */
+  public readonly flyingLayer = new PIXI.Container();
+
   constructor(
     private readonly ctx: AppContext,
     private readonly screen: ScreenConfig,
@@ -15,10 +21,7 @@ export class EffectManager extends PIXI.Container {
     super();
   }
 
-  // ── Explosion effect ──────────────────────────────────────────────
-
   public playEffect(index: number): void {
-    // Reuse a finished Effect instance to avoid unbounded growth
     let effect = this.effects.find((e) => !e.IsVisible());
     if (!effect) {
       const sprite = this.ctx.assets.GetSpriteFromNumberAtlas('boom-0.png');
@@ -32,12 +35,9 @@ export class EffectManager extends PIXI.Container {
     effect.Play(x, y);
   }
 
-  // ── Flying time-bonus animation ───────────────────────────────────
-
   /**
-   * Spawn a "+Xs" label that arcs from (startX, startY) to the clock icon
-   * at (endX, endY). onReached fires when the label arrives, so the caller
-   * can trigger the clock bounce.
+   * Spawn a "+Xs" label that pops up at (startX, startY) and flies to the clock.
+   * Labels live in flyingLayer so GameScene can render them above the Header.
    */
   public playFlyingBonus(
     startX: number,
@@ -50,22 +50,18 @@ export class EffectManager extends PIXI.Container {
   ): void {
     const fb = new FlyingBonus(startX, startY, endX, endY, bonusSeconds, isCombo, onReached);
     this.flyingBonuses.push(fb);
-    this.addChild(fb);
+    this.flyingLayer.addChild(fb);
   }
 
-  // ── Per-frame update ──────────────────────────────────────────────
-
   public update(deltaMs: number): void {
-    // Explosion frames
     for (const e of this.effects) {
       if (e.IsVisible()) e.Update(deltaMs);
     }
 
-    // Flying bonus labels — remove completed ones
     this.flyingBonuses = this.flyingBonuses.filter((fb) => {
       fb.update(deltaMs);
       if (fb.isDone) {
-        this.removeChild(fb);
+        this.flyingLayer.removeChild(fb);
         return false;
       }
       return true;

@@ -1,40 +1,32 @@
 import * as PIXI from 'pixi.js-legacy';
 
 /**
- * A "+Xs" label that flies along a bezier arc from an elimination point to the
- * clock icon in the header, giving the player clear visual feedback on the
- * time bonus they earned.
- *
- * The caller owns the lifecycle: add to a container, call update() each frame,
- * and remove when isDone returns true.
+ * A "+Xs" label that animates in three phases:
+ *   Phase 1 (0-100 ms)  : Appear at click position, scale 0 -> 2
+ *   Phase 2 (100-200 ms): Hold at click position at scale 2 (large, easy to read)
+ *   Phase 3 (200-300 ms): Fly from click position to the clock icon, shrink and fade
  */
 export class FlyingBonus extends PIXI.Container {
   private elapsed = 0;
   private _isDone = false;
 
-  // Bezier control point stored at construction time
-  private readonly cx: number;
-  private readonly cy: number;
-
-  private static readonly DURATION = 550; // ms
+  private static readonly PHASE_GROW = 100;
+  private static readonly PHASE_HOLD = 100;
+  private static readonly PHASE_FLY  = 100;
+  public  static readonly DURATION   = 300;
 
   constructor(
-    private readonly sx: number,  // start X (GameScene local)
-    private readonly sy: number,  // start Y
-    private readonly ex: number,  // end X  (clock centre)
-    private readonly ey: number,  // end Y
+    private readonly sx: number,
+    private readonly sy: number,
+    private readonly ex: number,
+    private readonly ey: number,
     bonusSeconds: number,
     isCombo: boolean,
     private readonly onReached: () => void,
   ) {
     super();
 
-    // Control point: one third of the way horizontally, well above both endpoints.
-    // This creates a smooth arc that rises before curving toward the header.
-    this.cx = sx + (ex - sx) * 0.3;
-    this.cy = Math.min(sy, ey) - 180;
-
-    const label = new PIXI.Text(`+${bonusSeconds}s`, {
+    const label = new PIXI.Text('+' + bonusSeconds + 's', {
       fontFamily: 'Arial Black, Arial',
       fontSize: 80,
       fontWeight: 'bold',
@@ -48,31 +40,44 @@ export class FlyingBonus extends PIXI.Container {
 
     this.x = sx;
     this.y = sy;
+    this.scale.set(0);
+    this.alpha = 1;
   }
 
   public get isDone(): boolean { return this._isDone; }
 
-  /** Advance the animation. Call every frame until isDone is true. */
   public update(deltaMs: number): void {
     if (this._isDone) return;
 
     this.elapsed += deltaMs;
-    const raw = Math.min(this.elapsed / FlyingBonus.DURATION, 1);
 
-    // Smooth ease-in-out
-    const t = raw < 0.5 ? 2 * raw * raw : -1 + (4 - 2 * raw) * raw;
-    const mt = 1 - t;
+    const GROW = FlyingBonus.PHASE_GROW;
+    const HOLD = FlyingBonus.PHASE_HOLD;
+    const FLY  = FlyingBonus.PHASE_FLY;
 
-    // Quadratic bezier position
-    this.x = mt * mt * this.sx + 2 * mt * t * this.cx + t * t * this.ex;
-    this.y = mt * mt * this.sy + 2 * mt * t * this.cy + t * t * this.ey;
-
-    // Fade: in over first 20%, out over last 20%
-    if (raw < 0.2)      this.alpha = raw / 0.2;
-    else if (raw > 0.8) this.alpha = (1 - raw) / 0.2;
-    else                this.alpha = 1;
-
-    if (raw >= 1) {
+    if (this.elapsed < GROW) {
+      // Phase 1: pop up at click position, scale 0 -> 2
+      const t = this.elapsed / GROW;
+      const s = (t < 0.75) ? (t / 0.75 * 2.2) : (2.2 - (t - 0.75) / 0.25 * 0.2);
+      this.scale.set(Math.max(0, s));
+      this.x = this.sx;
+      this.y = this.sy;
+      this.alpha = 1;
+    } else if (this.elapsed < GROW + HOLD) {
+      // Phase 2: hold at 2x scale
+      this.scale.set(2);
+      this.x = this.sx;
+      this.y = this.sy;
+      this.alpha = 1;
+    } else if (this.elapsed < GROW + HOLD + FLY) {
+      // Phase 3: fly to clock (ease-in), shrink from 2 to near 0, fade out
+      const raw = (this.elapsed - GROW - HOLD) / FLY;
+      const t = raw * raw;
+      this.x = this.sx + (this.ex - this.sx) * t;
+      this.y = this.sy + (this.ey - this.sy) * t;
+      this.scale.set(2 * (1 - raw * 0.9));
+      this.alpha = (raw < 0.4) ? 1 : (1 - raw) / 0.6;
+    } else {
       this._isDone = true;
       this.visible = false;
       this.onReached();

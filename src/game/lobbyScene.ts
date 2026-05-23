@@ -6,7 +6,7 @@ import { StageManager } from './stageManager';
 import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH } from './consts';
-import { drawBackground, drawCell, drawCellSelected, makeTexture, C } from './graphicsFactory';
+import { drawCell, drawCellSelected, makeTexture, C } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 
 /**
@@ -118,10 +118,14 @@ export class LobbyScene extends PIXI.Container {
     this.buildDailyChallengePanel();
   }
 
-  /** 复用游戏场景的方格纸背景（程序绘制）。 */
+  /** 用 bg.png 图片铺满整个关卡选择场景背景。 */
   private buildBackground(): void {
-    const bg = new PIXI.Graphics();
-    drawBackground(bg, GAME_WIDTH, GAME_WIDTH * 16 / 9);
+    const h  = GAME_WIDTH * 16 / 9;
+    const bg = new PIXI.Sprite(this.ctx.assets.GetTexture('bg.png'));
+    bg.width  = GAME_WIDTH;
+    bg.height = h;
+    bg.x = 0;
+    bg.y = 0;
     this.addChild(bg);
   }
 

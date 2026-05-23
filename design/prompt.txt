@@ -28,3 +28,70 @@ A single hand-drawn heart icon, SOLID gray fill (#BDBDBD), dark gray outline (#9
 subtle pencil sketch texture, slightly imperfect edges, NO GRADIENT, NO SHINE,
 centered on 160x160 canvas. Empty/depleted state, clean and warm.
 --ar 1:1 --v 6 --style raw --chaos 15
+
+爆炸效果
+推荐实现方式（适合 PixiJS）：
+
+消除时：
+1. 从图集中随机选择 4–6 个大碎片
+2. 再随机生成 4–8 个小碎屑 / 粉尘粒子
+3. 所有碎片从格子中心生成
+4. 每个碎片随机：
+   - 飞行方向 angle
+   - 初速度 speed
+   - 旋转速度 rotationSpeed
+   - 缩放 scale
+5. 生命周期约 250–350ms：
+   - 前半段快速向外爆开
+   - 后半段减速并透明度淡出
+6. 每帧更新：
+   - x += vx
+   - y += vy
+   - rotation += vr
+   - alpha -= fadeSpeed
+7. 生命周期结束后 destroy()
+
+推荐参数：
+
+大碎片：
+speed: 8–14
+rotationSpeed: 0.05–0.12
+scale: 0.8–1.2
+
+小碎屑：
+speed: 4–10
+scale: 0.4–0.7
+
+生命周期：
+250–350ms
+
+视觉建议：
+
+普通消除：
+4 个大碎片 + 少量碎屑
+
+连消：
+6–8 个大碎片
++ 更多粉尘
++ 更大飞散半径
++ 更长生命周期
+
+关键点：
+
+AI 负责：
+- 手绘纸片素材
+- 风格统一
+
+程序负责：
+- 动画
+- 随机性
+- 物理感
+- alpha 淡出
+
+这样会比固定序列帧：
+
+更自然
+更省内存
+更有手绘感
+更适合高频消除玩法
+更适合 PixiJS Web 游戏。

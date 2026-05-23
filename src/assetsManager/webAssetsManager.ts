@@ -4,6 +4,7 @@ import heartPngUrl   from '../assets/heart.png';
 import heartEmptyUrl from '../assets/heart_empty.png';
 import boomJsonUrl   from '../assets/boom.json';
 import boomPngUrl    from '../assets/boom.png';
+import bgPngUrl      from '../assets/bg.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -35,7 +36,13 @@ export class WebAssetsManager implements IAssetsManager {
       this.loadDigits(),
       this.loadHearts(),
       this.loadBoomAtlas(),
+      this.loadBg(),
     ]);
+  }
+
+  private async loadBg(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(bgPngUrl));
+    this.textures['bg.png'] = new PIXI.Texture(base);
   }
 
   private async loadDigits(): Promise<void> {

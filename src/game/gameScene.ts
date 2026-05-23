@@ -142,6 +142,8 @@ export class GameScene extends PIXI.Container {
     this.addChild(this.numberLayer);
     this.addChild(this.effectLayer);
     this.addChild(this.header);
+    // flyingLayer must sit ABOVE the header so bonus labels are never obscured
+    this.addChild(this.effectLayer.flyingLayer);
     this.addChild(this.resultOverlay);
     this.addChild(this.settingsOverlay);
 
@@ -277,13 +279,11 @@ export class GameScene extends PIXI.Container {
 
     this.state.addTime(bonusSec * 1000);
 
-    // Flying bonus animation
-    const posA = this.screen.indexToPos(idxA);
-    const posB = this.screen.indexToPos(idxB);
-    const half = this.screen.gridSize / 2;
-
-    const startX = (posA.x + posB.x) / 2 + half;
-    const startY = (posA.y + posB.y) / 2 + half;
+    // Flying bonus animation — bursts from the centre of the last-tapped cell (idxB)
+    const half  = this.screen.gridSize / 2;
+    const posB  = this.screen.indexToPos(idxB);
+    const startX = posB.x + half;
+    const startY = posB.y + half;
 
     const clockPos = this.header.getClockCenter();
 
