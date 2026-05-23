@@ -1,16 +1,18 @@
 import { IPlayerPrefs } from './IPlayerPrefs';
 
-// wx 的同步存储 API 在官方类型声明里缺失，用 any 跳过类型检查
+// wx sync-storage APIs are missing from the official TypeScript declarations;
+// cast to any to bypass the type checker.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const wxStorage = wx as any;
 
 /**
- * 基于微信小游戏 wx.storage 同步 API 的 PlayerPrefs 实现。
+ * wx.storage-backed PlayerPrefs implementation for WeChat mini games.
  *
- * wx 同步接口（Sync 后缀）在主线程可直接调用，行为类似 localStorage。
- * 所有操作均包裹 try-catch，存储异常时静默降级，不影响游戏运行。
+ * The Sync-suffixed wx APIs run synchronously on the main thread,
+ * behaving like localStorage. All operations are wrapped in try-catch
+ * so storage errors degrade silently without affecting gameplay.
  *
- * 微信存储限制：单个 key 最大 1MB，总量最大 10MB。
+ * WeChat storage limits: 1 MB per key, 10 MB total.
  */
 export class WechatPlayerPrefs implements IPlayerPrefs {
   private readonly prefix: string;
@@ -90,7 +92,7 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
 
   private read(key: string): string | null {
     try {
-      // wx.getStorageSync returns empty string '' when key is not found (not null)
+      // wx.getStorageSync returns '' when the key is not found (not null)
       const val: string = wxStorage.getStorageSync(key);
       return val === '' ? null : val;
     } catch (_e) {

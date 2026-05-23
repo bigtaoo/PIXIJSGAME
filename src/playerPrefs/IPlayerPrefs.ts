@@ -1,9 +1,9 @@
 /**
- * 跨平台数据持久化接口，对标 Unity PlayerPrefs。
+ * Cross-platform data persistence interface, modelled after Unity PlayerPrefs.
  *
- * 平台实现：
- *  - Web / 移动端浏览器 → WebPlayerPrefs  (localStorage)
- *  - 微信小游戏         → WechatPlayerPrefs (wx.storage)
+ * Platform implementations:
+ *  - Web / mobile browser -> WebPlayerPrefs  (localStorage)
+ *  - WeChat mini game     -> WechatPlayerPrefs (wx.storage)
  */
 export interface IPlayerPrefs {
   setInt(key: string, value: number): void;
@@ -20,9 +20,9 @@ export interface IPlayerPrefs {
   deleteAll(): void;
 
   /**
-   * 显式刷盘（对标 Unity PlayerPrefs.Save()）。
-   * localStorage / wx.storage 均自动持久化，此方法为 no-op，
-   * 保留是为了让调用方无需关心平台差异。
+   * Explicit flush to disk (mirrors Unity PlayerPrefs.Save()).
+   * localStorage / wx.storage persist automatically on every write,
+   * so this is a no-op — kept so callers need not branch on platform.
    */
   save(): void;
 }

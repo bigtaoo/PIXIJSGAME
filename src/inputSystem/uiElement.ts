@@ -17,7 +17,6 @@ export class UIElement {
 
   contains(x: number, y: number): boolean {
     const b = this.boundsProvider();
-
     return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
   }
 
@@ -28,7 +27,8 @@ export class UIElement {
   }
 
   public isSpriteVisible(): boolean {
-    // worldVisible 向上遍历整条父节点链，确保所在容器隐藏时 UIElement 同步失效
+    // worldVisible walks the full parent chain, so UIElements deactivate
+    // automatically when their container is hidden during a scene switch.
     return this.sprite.worldVisible;
   }
 }

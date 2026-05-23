@@ -10,31 +10,15 @@ import { Header } from './header';
 import { GameResultOverlay } from './gameResult';
 import { SettingsOverlay } from './settings';
 import { StageData } from './stageConfig';
+import { drawBackground } from './graphicsFactory';
+import { StarManager } from './starManager';
 
-/**
- * GameScene 负责单个关卡（StageData）的完整流程：
- *
- *   ┌─ 关卡开始 ─────────────────────────────────────────────────────┐
- *   │  lives = 3，timePool = 0，currentTargetIdx = 0               │
- *   │                                                               │
- *   │  startCurrentTarget()                                        │
- *   │    addTime(30_000)  — 每个目标 +30 秒                         │
- *   │    初始化棋盘                                                  │
- *   │                                                               │
- *   │  玩家消除所有格子 → onTargetCleared()                          │
- *   │    还有下一个目标 → startCurrentTarget()（循环）               │
- *   │    全部通关       → show(win) → onStageComplete 回调          │
- *   │                                                               │
- *   │  时间耗尽 → lives--                                           │
- *   │    lives > 0 → retryStage()（重置 time/idx，重新开始本关）     │
- *   │    lives = 0 → show(fail) → retry / 大厅                     │
- *   └──────────────────────────────────────────────────────────────┘
- */
 export class GameScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
   private readonly state: GameState;
   private readonly logic: Logic;
 
+  private bg!: PIXI.Graphics;
   private gridLayer!: Grid;
   private numberLayer!: NumberLayer;
   private effectLayer!: EffectManager;
@@ -42,26 +26,54 @@ export class GameScene extends PIXI.Container {
   private resultOverlay!: GameResultOverlay;
   private settingsOverlay!: SettingsOverlay;
 
-  // ── 关卡运行时状态 ──────────────────────────────────────────────────
+  private stage!: StageData;
   private currentTargetIdx = 0;
   private lives = 3;
   private selectedIndex = -1;
   private initialized = false;
 
+  private comboCount = 0;
+  private lastEliminationGameTime = -Infinity;
+  private gameTimeMs = 0;
+
+  private static readonly COMBO_WINDOW_MS = 3000;
+
+  /**
+   * True if at least one life was lost during the current stage attempt.
+   * Persists across retryStageAfterGameOver so a player who used all 3 lives
+   * cannot earn 2 or 3 stars even after retrying.
+   */
+  private livesEverLost = false;
+
   constructor(
     private readonly ctx: AppContext,
-    private readonly stage: StageData,
-    private readonly onStageComplete: () => void,
+    private readonly onStageComplete: (completedStage: StageData) => void,
     private readonly onGoLobby: () => void,
   ) {
     super();
     this.screen = new ScreenConfig();
-    this.screen.setGridDims(stage.gridW, stage.gridH);
-    this.state = new GameState();
-    this.logic = new Logic();
+    this.state  = new GameState();
+    this.logic  = new Logic();
   }
 
-  // ── 公开接口 ──────────────────────────────────────────────────────
+  // ── Public API ─────────────────────────────────────────────────────
+
+  public loadStage(stage: StageData): void {
+    this.stage = stage;
+    this.screen.setGridDims(stage.gridW, stage.gridH);
+
+    this.lives            = 3;
+    this.currentTargetIdx = 0;
+    this.livesEverLost    = false;
+    this.state.reset();
+    this.gameTimeMs = 0;
+
+    if (this.initialized) {
+      this.resultOverlay.hide();
+      this.settingsOverlay.hide();
+      this.startCurrentTarget();
+    }
+  }
 
   public resize(windowWidth: number, windowHeight: number): void {
     this.screen.update(windowWidth, windowHeight);
@@ -69,20 +81,26 @@ export class GameScene extends PIXI.Container {
     if (!this.initialized) {
       this.buildScene();
       this.initialized = true;
+    } else {
+      drawBackground(this.bg, this.screen.width, this.screen.height);
+      this.gridLayer.reconfigure();
+      this.numberLayer.reconfigure(this.logic);
     }
 
-    const { width, height, scale } = this.screen;
-    this.x = (windowWidth - width * scale) / 2;
-    this.y = (windowHeight - height * scale) / 2;
-    this.scale.set(scale);
+    this.x = 0;
+    this.y = 0;
+    this.scale.set(this.screen.scale);
   }
 
   public update(deltaMs: number): void {
     if (!this.initialized) return;
 
     this.effectLayer.update(deltaMs);
+    this.header.update(deltaMs);
 
     if (this.state.isGameEnd || this.state.isPause) return;
+
+    this.gameTimeMs += deltaMs;
 
     this.state.tick(deltaMs);
     this.header.updateTime(this.state.remainingSeconds);
@@ -92,26 +110,27 @@ export class GameScene extends PIXI.Container {
     }
   }
 
-  // ── 场景构建 ────────────────────────────────────────────────────────
+  // ── Scene construction ─────────────────────────────────────────────
 
   private buildScene(): void {
-    const bg = new PIXI.Sprite(this.ctx.assets.GetTexture('background.png'));
-    bg.width = this.screen.width;
-    bg.height = this.screen.height;
-    this.addChild(bg);
+    this.bg = new PIXI.Graphics();
+    drawBackground(this.bg, this.screen.width, this.screen.height);
+    this.addChild(this.bg);
 
-    const firstTarget = this.stage.targets[0];
-
-    this.gridLayer = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
+    this.gridLayer   = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
     this.numberLayer = new NumberLayer(this.ctx, this.screen);
     this.effectLayer = new EffectManager(this.ctx, this.screen);
-    this.header = new Header(this.ctx, this.screen, firstTarget, () => this.openSettings());
+    this.header      = new Header(
+      this.ctx, this.screen,
+      this.stage.targets[0],
+      () => this.openSettings(),
+    );
 
     this.resultOverlay = new GameResultOverlay(
       this.ctx,
-      () => this.retryStageAfterGameOver(), // 失败后重试（重置命数）
-      () => this.onStageComplete(),           // 胜利后进入下一关
-      () => this.onGoLobby(),                 // 返回大厅
+      () => this.retryStageAfterGameOver(),
+      () => this.onStageComplete(this.stage),
+      () => this.onGoLobby(),
     );
     this.settingsOverlay = new SettingsOverlay(
       this.ctx,
@@ -126,68 +145,60 @@ export class GameScene extends PIXI.Container {
     this.addChild(this.resultOverlay);
     this.addChild(this.settingsOverlay);
 
-    // 开始第一个目标（不经过 resize 后的再次调用）
     this.startCurrentTarget();
   }
 
-  // ── 目标流程 ────────────────────────────────────────────────────────
+  // ── Target flow ────────────────────────────────────────────────────
 
-  /**
-   * 启动 currentTargetIdx 对应的目标：
-   *   1. 向时间池注入 30 秒
-   *   2. 更新 Header 提示
-   *   3. 重新生成棋盘
-   */
   private startCurrentTarget(): void {
     const target = this.stage.targets[this.currentTargetIdx];
 
     this.state.isGameEnd = false;
-    this.state.addTime(30_000);   // 每个目标 +30 秒
+    this.state.addTime(30_000);
 
     this.logic.initialize(this.screen, target);
     this.header.updateTarget(target);
-    this.gridLayer.reset();
-    this.numberLayer.reset(this.logic);
+    this.header.updateLives(this.lives);
+
+    this.gridLayer.reconfigure();
+    this.numberLayer.reconfigure(this.logic);
 
     this.selectedIndex = -1;
     this.gridLayer.hideSelection();
+
+    this.comboCount = 0;
+    this.lastEliminationGameTime = -Infinity;
   }
 
-  /** 当前目标全部消除后调用 */
   private onTargetCleared(): void {
     this.currentTargetIdx++;
     if (this.currentTargetIdx >= this.stage.targets.length) {
-      // 本关所有目标完成
+      // All targets cleared — calculate and persist star rating
       this.state.isGameEnd = true;
-      this.selectedIndex = -1;
+      this.selectedIndex   = -1;
       this.gridLayer.hideSelection();
-      this.resultOverlay.show(true);
+      const stars = StarManager.calculateStars(this.livesEverLost, this.state.timeRemainingMs);
+      StarManager.saveStars(this.stage.stageIndex, stars);
+      this.resultOverlay.show(true, stars);
     } else {
-      // 无缝进入下一个目标
       this.startCurrentTarget();
     }
   }
 
-  /** 时间耗尽时调用 */
   private onTimeUp(): void {
+    this.livesEverLost = true;
     this.lives--;
     this.header.updateLives(this.lives);
     if (this.lives > 0) {
-      // 还有命：重置时间与进度，从本关第一个目标重来
       this.retryStage();
     } else {
-      // 命数耗尽：显示失败浮层
       this.state.isGameEnd = true;
-      this.selectedIndex = -1;
+      this.selectedIndex   = -1;
       this.gridLayer.hideSelection();
       this.resultOverlay.show(false);
     }
   }
 
-  /**
-   * 命数耗尽后玩家选择"重试"时调用。
-   * 重置命数（3条）并重开本关。
-   */
   private retryStageAfterGameOver(): void {
     this.lives = 3;
     this.header.updateLives(this.lives);
@@ -195,18 +206,18 @@ export class GameScene extends PIXI.Container {
     this.retryStage();
   }
 
-  /**
-   * 丢失一条命后的内部重置：
-   * 时间池归零，从第 0 个目标重新开始，棋盘重置。
-   */
   private retryStage(): void {
     this.currentTargetIdx = 0;
-    this.state.reset();       // timeRemainingMs = 0, isGameEnd = false
+    this.state.reset();
     this.resultOverlay.hide();
+
+    this.comboCount = 0;
+    this.lastEliminationGameTime = -Infinity;
+
     this.startCurrentTarget();
   }
 
-  // ── 格子点击 ────────────────────────────────────────────────────────
+  // ── Cell click ─────────────────────────────────────────────────────
 
   private onCellClick(index: number): void {
     if (this.state.isGameEnd || this.state.isPause) return;
@@ -225,8 +236,8 @@ export class GameScene extends PIXI.Container {
       return;
     }
 
-    const a = this.logic.getNumberByIndex(this.selectedIndex);
-    const b = this.logic.getNumberByIndex(index);
+    const a      = this.logic.getNumberByIndex(this.selectedIndex);
+    const b      = this.logic.getNumberByIndex(index);
     const target = this.stage.targets[this.currentTargetIdx];
 
     if (a + b === target) {
@@ -248,14 +259,47 @@ export class GameScene extends PIXI.Container {
     this.logic.removeNumber(idxA);
     this.logic.removeNumber(idxB);
     this.selectedIndex = -1;
-    this.state.addTime(1_000);  // 消除奖励 +1 秒
+
+    // ── Combo logic ──────────────────────────────────────────────────
+    const elapsed = this.gameTimeMs - this.lastEliminationGameTime;
+    if (elapsed <= GameScene.COMBO_WINDOW_MS) {
+      this.comboCount++;
+    } else {
+      this.comboCount = 1;
+    }
+    this.lastEliminationGameTime = this.gameTimeMs;
+
+    // Bonus seconds: 1st (+2 s), 2nd consecutive (+3 s), 3rd+ (+4 s cap)
+    const bonusSec = this.comboCount === 1 ? 2
+                   : this.comboCount === 2 ? 3
+                   :                         4;
+    const isCombo = this.comboCount > 1;
+
+    this.state.addTime(bonusSec * 1000);
+
+    // Flying bonus animation
+    const posA = this.screen.indexToPos(idxA);
+    const posB = this.screen.indexToPos(idxB);
+    const half = this.screen.gridSize / 2;
+
+    const startX = (posA.x + posB.x) / 2 + half;
+    const startY = (posA.y + posB.y) / 2 + half;
+
+    const clockPos = this.header.getClockCenter();
+
+    this.effectLayer.playFlyingBonus(
+      startX, startY,
+      clockPos.x, clockPos.y,
+      bonusSec, isCombo,
+      () => this.header.triggerClockBounce(),
+    );
 
     if (this.logic.isAllRemoved()) {
       this.onTargetCleared();
     }
   }
 
-  // ── 设置/暂停 ────────────────────────────────────────────────────────
+  // Settings / pause
 
   private openSettings(): void {
     if (this.state.isGameEnd) return;

@@ -3,7 +3,7 @@ import { IPlayerPrefs } from './IPlayerPrefs';
 let _impl: IPlayerPrefs | null = null;
 
 /**
- * 在应用启动时（加载资源之前）注入平台对应的实现。
+ * Inject the platform-specific implementation before loading assets.
  *
  * Web:    setPlayerPrefsImpl(new WebPlayerPrefs())
  * WeChat: setPlayerPrefsImpl(new WechatPlayerPrefs())
@@ -13,14 +13,14 @@ export function setPlayerPrefsImpl(impl: IPlayerPrefs): void {
 }
 
 function get(): IPlayerPrefs {
-  if (!_impl) throw new Error('[PlayerPrefs] 未初始化，请先调用 setPlayerPrefsImpl()');
+  if (!_impl) throw new Error('[PlayerPrefs] Not initialised — call setPlayerPrefsImpl() first');
   return _impl;
 }
 
 /**
- * Unity 风格的静态 PlayerPrefs API。
+ * Unity-style static PlayerPrefs API.
  *
- * 用法示例：
+ * Usage example:
  *   PlayerPrefs.setInt('stage', 3);
  *   const stage = PlayerPrefs.getInt('stage', 1);
  */
@@ -49,7 +49,7 @@ export const PlayerPrefs = {
     return get().getString(key, defaultValue);
   },
 
-  // ── 通用 ───────────────────────────────────────────────────────────
+  // ── General ────────────────────────────────────────────────────────
   hasKey(key: string): boolean {
     return get().hasKey(key);
   },

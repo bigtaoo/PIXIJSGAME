@@ -1,24 +1,24 @@
 /**
- * 关卡静态配置。
+ * Static stage configuration.
  *
- * 共 19 关，每关 5 个目标数字（最后一关 4 个）。
- * 目标数字从 6 依次递增至 99。
+ * 19 stages total; each stage has 5 targets (Stage 19 has 4).
+ * Targets increment from 6 through 99.
  *
- * 格子扩张规则（取本关第一个目标数字判断）：
- *   ≥ 71 → 6×10 = 60 格
- *   ≥ 51 → 6×8  = 48 格
- *   ≥ 31 → 6×6  = 36 格
- *   ≥ 21 → 4×8  = 32 格
- *   ≥ 11 → 4×6  = 24 格
- *   default → 3×6 = 18 格
+ * Grid expansion rules (determined by the first target of the stage):
+ *   >= 71 -> 6 x 10 = 60 cells
+ *   >= 51 -> 6 x 8  = 48 cells
+ *   >= 31 -> 6 x 6  = 36 cells
+ *   >= 21 -> 4 x 8  = 32 cells
+ *   >= 11 -> 4 x 6  = 24 cells
+ *   default -> 3 x 6 = 18 cells
  *
- * 所有网格总格子数均为偶数，保证可正确配对。
+ * All cell counts are even numbers to guarantee valid pairing.
  */
 export interface StageData {
-  readonly stageIndex: number;         // 1-based（1–19）
-  readonly targets: readonly number[]; // 本关依次要消除的目标数字
-  readonly gridW: number;              // 横向格子数
-  readonly gridH: number;              // 纵向格子数
+  readonly stageIndex: number;         // 1-based (1-19)
+  readonly targets: readonly number[]; // target values to clear in order
+  readonly gridW: number;              // horizontal cell count
+  readonly gridH: number;              // vertical cell count
 }
 
 function getGridDims(startTarget: number): [number, number] {

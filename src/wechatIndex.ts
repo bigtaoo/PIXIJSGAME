@@ -24,7 +24,7 @@ async function Init() {
     forceCanvas: true,
   });
 
-  // 最先初始化存储
+  // Initialise storage first
   setPlayerPrefsImpl(new WechatPlayerPrefs());
 
   const assets = new WechatAssetsManager();
@@ -33,7 +33,9 @@ async function Init() {
   const input = new InputManager();
   setupWeChatInput(input);
 
-  const ctx: AppContext = { assets, input };
+  assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
+
+  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer };
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);

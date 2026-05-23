@@ -1,0 +1,30 @@
+大厅背景图
+A hand-drawn adventure map illustration on warm beige kraft paper (#F5EDD6) with subtle noise texture (10% opacity),
+featuring a natural S-shaped winding path (14px width, dark brown #6D4C41, 80% opacity)
+flowing from bottom-left to top-right with 2-3 gentle turns,
+surrounded by simple sketch-style decorations: round bushes, oval rocks, simplified pencil shapes, and math symbols (+, =, ?) at 60-80% opacity.
+Warm brown, olive green, and earthy yellow palette. Watercolor pencil style, soft edges, slight paper grain.
+Square composition (1:1 aspect ratio), seamless at edges for 90-degree rotation.
+--ar 1:1 --v 6 --style raw --chaos 15
+
+数字
+A sprite sheet of digits 0-9 in **bold rounded sans-serif font** (similar to Noto Sans Bold), arranged in a **single horizontal row** on a **transparent background**.
+- **Each digit**: 120x160 pixels, **light brown fill (#D4B896)**, **dark brown outline (#3E2723, 2px stroke width)**.
+- **Spacing**: 10px between each digit.
+- **Total canvas size**: 1290x160 pixels (10 digits × 120px + 9 × 10px spacing).
+- **Style**: Clean, crisp, **no shadows**, **no gradients**, **no anti-aliasing artifacts**.
+- **Alignment**: Each digit is **visually centered** in its 120x160 cell.
+--ar 129:16 --v 6 --style raw
+
+
+爱心
+A single hand-drawn heart icon, SOLID coral red fill (#FF6B6B), DARK RED OUTLINE (#C0392B, 3-4px thick),
+subtle pencil sketch texture (10% opacity), NO GRADIENT, NO SHINE,
+slightly imperfect edges, centered on 160x160 canvas.
+Clean, warm, notebook paper style. --ar 1:1 --v 6 --style raw --chaos 15
+
+空心
+A single hand-drawn heart icon, SOLID gray fill (#BDBDBD), dark gray outline (#9E9E9E, 3-4px thick),
+subtle pencil sketch texture, slightly imperfect edges, NO GRADIENT, NO SHINE,
+centered on 160x160 canvas. Empty/depleted state, clean and warm.
+--ar 1:1 --v 6 --style raw --chaos 15

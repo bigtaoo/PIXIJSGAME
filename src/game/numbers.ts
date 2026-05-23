@@ -4,16 +4,20 @@ import { ScreenConfig } from './screenConfig';
 import { Logic } from './logic';
 
 /**
- * 每个格子最多持有两个 Sprite 槽（个位 / 十位）。
- * Sprite 只创建、不销毁，切换数字时复用并更新贴图，多余的槽隐藏。
+ * Each cell holds up to two Sprite slots (units digit / tens digit).
+ * Sprites are created once and reused; surplus slots are hidden rather
+ * than destroyed.
  */
 interface CellSlots {
-  /** slots[0] = 个位（单数字时只用它），slots[1] = 十位（两位数时追加） */
+  /** slots[0] = units (used alone for single-digit), slots[1] = tens (two-digit only) */
   slots: [PIXI.Sprite] | [PIXI.Sprite, PIXI.Sprite];
 }
 
 export class NumberLayer extends PIXI.Container {
-  /** cellIndex → CellSlots */
+  /**
+   * High-watermark sprite pool, mirroring Grid's cell pool.
+   * Cells outside the current stage grid are hidden but never destroyed.
+   */
   private cells: Map<number, CellSlots> = new Map();
 
   constructor(
@@ -23,15 +27,31 @@ export class NumberLayer extends PIXI.Container {
     super();
   }
 
-  // ── 公开接口 ──────────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────────
 
-  public draw(logic: Logic): void {
+  /**
+   * Called at the start of every stage (including the first).
+   *
+   * Draws numbers for all active cells in the current grid and hides any
+   * Sprites that belong to cells outside the current grid (from a previous
+   * larger stage).
+   */
+  public reconfigure(logic: Logic): void {
     const { gridCountW: w, gridCountH: h } = this.screen;
+    const activeIndices = new Set<number>();
+
     for (let col = 0; col < w; ++col) {
       for (let row = 0; row < h; ++row) {
-        const n = logic.getNumber(this.screen, col, row);
         const idx = this.screen.cellIndex(col, row);
-        this.updateCell(idx, col, row, n);
+        activeIndices.add(idx);
+        this.updateCell(idx, col, row, logic.getNumber(this.screen, col, row));
+      }
+    }
+
+    // Hide Sprites for cells outside the current grid.
+    for (const [idx, cell] of this.cells) {
+      if (!activeIndices.has(idx)) {
+        cell.slots.forEach((s) => (s.visible = false));
       }
     }
   }
@@ -41,25 +61,22 @@ export class NumberLayer extends PIXI.Container {
     if (cell) cell.slots.forEach((s) => (s.visible = false));
   }
 
-  /** 新游戏时重绘所有数字（复用已有 Sprite） */
-  public reset(logic: Logic): void {
-    this.draw(logic);
-  }
-
-  // ── 内部实现 ──────────────────────────────────────────────────────────
+  // ── Internal ──────────────────────────────────────────────────────────
 
   /**
-   * 根据数值 n 决定单/双位布局，创建或复用 Sprite。
+   * Choose single- or two-digit layout based on the value n, then
+   * create or reuse Sprites accordingly.
    *
-   * 单位数：一个 Sprite，填满整个格子（gridSize × gridSize）
-   * 两位数：两个 Sprite，各占格子宽度的一半，整体缩放至格子的 70%，水平垂直居中
+   * Single digit: one Sprite fills the full cell (gridSize x gridSize).
+   * Two digits:   two Sprites side by side, scaled to 70% of the cell,
+   *               centred both horizontally and vertically.
    */
   private updateCell(idx: number, col: number, row: number, n: number): void {
     const { gridSize, offsetX, offsetY } = this.screen;
     const cellX = col * gridSize + offsetX;
     const cellY = row * gridSize + offsetY;
 
-    const str = n.toString();          // e.g. 15 → "15", 7 → "7"
+    const str = n.toString();          // e.g. 15 -> "15", 7 -> "7"
     const isTwoDigit = str.length >= 2;
 
     if (isTwoDigit) {
@@ -69,7 +86,7 @@ export class NumberLayer extends PIXI.Container {
     }
   }
 
-  // ── 单位数布局 ────────────────────────────────────────────────────────
+  // ── Single-digit layout ───────────────────────────────────────────────
 
   private layoutOneDigit(
     idx: number,
@@ -78,21 +95,21 @@ export class NumberLayer extends PIXI.Container {
     gs: number,
     digit: string,
   ): void {
-    const cell = this.getOrCreateCell(idx, digit, false);
+    const cell = this.getOrCreateCell(idx, false);
     const s = cell.slots[0];
 
     s.texture = this.ctx.assets.GetTexture(`${digit}.png`);
-    s.width = gs;
-    s.height = gs;
-    s.x = cellX;
-    s.y = cellY;
+    s.width   = gs;
+    s.height  = gs;
+    s.x       = cellX;
+    s.y       = cellY;
     s.visible = true;
 
-    // 隐藏多余的十位槽（如果存在）
+    // Hide the tens slot if it exists
     if (cell.slots.length > 1) cell.slots[1]!.visible = false;
   }
 
-  // ── 两位数布局 ────────────────────────────────────────────────────────
+  // ── Two-digit layout ──────────────────────────────────────────────────
 
   private layoutTwoDigits(
     idx: number,
@@ -102,59 +119,53 @@ export class NumberLayer extends PIXI.Container {
     tensChar: string,
     unitsChar: string,
   ): void {
-    const cell = this.getOrCreateCell(idx, tensChar, true);
+    const cell = this.getOrCreateCell(idx, true);
 
-    // 整体缩放到格子 70%，两个数字各占一半宽度
-    const scale = 0.70;
+    // Scale the pair to 70% of the cell; each digit gets half the total width
+    const scale  = 0.70;
     const totalW = gs * scale;
-    const dw = totalW / 2;        // 每个数字宽度
-    const dh = gs * scale;        // 每个数字高度
-    const marginX = (gs - totalW) / 2;   // 水平居中偏移
-    const marginY = (gs - dh) / 2;       // 垂直居中偏移
+    const dw     = totalW / 2;              // width per digit
+    const dh     = gs * scale;              // height per digit
+    const marginX = (gs - totalW) / 2;      // horizontal centering offset
+    const marginY = (gs - dh) / 2;          // vertical centering offset
 
     const digits = [tensChar, unitsChar];
     for (let i = 0; i < 2; i++) {
       const s = cell.slots[i as 0 | 1]!;
       s.texture = this.ctx.assets.GetTexture(`${digits[i]}.png`);
-      s.width = dw;
-      s.height = dh;
-      s.x = cellX + marginX + i * dw;
-      s.y = cellY + marginY;
+      s.width   = dw;
+      s.height  = dh;
+      s.x       = cellX + marginX + i * dw;
+      s.y       = cellY + marginY;
       s.visible = true;
     }
   }
 
-  // ── Sprite 缓存管理 ───────────────────────────────────────────────────
+  // ── Sprite cache management ───────────────────────────────────────────
 
   /**
-   * 取出已有的 CellSlots，或首次创建。
-   * needSecond=true 时确保 slots[1] 也存在。
+   * Return the existing CellSlots for idx, or create one.
+   * When needSecond=true, ensure slots[1] also exists.
    */
-  private getOrCreateCell(
-    idx: number,
-    firstDigit: string,
-    needSecond: boolean,
-  ): CellSlots {
+  private getOrCreateCell(idx: number, needSecond: boolean): CellSlots {
     let cell = this.cells.get(idx);
 
     if (!cell) {
-      // 首次创建：至少建一个 Sprite
-      const s0 = this.makeSprite(firstDigit);
-      cell = { slots: [s0] } as CellSlots;
+      // First time: create the units Sprite.
+      cell = { slots: [this.makeSprite()] } as CellSlots;
       this.cells.set(idx, cell);
     }
 
     if (needSecond && cell.slots.length < 2) {
-      // 按需追加第二个 Sprite（十位 → 个位 旁边）
-      const s1 = this.makeSprite('0');
-      (cell.slots as PIXI.Sprite[]).push(s1);
+      // Lazily append a second Sprite (tens position).
+      (cell.slots as PIXI.Sprite[]).push(this.makeSprite());
     }
 
     return cell;
   }
 
-  private makeSprite(digit: string): PIXI.Sprite {
-    const s = this.ctx.assets.GetSpriteFromNumberAtlas(`${digit}.png`);
+  private makeSprite(): PIXI.Sprite {
+    const s = new PIXI.Sprite(this.ctx.assets.GetTexture('0.png'));
     this.addChild(s);
     return s;
   }

@@ -36,7 +36,7 @@ export class InputManager {
   }
 
   emit(e: InputEvent) {
-    // 1️⃣ UI priority (top-most first)
+    // UI priority (top-most first)
     for (let i = this.uiElements.length - 1; i >= 0; i--) {
       const el = this.uiElements[i];
 
@@ -44,11 +44,11 @@ export class InputManager {
 
       if (el.contains(e.x, e.y)) {
         el.handle(e);
-        return; // 🔥 stop propagation
+        return; // stop propagation
       }
     }
 
-    // 2️⃣ fallback to global handlers
+    // fallback to global handlers
     const list = this.handlers.get(e.type)!;
     for (const h of list) h(e);
   }
@@ -57,5 +57,3 @@ export class InputManager {
     this.uiElements.sort((a, b) => a.zIndex - b.zIndex);
   }
 }
-
-export const Input = new InputManager();

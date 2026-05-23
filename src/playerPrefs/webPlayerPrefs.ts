@@ -1,11 +1,12 @@
 import { IPlayerPrefs } from './IPlayerPrefs';
 
 /**
- * 基于 localStorage 的 PlayerPrefs 实现。
- * 适用于桌面浏览器与移动端浏览器（两者 API 完全相同）。
+ * localStorage-backed PlayerPrefs implementation.
+ * Works on desktop browsers and mobile browsers (identical API).
  *
- * 所有 key 加前缀以避免与页面其他数据冲突。
- * 写入失败时（如隐私模式禁用 storage、配额满）静默降级，不抛出异常。
+ * All keys are prefixed to avoid collisions with other page data.
+ * Write failures (private-mode storage disabled, quota exceeded) are
+ * silently swallowed — they must not crash the game.
  */
 export class WebPlayerPrefs implements IPlayerPrefs {
   private readonly prefix: string;
@@ -18,7 +19,7 @@ export class WebPlayerPrefs implements IPlayerPrefs {
     return this.prefix + key;
   }
 
-  // ── 写入 ────────────────────────────────────────────────────────────
+  // ── Write ─────────────────────────────────────────────────────────
 
   setInt(key: string, value: number): void {
     this.write(this.k(key), Math.trunc(value).toString());
@@ -32,7 +33,7 @@ export class WebPlayerPrefs implements IPlayerPrefs {
     this.write(this.k(key), value);
   }
 
-  // ── 读取 ────────────────────────────────────────────────────────────
+  // ── Read ──────────────────────────────────────────────────────────
 
   getInt(key: string, defaultValue = 0): number {
     const raw = this.read(this.k(key));
@@ -52,7 +53,7 @@ export class WebPlayerPrefs implements IPlayerPrefs {
     return this.read(this.k(key)) ?? defaultValue;
   }
 
-  // ── 其他 ────────────────────────────────────────────────────────────
+  // ── Other ─────────────────────────────────────────────────────────
 
   hasKey(key: string): boolean {
     return this.read(this.k(key)) !== null;
@@ -62,7 +63,7 @@ export class WebPlayerPrefs implements IPlayerPrefs {
     try {
       localStorage.removeItem(this.k(key));
     } catch {
-      // 静默忽略
+      // Silently ignore
     }
   }
 
@@ -71,21 +72,21 @@ export class WebPlayerPrefs implements IPlayerPrefs {
       const toRemove = Object.keys(localStorage).filter((k) => k.startsWith(this.prefix));
       toRemove.forEach((k) => localStorage.removeItem(k));
     } catch {
-      // 静默忽略
+      // Silently ignore
     }
   }
 
-  /** localStorage 每次写入自动持久化，此方法为 no-op */
+  /** localStorage persists automatically on every write — no-op */
   save(): void {}
 
-  // ── 内部辅助 ─────────────────────────────────────────────────────────
+  // ── Internal helpers ──────────────────────────────────────────────
 
   private write(key: string, value: string): void {
     try {
       localStorage.setItem(key, value);
     } catch (e) {
-      // QuotaExceededError 或隐私模式下 storage 被禁用，静默忽略
-      console.warn('[WebPlayerPrefs] 写入失败:', e);
+      // QuotaExceededError or storage disabled in private mode
+      console.warn('[WebPlayerPrefs] write failed:', e);
     }
   }
 

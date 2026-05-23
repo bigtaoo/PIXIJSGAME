@@ -10,47 +10,70 @@ export class Grid extends PIXI.Container {
   constructor(
     private readonly ctx: AppContext,
     private readonly screen: ScreenConfig,
-    onCellClick: (index: number) => void,
+    private readonly onCellClick: (index: number) => void,
   ) {
     super();
-    this.buildCells(onCellClick);
   }
 
-  private buildCells(onCellClick: (index: number) => void): void {
+  public reconfigure(): void {
     const { gridCountW: w, gridCountH: h, gridSize, offsetX, offsetY } = this.screen;
+    const activeIndices = new Set<number>();
 
     for (let col = 0; col < w; ++col) {
       for (let row = 0; row < h; ++row) {
         const idx = this.screen.cellIndex(col, row);
-        const sprite = this.ctx.assets.GetSpriteFromNumberAtlas('Blue.png');
-        sprite.x = col * gridSize + offsetX;
-        sprite.y = row * gridSize + offsetY;
-        sprite.width = gridSize;
-        sprite.height = gridSize;
-        this.addChild(sprite);
-        this.cells.set(idx, sprite);
+        activeIndices.add(idx);
 
-        this.ctx.input.registerUI(
-          new UIElement({
-            zIndex: 10,
-            sprite,
-            onTap: () => onCellClick(idx),
-          }),
-        );
+        let sprite = this.cells.get(idx);
+
+        if (!sprite) {
+          sprite = new PIXI.Sprite(this.ctx.assets.GetTexture('cell.png'));
+          this.addChild(sprite);
+          this.cells.set(idx, sprite);
+
+          const capturedIdx = idx;
+          this.ctx.input.registerUI(
+            new UIElement({
+              zIndex: 10,
+              sprite,
+              onTap: () => this.onCellClick(capturedIdx),
+            }),
+          );
+        }
+
+        sprite.x      = col * gridSize + offsetX;
+        sprite.y      = row * gridSize + offsetY;
+        sprite.width  = gridSize;
+        sprite.height = gridSize;
+        sprite.visible = true;
       }
     }
+
+    for (const [idx, sprite] of this.cells) {
+      if (!activeIndices.has(idx)) sprite.visible = false;
+    }
+
+    if (this.selectionHighlight) {
+      this.selectionHighlight.width  = gridSize;
+      this.selectionHighlight.height = gridSize;
+    }
+
+    this.hideSelection();
   }
 
   public showSelection(index: number): void {
+    const { gridSize, offsetX, offsetY } = this.screen;
+
     if (!this.selectionHighlight) {
-      this.selectionHighlight = this.ctx.assets.GetSpriteFromNumberAtlas('select.png');
-      this.selectionHighlight.width = this.screen.gridSize;
-      this.selectionHighlight.height = this.screen.gridSize;
+      this.selectionHighlight = new PIXI.Sprite(this.ctx.assets.GetTexture('cell_selected.png'));
+      this.selectionHighlight.width  = gridSize;
+      this.selectionHighlight.height = gridSize;
       this.addChild(this.selectionHighlight);
     }
+
     const { x, y } = this.screen.indexToPos(index);
-    this.selectionHighlight.x = x;
-    this.selectionHighlight.y = y;
+    this.selectionHighlight.x       = x;
+    this.selectionHighlight.y       = y;
     this.selectionHighlight.visible = true;
   }
 
@@ -61,11 +84,5 @@ export class Grid extends PIXI.Container {
   public hideCell(index: number): void {
     const cell = this.cells.get(index);
     if (cell) cell.visible = false;
-  }
-
-  /** 新游戏时恢复所有格子并清除选中状态 */
-  public reset(): void {
-    for (const cell of this.cells.values()) cell.visible = true;
-    this.hideSelection();
   }
 }

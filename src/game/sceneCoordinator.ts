@@ -2,54 +2,88 @@ import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
 import { GameScene } from './gameScene';
 import { LobbyScene } from './lobbyScene';
+import { DailyChallengeScene } from './dailyChallengeScene';
 import { StageData, STAGES } from './stageConfig';
 import { StageManager } from './stageManager';
 
 /**
- * SceneCoordinator — 场景切换的顶层容器。
+ * SceneCoordinator — top-level container that owns scene transitions.
  *
- * 挂载规则：
- *   新玩家（maxCompleted = 0）→ 直接进入第 1 关
- *   老玩家（maxCompleted ≥ 1）→ 显示大厅，由玩家选关
+ * Both scenes are created once in the constructor and kept alive for the
+ * entire session. Switching scenes is a simple show/hide — no objects are
+ * created or destroyed at transition time.
  *
- * 切换场景时：
- *   1. 隐藏旧场景（visible=false 使 UIElement 通过 worldVisible 自动失效）
- *   2. 从容器移除旧场景
- *   3. 创建并挂载新场景
+ * Mount rules:
+ *   New player  (maxCompleted = 0) -> go straight into Stage 1
+ *   Returning player (maxCompleted >= 1) -> show lobby, let player choose
  *
- * update / resize 透传给当前活跃场景。
+ * Scene switch procedure:
+ *   1. Hide the outgoing scene (visible=false, UIElements deactivate via worldVisible)
+ *   2. Show the incoming scene and call its load/refresh method
+ *   3. Forward the current window dimensions via resize()
+ *
+ * update / resize are forwarded to the active scene only.
  */
 export class SceneCoordinator extends PIXI.Container {
-  private currentScene: GameScene | LobbyScene | null = null;
-  private windowWidth = 0;
+  private readonly lobbyScene:          LobbyScene;
+  private readonly gameScene:           GameScene;
+  private readonly dailyChallengeScene: DailyChallengeScene;
+
+  private activeScene: LobbyScene | GameScene | DailyChallengeScene | null = null;
+  private windowWidth  = 0;
   private windowHeight = 0;
   private started = false;
 
   constructor(private readonly ctx: AppContext) {
     super();
+
+    this.gameScene = new GameScene(
+      ctx,
+      (completedStage) => this.onStageComplete(completedStage),
+      () => this.showLobby(),
+    );
+    this.lobbyScene = new LobbyScene(
+      ctx,
+      (stage) => this.showGame(stage),
+      () => this.showDailyChallenge(),
+    );
+    this.dailyChallengeScene = new DailyChallengeScene(
+      ctx,
+      () => this.showLobby(),
+    );
+
+    // Add all scenes to the display tree; visibility controls which is active.
+    this.gameScene.visible           = false;
+    this.lobbyScene.visible          = false;
+    this.dailyChallengeScene.visible = false;
+    this.addChild(this.gameScene);
+    this.addChild(this.lobbyScene);
+    this.addChild(this.dailyChallengeScene);
   }
 
-  // ── 公开接口 ──────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────
 
   public resize(w: number, h: number): void {
-    this.windowWidth = w;
+    this.windowWidth  = w;
     this.windowHeight = h;
 
     if (!this.started) {
       this.started = true;
       this.start();
     } else {
-      this.currentScene?.resize(w, h);
+      this.activeScene?.resize(w, h);
     }
   }
 
   public update(deltaMs: number): void {
-    if (this.currentScene instanceof GameScene) {
-      this.currentScene.update(deltaMs);
+    if (this.activeScene instanceof GameScene) {
+      this.activeScene.update(deltaMs);
+    } else if (this.activeScene instanceof DailyChallengeScene) {
+      this.activeScene.update(deltaMs);
     }
   }
 
-  // ── 场景跳转 ──────────────────────────────────────────────────────
+  // ── Scene transitions ─────────────────────────────────────────────
 
   private start(): void {
     if (StageManager.hasCompletedAnyStage()) {
@@ -59,55 +93,48 @@ export class SceneCoordinator extends PIXI.Container {
     }
   }
 
-  /** 显示大厅（老玩家选关入口） */
+  /** Show the stage lobby. Refreshes button states to reflect current progress. */
   public showLobby(): void {
-    this.disposeCurrentScene();
-    const lobby = new LobbyScene(this.ctx, (stage) => this.showGame(stage));
-    this.addChild(lobby);
-    this.currentScene = lobby;
-    lobby.resize(this.windowWidth, this.windowHeight);
+    this.gameScene.visible           = false;
+    this.dailyChallengeScene.visible = false;
+    this.lobbyScene.visible          = true;
+    this.activeScene                 = this.lobbyScene;
+    this.lobbyScene.refresh();
+    this.lobbyScene.resize(this.windowWidth, this.windowHeight);
   }
 
-  /** 显示指定关卡的游戏场景 */
+  /** Show the Daily Challenge scene. */
+  public showDailyChallenge(): void {
+    this.lobbyScene.visible          = false;
+    this.gameScene.visible           = false;
+    this.dailyChallengeScene.visible = true;
+    this.activeScene                 = this.dailyChallengeScene;
+    this.dailyChallengeScene.start();
+    this.dailyChallengeScene.resize(this.windowWidth, this.windowHeight);
+  }
+
+  /** Load and show the game scene for the given stage. */
   public showGame(stage: StageData): void {
-    this.disposeCurrentScene();
-    const scene = new GameScene(
-      this.ctx,
-      stage,
-      () => this.onStageComplete(stage),  // 通关回调
-      () => this.showLobby(),              // 返回大厅回调
-    );
-    this.addChild(scene);
-    this.currentScene = scene;
-    scene.resize(this.windowWidth, this.windowHeight);
+    this.lobbyScene.visible          = false;
+    this.dailyChallengeScene.visible = false;
+    this.gameScene.visible           = true;
+    this.activeScene                 = this.gameScene;
+    this.gameScene.loadStage(stage);
+    this.gameScene.resize(this.windowWidth, this.windowHeight);
   }
 
-  // ── 通关处理 ──────────────────────────────────────────────────────
+  // ── Stage completion ──────────────────────────────────────────────
 
   private onStageComplete(stage: StageData): void {
     StageManager.recordComplete(stage.stageIndex);
 
-    const nextIndex = stage.stageIndex + 1;
-    if (nextIndex <= STAGES.length) {
-      // 自动进入下一关
-      this.showGame(STAGES[nextIndex - 1]);
+    // STAGES is 0-indexed; stageIndex is 1-based, so STAGES[stageIndex]
+    // is exactly the next stage (or undefined when all stages are done).
+    const nextStage = STAGES[stage.stageIndex];
+    if (nextStage) {
+      this.showGame(nextStage);
     } else {
-      // 全部通关，回到大厅
       this.showLobby();
     }
-  }
-
-  // ── 内部清理 ──────────────────────────────────────────────────────
-
-  /**
-   * 安全销毁当前场景：
-   *   先设 visible=false（UIElement 通过 worldVisible 立即失效），
-   *   再从容器移除。PIXI 对象本身由 GC 回收。
-   */
-  private disposeCurrentScene(): void {
-    if (!this.currentScene) return;
-    this.currentScene.visible = false;
-    this.removeChild(this.currentScene);
-    this.currentScene = null;
   }
 }

@@ -1,81 +1,85 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
 import { UIElement } from '../inputSystem/uiElement';
+import { drawPanel, C } from './graphicsFactory';
 
-/**
- * 游戏结果浮层（关卡胜利 / 失败）。
- *
- * 三个按钮：
- *   retryBtn  — 失败时显示，重试本关
- *   nextBtn   — 胜利时显示，进入下一关
- *   lobbyBtn  — 两种状态均显示，返回大厅
- *
- * show(win) 控制 retry / next 互斥；lobbyBtn 始终可见。
- */
 export class GameResultOverlay extends PIXI.Container {
-  private retryBtn: PIXI.Sprite;
-  private nextBtn: PIXI.Sprite;
-  private lobbyBtn: PIXI.Sprite;
+  private retryBtn:  PIXI.Sprite;
+  private nextBtn:   PIXI.Sprite;
+  private lobbyBtn:  PIXI.Sprite;
+  private starText!: PIXI.Text;
 
   constructor(
     ctx: AppContext,
     onRetry: () => void,
-    onNext: () => void,
+    onNext:  () => void,
     onLobby: () => void,
   ) {
     super();
     this.visible = false;
 
-    const bg = ctx.assets.GetSpriteFromNumberAtlas('note.png');
-    bg.width = 700;
-    bg.height = 800;
-    bg.x = 190;
-    bg.y = 560;
+    const PANEL_W = 700;
+    const PANEL_H = 500;
+    const PANEL_X = 190;
+    const PANEL_Y = 710;
+
+    const bg = new PIXI.Graphics();
+    drawPanel(bg, PANEL_W, PANEL_H);
+    bg.x = PANEL_X;
+    bg.y = PANEL_Y;
     this.addChild(bg);
 
-    const btnY = 720;
-    const btnSize = 200;
+    const btnSize   = 200;
+    const btnY      = PANEL_Y + PANEL_H / 2 - btnSize / 2 + 30;
+    const btnLeftX  = PANEL_X + 80;
+    const btnRightX = PANEL_X + PANEL_W - 80 - btnSize;
 
-    // 失败：重试按钮（左）
-    this.retryBtn = ctx.assets.GetSpriteFromNumberAtlas('retry.png');
-    this.retryBtn.width = btnSize;
+    this.retryBtn = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
+    this.retryBtn.width  = btnSize;
     this.retryBtn.height = btnSize;
-    this.retryBtn.x = 230;
+    this.retryBtn.x = btnLeftX;
     this.retryBtn.y = btnY;
     this.addChild(this.retryBtn);
-    ctx.input.registerUI(
-      new UIElement({ zIndex: 20, sprite: this.retryBtn, onTap: onRetry }),
-    );
+    ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.retryBtn, onTap: onRetry }));
 
-    // 胜利：下一关按钮（左）
-    this.nextBtn = ctx.assets.GetSpriteFromNumberAtlas('next.png');
-    this.nextBtn.width = btnSize;
+    this.nextBtn = new PIXI.Sprite(ctx.assets.GetTexture('next.png'));
+    this.nextBtn.width  = btnSize;
     this.nextBtn.height = btnSize;
-    this.nextBtn.x = 230;
+    this.nextBtn.x = btnLeftX;
     this.nextBtn.y = btnY;
     this.addChild(this.nextBtn);
-    ctx.input.registerUI(
-      new UIElement({ zIndex: 20, sprite: this.nextBtn, onTap: onNext }),
-    );
+    ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.nextBtn, onTap: onNext }));
 
-    // 大厅按钮（右，始终显示）
-    this.lobbyBtn = ctx.assets.GetSpriteFromNumberAtlas('clock.png');
-    this.lobbyBtn.width = btnSize;
+    this.lobbyBtn = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
+    this.lobbyBtn.width  = btnSize;
     this.lobbyBtn.height = btnSize;
-    this.lobbyBtn.x = 470;
+    this.lobbyBtn.x = btnRightX;
     this.lobbyBtn.y = btnY;
     this.addChild(this.lobbyBtn);
-    ctx.input.registerUI(
-      new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }),
-    );
+    ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }));
+
+    // Star display shown on win
+    this.starText = new PIXI.Text('', {
+      fontFamily: 'Arial',
+      fontSize:   72,
+      fill:       0xEAB830,
+    });
+    this.starText.anchor.set(0.5, 0.5);
+    this.starText.x = PANEL_X + PANEL_W / 2;
+    this.starText.y = PANEL_Y + 120;
+    this.addChild(this.starText);
   }
 
-  /** win=true 显示"下一关"，win=false 显示"重试" */
-  public show(win: boolean): void {
-    this.visible = true;
+  public show(win: boolean, stars = 0): void {
+    this.visible          = true;
     this.retryBtn.visible = !win;
-    this.nextBtn.visible = win;
+    this.nextBtn.visible  = win;
     this.lobbyBtn.visible = true;
+    this.starText.visible = win;
+    if (win) {
+      this.starText.text  = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      this.starText.style.fill = stars === 3 ? 0xEAB830 : C.icon;
+    }
   }
 
   public hide(): void {

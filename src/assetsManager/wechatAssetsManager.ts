@@ -1,6 +1,10 @@
 import * as PIXI from 'pixi.js-legacy';
-import numbersJson from '../assets/numbers.json';
 import { IAssetsManager } from './IAssetsManager';
+
+// ── digits.png 参数 ───────────────────────────────────────────────────────────
+const DIGIT_W   = 120;
+const DIGIT_H   = 160;
+const DIGIT_GAP = 10;
 
 export class WechatAssetsManager implements IAssetsManager {
   private textures: Record<string, PIXI.Texture> = {};
@@ -8,61 +12,51 @@ export class WechatAssetsManager implements IAssetsManager {
   private loadImageWX(src: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const img = wx.createImage();
-      img.onload = () => resolve(img);
+      img.onload  = () => resolve(img);
       img.onerror = reject;
       img.src = src;
     });
   }
 
-  private loadJSONWX(): Promise<any> {
-    return Promise.resolve(numbersJson);
-  }
-
-  private async createTexture(src: string): Promise<PIXI.Texture> {
-    const image = await this.loadImageWX(src);
-    const resource = new PIXI.CanvasResource(image);
-    const baseTexture = new PIXI.BaseTexture(resource);
-    const texture = new PIXI.Texture(baseTexture);
-
-    return texture;
+  private imageToBaseTexture(img: any): PIXI.BaseTexture {
+    const resource = new PIXI.CanvasResource(img);
+    return new PIXI.BaseTexture(resource);
   }
 
   public async loadAssets(): Promise<void> {
-    const [image, atlasData] = await Promise.all([
-      this.loadImageWX('assets/numbers.png'),
-      this.loadJSONWX(),
-    ]);
-    // console.log('image: w-', image.width);
-    // console.log('json', atlasData);
-
-    const resource = new PIXI.CanvasResource(image);
-    const baseTexture = new PIXI.BaseTexture(resource);
-
-    for (const frameName in atlasData.frames) {
-      const frame = atlasData.frames[frameName].frame;
-
-      const rect = new PIXI.Rectangle(frame.x, frame.y, frame.w, frame.h);
-
-      this.textures[frameName] = new PIXI.Texture(baseTexture, rect);
+    // 数字精灵图
+    const digitsImg  = await this.loadImageWX('assets/digits.png');
+    const digitsBase = this.imageToBaseTexture(digitsImg);
+    for (let i = 0; i <= 9; i++) {
+      this.textures[`${i}.png`] = new PIXI.Texture(
+        digitsBase,
+        new PIXI.Rectangle(i * (DIGIT_W + DIGIT_GAP), 0, DIGIT_W, DIGIT_H),
+      );
     }
 
-    const background = await this.createTexture('assets/background.png');
-    this.textures['background.png'] = background;
+    // 心形图标
+    const heartImg = await this.loadImageWX('assets/heart.png');
+    this.textures['heart.png'] = new PIXI.Texture(this.imageToBaseTexture(heartImg));
+
+    const heartEmptyImg = await this.loadImageWX('assets/heart_empty.png');
+    this.textures['heart_empty.png'] = new PIXI.Texture(this.imageToBaseTexture(heartEmptyImg));
   }
 
-  public GetSpriteFromNumberAtlas(key: string): PIXI.Sprite {
-    const texture = this.textures[key];
-
-    if (!texture) {
-      throw new Error(`Missing texture: ${key}`);
-    }
-
-    return new PIXI.Sprite(texture);
+  /**
+   * 微信小游戏环境暂不支持 renderer.generateTexture()，为空实现。
+   * 场景中的程序化元素（格子、闹钟等）会直接使用 Graphics 对象渲染。
+   */
+  public generateProgrammaticTextures(_renderer: PIXI.Renderer): void {
+    // TODO: 微信环境程序化纹理生成
   }
 
   public GetTexture(key: string): PIXI.Texture {
-    return this.textures[key];
+    const tex = this.textures[key];
+    if (!tex) throw new Error(`Missing texture: "${key}"`);
+    return tex;
+  }
+
+  public GetSpriteFromNumberAtlas(key: string): PIXI.Sprite {
+    return new PIXI.Sprite(this.GetTexture(key));
   }
 }
-
-// export const wechatAssetsManager = new WechatAssetsManager();
