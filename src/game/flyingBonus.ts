@@ -10,6 +10,10 @@ export class FlyingBonus extends PIXI.Container {
   private elapsed = 0;
   private _isDone = false;
 
+  /** onReached fires at this time (ms) — during phase 3, before the animation ends. */
+  private callbackFired = false;
+  private static readonly CALLBACK_TIME = 250;
+
   private static readonly PHASE_GROW = 100;
   private static readonly PHASE_HOLD = 100;
   private static readonly PHASE_FLY  = 100;
@@ -51,6 +55,12 @@ export class FlyingBonus extends PIXI.Container {
 
     this.elapsed += deltaMs;
 
+    // Fire onReached at 250ms (mid-flight, as the label approaches the clock).
+    if (!this.callbackFired && this.elapsed >= FlyingBonus.CALLBACK_TIME) {
+      this.callbackFired = true;
+      this.onReached();
+    }
+
     const GROW = FlyingBonus.PHASE_GROW;
     const HOLD = FlyingBonus.PHASE_HOLD;
     const FLY  = FlyingBonus.PHASE_FLY;
@@ -80,7 +90,7 @@ export class FlyingBonus extends PIXI.Container {
     } else {
       this._isDone = true;
       this.visible = false;
-      this.onReached();
+      // onReached already fired at CALLBACK_TIME (250ms)
     }
   }
 }

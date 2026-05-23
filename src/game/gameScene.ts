@@ -12,6 +12,7 @@ import { SettingsOverlay } from './settings';
 import { StageData } from './stageConfig';
 import { drawBackground } from './graphicsFactory';
 import { StarManager } from './starManager';
+import { StageManager } from './stageManager';
 
 export class GameScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
@@ -175,12 +176,15 @@ export class GameScene extends PIXI.Container {
   private onTargetCleared(): void {
     this.currentTargetIdx++;
     if (this.currentTargetIdx >= this.stage.targets.length) {
-      // All targets cleared — calculate and persist star rating
+      // All targets cleared — persist progress and star rating immediately,
+      // so the lobby reflects the new unlock even if the player taps "lobby"
+      // instead of "next".
       this.state.isGameEnd = true;
       this.selectedIndex   = -1;
       this.gridLayer.hideSelection();
       const stars = StarManager.calculateStars(this.livesEverLost, this.state.timeRemainingMs);
       StarManager.saveStars(this.stage.stageIndex, stars);
+      StageManager.recordComplete(this.stage.stageIndex);
       this.resultOverlay.show(true, stars);
     } else {
       this.startCurrentTarget();

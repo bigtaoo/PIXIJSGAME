@@ -84,6 +84,35 @@ export function drawCellSelected(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
+// ─── 关卡大厅圆形节点 ─────────────────────────────────────────────────────────
+
+/**
+ * 普通圆形格子：暖白填充 + 浅色描边，内切于 size×size 正方形。
+ */
+export function drawCircleCell(g: PIXI.Graphics, size: number): void {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r  = size / 2 - 2;
+  g.lineStyle(1.5, C.cellBorder, 1);
+  g.beginFill(C.cellFill);
+  g.drawCircle(cx, cy, r);
+  g.endFill();
+}
+
+/**
+ * 选中圆形格子：金色描边 + 略亮底色，内切于 size×size 正方形。
+ */
+export function drawCircleCellSelected(g: PIXI.Graphics, size: number): void {
+  const cx = size / 2;
+  const cy = size / 2;
+  const bw = Math.max(5, Math.round(size * 0.042));
+  const r  = size / 2 - bw / 2;
+  g.lineStyle(bw, C.cellSelBorder, 1);
+  g.beginFill(C.cellSelFill);
+  g.drawCircle(cx, cy, r);
+  g.endFill();
+}
+
 // ─── 闹钟 ─────────────────────────────────────────────────────────────────────
 
 /**

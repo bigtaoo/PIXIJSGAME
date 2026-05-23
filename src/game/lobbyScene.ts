@@ -6,7 +6,7 @@ import { StageManager } from './stageManager';
 import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH } from './consts';
-import { drawCell, drawCellSelected, makeTexture, C } from './graphicsFactory';
+import { drawCircleCell, drawCircleCellSelected, makeTexture, C } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 
 /**
@@ -157,15 +157,15 @@ export class LobbyScene extends PIXI.Container {
     const startX  = (GAME_WIDTH - totalW) / 2;
     const startY  = 280;
 
-    // 生成两种卡片纹理（普通 / 选中）
+    // 生成两种圆形卡片纹理（普通 / 选中）
     this.cardTexture = makeTexture(
       this.ctx.renderer,
-      g => drawCell(g, btnSize),
+      g => drawCircleCell(g, btnSize),
       btnSize,
     );
     this.cardSelectedTexture = makeTexture(
       this.ctx.renderer,
-      g => drawCellSelected(g, btnSize),
+      g => drawCircleCellSelected(g, btnSize),
       btnSize,
     );
 
