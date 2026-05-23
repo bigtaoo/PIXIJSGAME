@@ -5,22 +5,78 @@ import { UIElement } from '../inputSystem/uiElement';
 import { Orientation } from './enums';
 
 export class Header extends PIXI.Container {
-  /** 最多 3 位数字 Sprite，支持 0–999 秒显示，修复原来只支持两位数的 bug */
+  /** 最多 3 位数字 Sprite，支持 0–999 秒显示 */
   private timeSprites: PIXI.Sprite[] = [];
   private lastDisplayedSeconds = -1;
+
+  /** 当前目标提示的 Sprite 列表（updateTarget 时整体替换） */
+  private tipSprites: PIXI.Sprite[] = [];
+
+  /** 命数图标（最多 3 个，减少时逐一隐藏） */
+  private livesSprites: PIXI.Sprite[] = [];
+
+  private _target: number;
 
   constructor(
     private readonly ctx: AppContext,
     private readonly screen: ScreenConfig,
-    private readonly target: number,
+    initialTarget: number,
     onSettings: () => void,
   ) {
     super();
+    this._target = initialTarget;
     this.buildBackground();
     this.buildTip();
     this.buildTime();
+    this.buildLives();
     this.buildSettingsButton(onSettings);
   }
+
+  // ── 公开接口 ─────────────────────────────────────────────────────────
+
+  /**
+   * 切换到新目标数字时调用（每关 5 次）。
+   * 清除旧提示 Sprite 并重建。
+   */
+  public updateTarget(target: number): void {
+    this._target = target;
+    // 清除旧提示
+    for (const s of this.tipSprites) {
+      this.removeChild(s);
+      s.destroy();
+    }
+    this.tipSprites = [];
+    this.buildTip();
+  }
+
+  /**
+   * 每帧由 GameScene 调用，传入剩余秒数。
+   * 支持 3 位数（修复原代码仅支持 <100 秒的 bug）。
+   */
+  public updateTime(seconds: number): void {
+    if (seconds === this.lastDisplayedSeconds) return;
+    this.lastDisplayedSeconds = seconds;
+
+    const s = Math.max(0, seconds).toString();
+    for (const d of this.timeSprites) d.visible = false;
+    for (let i = 0; i < s.length && i < this.timeSprites.length; i++) {
+      const sprite = this.timeSprites[this.timeSprites.length - 1 - i];
+      sprite.texture = this.ctx.assets.GetTexture(`${s[s.length - 1 - i]}.png`);
+      sprite.visible = true;
+    }
+  }
+
+  /**
+   * 剩余命数变化时调用（0–3）。
+   * 命数图标从右到左依次隐藏。
+   */
+  public updateLives(lives: number): void {
+    for (let i = 0; i < this.livesSprites.length; i++) {
+      this.livesSprites[i].visible = i < lives;
+    }
+  }
+
+  // ── 私有构建方法 ─────────────────────────────────────────────────────
 
   private buildBackground(): void {
     const tex = this.ctx.assets.GetTexture('note.png');
@@ -39,16 +95,16 @@ export class Header extends PIXI.Container {
 
   /**
    * 顶部提示区：显示本局目标公式，例如 "3 + 7 = 10"
-   * 修复：通过 target 参数动态生成，而非写死 10
+   * 动态生成，updateTarget() 会重建。
    */
   private buildTip(): void {
     const w = 80, h = 100, y = 85;
-    const maxFirst = Math.min(9, this.target - 1);
-    const minFirst = Math.max(1, this.target - 9);
+    const maxFirst = Math.min(9, this._target - 1);
+    const minFirst = Math.max(1, this._target - 9);
     const first = minFirst + Math.floor(Math.random() * (maxFirst - minFirst + 1));
-    const second = this.target - first;
+    const second = this._target - first;
 
-    const targetStr = this.target.toString();
+    const targetStr = this._target.toString();
     const items: [string, number][] = [
       [`${first}.png`, 70],
       ['plus.png', 155],
@@ -64,62 +120,55 @@ export class Header extends PIXI.Container {
       s.x = x;
       s.y = y;
       this.addChild(s);
+      this.tipSprites.push(s);
     }
   }
 
   private buildTime(): void {
     const clock = this.ctx.assets.GetSpriteFromNumberAtlas('clock.png');
-    clock.width = 170;
-    clock.height = 170;
-    clock.x = 600;
-    clock.y = 50;
+    clock.width = 80;
+    clock.height = 80;
+    clock.x = 620;
+    clock.y = 90;
     this.addChild(clock);
 
-    // 3 位数字 Sprite，右对齐排列
     for (let i = 0; i < 3; i++) {
       const d = this.ctx.assets.GetSpriteFromNumberAtlas('0.png');
-      d.width = 100;
-      d.height = 120;
-      d.x = 800 + i * 110;
-      d.y = 73;
+      d.width = 80;
+      d.height = 100;
+      d.x = 720 + i * 90;
+      d.y = 75;
       d.visible = false;
       this.addChild(d);
       this.timeSprites.push(d);
     }
   }
 
-  private buildSettingsButton(onSettings: () => void): void {
-    const btn = this.ctx.assets.GetSpriteFromNumberAtlas('clock.png');
-    btn.width = 120;
-    btn.height = 120;
-    btn.x = 1050;
-    btn.y = 70;
-    this.addChild(btn);
-    this.ctx.input.registerUI(
-      new UIElement({
-        zIndex: 10,
-        sprite: btn,
-        onTap: onSettings,
-      }),
-    );
+  /**
+   * 命数显示：3 个小图标，从左到右排列，命数减少时从右往左隐藏。
+   * 使用 retry.png 作为命数图标（实际项目可替换为心形素材）。
+   */
+  private buildLives(): void {
+    for (let i = 0; i < 3; i++) {
+      const s = this.ctx.assets.GetSpriteFromNumberAtlas('retry.png');
+      s.width = 60;
+      s.height = 60;
+      s.x = 1000 + i * 70;
+      s.y = 100;
+      this.addChild(s);
+      this.livesSprites.push(s);
+    }
   }
 
-  /**
-   * 每帧由 GameScene 调用，传入剩余秒数。
-   * 修复：支持 3 位数（原代码仅支持 <100 秒）
-   */
-  public updateTime(seconds: number): void {
-    if (seconds === this.lastDisplayedSeconds) return;
-    this.lastDisplayedSeconds = seconds;
-
-    const s = Math.max(0, seconds).toString();
-    // 先全部隐藏
-    for (const d of this.timeSprites) d.visible = false;
-    // 从右往左填入各位数字
-    for (let i = 0; i < s.length && i < this.timeSprites.length; i++) {
-      const sprite = this.timeSprites[this.timeSprites.length - 1 - i];
-      sprite.texture = this.ctx.assets.GetTexture(`${s[s.length - 1 - i]}.png`);
-      sprite.visible = true;
-    }
+  private buildSettingsButton(onSettings: () => void): void {
+    const btn = this.ctx.assets.GetSpriteFromNumberAtlas('clock.png');
+    btn.width = 100;
+    btn.height = 100;
+    btn.x = 980;
+    btn.y = 30;
+    this.addChild(btn);
+    this.ctx.input.registerUI(
+      new UIElement({ zIndex: 10, sprite: btn, onTap: onSettings }),
+    );
   }
 }

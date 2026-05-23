@@ -3,7 +3,7 @@ import { WechatAssetsManager } from './assetsManager/wechatAssetsManager';
 import { InputManager } from './inputSystem/inputManager';
 import { setupWeChatInput } from './inputSystem/wechatAdapter';
 import { AppContext } from './game/appContext';
-import { GameScene } from './game/gameScene';
+import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
 
@@ -35,11 +35,11 @@ async function Init() {
 
   const ctx: AppContext = { assets, input };
 
-  const scene = new GameScene(ctx);
-  app.stage.addChild(scene);
-  scene.resize(width, height);
+  const coordinator = new SceneCoordinator(ctx);
+  app.stage.addChild(coordinator);
+  coordinator.resize(width, height);
 
-  app.ticker.add(() => scene.update(app.ticker.elapsedMS));
+  app.ticker.add(() => coordinator.update(app.ticker.elapsedMS));
 }
 
 Init();

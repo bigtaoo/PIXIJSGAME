@@ -4,29 +4,44 @@ import { UIElement } from '../inputSystem/uiElement';
 
 /**
  * 设置/暂停浮层。
- * 重构：移除对 display/config 的全局引用，改用 onResume 回调。
- * 构造时即创建所有子节点，可见性由 show()/hide() 控制。
+ * 提供"继续游戏"和"返回大厅"两个操作。
  */
 export class SettingsOverlay extends PIXI.Container {
-  constructor(ctx: AppContext, onResume: () => void) {
+  constructor(
+    ctx: AppContext,
+    onResume: () => void,
+    onGoLobby: () => void,
+  ) {
     super();
     this.visible = false;
 
     const bg = ctx.assets.GetSpriteFromNumberAtlas('note.png');
-    bg.width = 1500;
-    bg.height = 800;
-    bg.x = 300;
-    bg.y = 200;
+    bg.width = 700;
+    bg.height = 500;
+    bg.x = 190;
+    bg.y = 710;
     this.addChild(bg);
 
-    const closeBtn = ctx.assets.GetSpriteFromNumberAtlas('clock.png');
-    closeBtn.width = 300;
-    closeBtn.height = 200;
-    closeBtn.x = 600;
-    closeBtn.y = 500;
-    this.addChild(closeBtn);
+    // 继续游戏
+    const resumeBtn = ctx.assets.GetSpriteFromNumberAtlas('next.png');
+    resumeBtn.width = 200;
+    resumeBtn.height = 200;
+    resumeBtn.x = 230;
+    resumeBtn.y = 820;
+    this.addChild(resumeBtn);
     ctx.input.registerUI(
-      new UIElement({ zIndex: 20, sprite: closeBtn, onTap: onResume }),
+      new UIElement({ zIndex: 20, sprite: resumeBtn, onTap: onResume }),
+    );
+
+    // 返回大厅
+    const lobbyBtn = ctx.assets.GetSpriteFromNumberAtlas('clock.png');
+    lobbyBtn.width = 200;
+    lobbyBtn.height = 200;
+    lobbyBtn.x = 470;
+    lobbyBtn.y = 820;
+    this.addChild(lobbyBtn);
+    ctx.input.registerUI(
+      new UIElement({ zIndex: 20, sprite: lobbyBtn, onTap: onGoLobby }),
     );
   }
 

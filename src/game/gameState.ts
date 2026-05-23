@@ -1,32 +1,30 @@
+/**
+ * 纯运行时状态（不含关卡配置）。
+ *
+ * 时间池从 0 开始，每个目标数字开始时由 GameScene 调用 addTime(30_000) 注入。
+ * 不再持有固定的 initialTimeMs，重置时清零即可。
+ */
 export class GameState {
-  public readonly target: number;
-  public readonly initialTimeMs: number;
-
-  public timeRemainingMs: number;
+  public timeRemainingMs = 0;
   public isGameEnd = false;
   public isPause = false;
 
-  constructor(target = 10, initialTimeMs = 30_000) {
-    this.target = target;
-    this.initialTimeMs = initialTimeMs;
-    this.timeRemainingMs = initialTimeMs;
-  }
-
+  /** 重置状态（关卡重试 / 开始新关卡时调用） */
   public reset(): void {
-    this.timeRemainingMs = this.initialTimeMs;
+    this.timeRemainingMs = 0;
     this.isGameEnd = false;
     this.isPause = false;
   }
 
-  /** 每帧推进计时（暂停/结束时跳过） */
+  /** 每帧推进计时（暂停或已结束时跳过） */
   public tick(deltaMs: number): void {
     if (!this.isPause && !this.isGameEnd) {
       this.timeRemainingMs -= deltaMs;
     }
   }
 
-  /** 消除成功后奖励时间 */
-  public addTimeBonus(ms: number): void {
+  /** 向时间池添加时间（目标开始 +30s、消除成功 +1s） */
+  public addTime(ms: number): void {
     this.timeRemainingMs += ms;
   }
 

@@ -1,5 +1,9 @@
 import { IPlayerPrefs } from './IPlayerPrefs';
 
+// wx 的同步存储 API 在官方类型声明里缺失，用 any 跳过类型检查
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const wxStorage = wx as any;
+
 /**
  * 基于微信小游戏 wx.storage 同步 API 的 PlayerPrefs 实现。
  *
@@ -19,8 +23,6 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
     return this.prefix + key;
   }
 
-  // ── 写入 ────────────────────────────────────────────────────────────
-
   setInt(key: string, value: number): void {
     this.write(this.k(key), Math.trunc(value).toString());
   }
@@ -32,8 +34,6 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
   setString(key: string, value: string): void {
     this.write(this.k(key), value);
   }
-
-  // ── 读取 ────────────────────────────────────────────────────────────
 
   getInt(key: string, defaultValue = 0): number {
     const raw = this.read(this.k(key));
@@ -53,52 +53,47 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
     return this.read(this.k(key)) ?? defaultValue;
   }
 
-  // ── 其他 ────────────────────────────────────────────────────────────
-
   hasKey(key: string): boolean {
     return this.read(this.k(key)) !== null;
   }
 
   deleteKey(key: string): void {
     try {
-      wx.removeStorageSync(this.k(key));
+      wxStorage.removeStorageSync(this.k(key));
     } catch (e) {
-      console.warn('[WechatPlayerPrefs] deleteKey 失败:', e);
+      console.warn('[WechatPlayerPrefs] deleteKey failed:', e);
     }
   }
 
   deleteAll(): void {
     try {
-      const info = wx.getStorageInfoSync();
-      const toRemove = info.keys.filter((k: string) => k.startsWith(this.prefix));
-      toRemove.forEach((k: string) => {
-        try { wx.removeStorageSync(k); } catch { /* 单条失败不中断 */ }
+      const info = wxStorage.getStorageInfoSync();
+      const toRemove = (info.keys as string[]).filter((k) => k.startsWith(this.prefix));
+      toRemove.forEach((k) => {
+        try { wxStorage.removeStorageSync(k); } catch (_e) { /* ignore */ }
       });
     } catch (e) {
-      console.warn('[WechatPlayerPrefs] deleteAll 失败:', e);
+      console.warn('[WechatPlayerPrefs] deleteAll failed:', e);
     }
   }
 
-  /** wx.storage 每次写入自动持久化，此方法为 no-op */
+  /** wx.storage persists automatically on each write — no-op */
   save(): void {}
-
-  // ── 内部辅助 ─────────────────────────────────────────────────────────
 
   private write(key: string, value: string): void {
     try {
-      wx.setStorageSync(key, value);
+      wxStorage.setStorageSync(key, value);
     } catch (e) {
-      // 超出配额或其他写入错误，静默忽略
-      console.warn('[WechatPlayerPrefs] 写入失败:', e);
+      console.warn('[WechatPlayerPrefs] write failed:', e);
     }
   }
 
   private read(key: string): string | null {
     try {
-      // wx.getStorageSync 找不到 key 时返回空字符串 ''，而非 null
-      const val: string = wx.getStorageSync(key);
+      // wx.getStorageSync returns empty string '' when key is not found (not null)
+      const val: string = wxStorage.getStorageSync(key);
       return val === '' ? null : val;
-    } catch {
+    } catch (_e) {
       return null;
     }
   }

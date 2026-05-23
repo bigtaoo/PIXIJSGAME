@@ -28,6 +28,7 @@ export class UIElement {
   }
 
   public isSpriteVisible(): boolean {
-    return this.sprite.visible;
+    // worldVisible 向上遍历整条父节点链，确保所在容器隐藏时 UIElement 同步失效
+    return this.sprite.worldVisible;
   }
 }

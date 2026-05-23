@@ -3,7 +3,7 @@ import { WebAssetsManager } from './assetsManager/webAssetsManager';
 import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
-import { GameScene } from './game/gameScene';
+import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 
@@ -28,17 +28,17 @@ window.onload = async () => {
 
   const ctx: AppContext = { assets, input };
 
-  const scene = new GameScene(ctx);
-  app.stage.addChild(scene);
+  const coordinator = new SceneCoordinator(ctx);
+  app.stage.addChild(coordinator);
 
-  scene.resize(window.innerWidth, window.innerHeight);
+  coordinator.resize(window.innerWidth, window.innerHeight);
 
   window.addEventListener('resize', () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
-    scene.resize(window.innerWidth, window.innerHeight);
+    coordinator.resize(window.innerWidth, window.innerHeight);
   });
 
   app.ticker.add(() => {
-    scene.update(app.ticker.elapsedMS);
+    coordinator.update(app.ticker.elapsedMS);
   });
 };
