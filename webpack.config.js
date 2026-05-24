@@ -8,10 +8,26 @@ module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
   const targetPlatform = env.TARGET || 'web';
 
+  // ── Platform-specific overrides ──────────────────────────────────
+  const platformConfig = {
+    web: {
+      entry: './src/index.ts',
+      outputPath: path.resolve(__dirname, 'dist'),
+      htmlTemplate: './public/index.html',
+    },
+    crazygames: {
+      entry: './src/crazygamesIndex.ts',
+      outputPath: path.resolve(__dirname, 'crazygames'),
+      htmlTemplate: './public/crazygames.html',
+    },
+  };
+
+  const platform = platformConfig[targetPlatform] ?? platformConfig.web;
+
   return {
     target: 'web',
     mode: isProd ? 'production' : 'development',
-    entry: './src/index.ts',
+    entry: platform.entry,
     devtool: isProd ? false : 'source-map',
     module: {
       rules: [
@@ -30,11 +46,11 @@ module.exports = (env, argv) => {
     resolve: { extensions: ['.ts', '.js'] },
     output: {
       filename: 'index.js',
-      path: path.resolve(__dirname, 'dist'),
+      path: platform.outputPath,
       clean: false,
     },
     plugins: [
-      new HtmlWebpackPlugin({ template: './public/index.html' }),
+      new HtmlWebpackPlugin({ template: platform.htmlTemplate }),
       new webpack.DefinePlugin({
         TARGET: JSON.stringify(targetPlatform),
       }),
