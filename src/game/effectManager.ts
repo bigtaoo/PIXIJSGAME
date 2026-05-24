@@ -1,11 +1,11 @@
 import * as PIXI from 'pixi.js-legacy';
-import { Effect } from './effect';
+import { ExplosionSystem } from './effect';
 import { FlyingBonus } from './flyingBonus';
 import { AppContext } from './appContext';
 import { ScreenConfig } from './screenConfig';
 
 export class EffectManager extends PIXI.Container {
-  private effects: Effect[] = [];
+  private readonly explosion: ExplosionSystem;
   private flyingBonuses: FlyingBonus[] = [];
 
   /**
@@ -19,20 +19,19 @@ export class EffectManager extends PIXI.Container {
     private readonly screen: ScreenConfig,
   ) {
     super();
+    this.explosion = new ExplosionSystem(this, ctx.assets);
   }
 
-  public playEffect(index: number): void {
-    let effect = this.effects.find((e) => !e.IsVisible());
-    if (!effect) {
-      const sprite = this.ctx.assets.GetSpriteFromNumberAtlas('boom-0.png');
-      sprite.width = this.screen.gridSize;
-      sprite.height = this.screen.gridSize;
-      this.addChild(sprite);
-      effect = new Effect(sprite, this.ctx.assets);
-      this.effects.push(effect);
-    }
+  /**
+   * Trigger an explosion at the given cell index.
+   *
+   * @param index   Cell index (used to look up screen position)
+   * @param isCombo Whether this elimination is part of a combo
+   */
+  public playEffect(index: number, isCombo = false): void {
     const { x, y } = this.screen.indexToPos(index);
-    effect.Play(x, y);
+    const half = this.screen.gridSize / 2;
+    this.explosion.play(x + half, y + half, isCombo, this.screen.gridSize);
   }
 
   /**
@@ -54,9 +53,7 @@ export class EffectManager extends PIXI.Container {
   }
 
   public update(deltaMs: number): void {
-    for (const e of this.effects) {
-      if (e.IsVisible()) e.Update(deltaMs);
-    }
+    this.explosion.update(deltaMs);
 
     this.flyingBonuses = this.flyingBonuses.filter((fb) => {
       fb.update(deltaMs);

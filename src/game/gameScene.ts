@@ -260,13 +260,8 @@ export class GameScene extends PIXI.Container {
     this.gridLayer.hideCell(idxB);
     this.numberLayer.hideNumber(idxA);
     this.numberLayer.hideNumber(idxB);
-    this.effectLayer.playEffect(idxA);
-    this.effectLayer.playEffect(idxB);
-    this.logic.removeNumber(idxA);
-    this.logic.removeNumber(idxB);
-    this.selectedIndex = -1;
 
-    // ── Combo logic ──────────────────────────────────────────────────
+    // ── Combo logic (computed before effects so isCombo is available) ─
     const elapsed = this.gameTimeMs - this.lastEliminationGameTime;
     if (elapsed <= GameScene.COMBO_WINDOW_MS) {
       this.comboCount++;
@@ -275,11 +270,18 @@ export class GameScene extends PIXI.Container {
     }
     this.lastEliminationGameTime = this.gameTimeMs;
 
+    const isCombo = this.comboCount > 1;
+    this.effectLayer.playEffect(idxA, isCombo);
+    this.effectLayer.playEffect(idxB, isCombo);
+
+    this.logic.removeNumber(idxA);
+    this.logic.removeNumber(idxB);
+    this.selectedIndex = -1;
+
     // Bonus seconds: 1st (+2 s), 2nd consecutive (+3 s), 3rd+ (+4 s cap)
     const bonusSec = this.comboCount === 1 ? 2
                    : this.comboCount === 2 ? 3
                    :                         4;
-    const isCombo = this.comboCount > 1;
 
     this.state.addTime(bonusSec * 1000);
 

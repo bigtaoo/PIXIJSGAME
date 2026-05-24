@@ -2,8 +2,10 @@ import * as PIXI from 'pixi.js-legacy';
 import digitsPngUrl  from '../assets/digits.png';
 import heartPngUrl   from '../assets/heart.png';
 import heartEmptyUrl from '../assets/heart_empty.png';
-import boomJsonUrl   from '../assets/boom.json';
-import boomPngUrl    from '../assets/boom.png';
+import boomJsonUrl      from '../assets/boom.json';
+import boomPngUrl       from '../assets/boom.png';
+import explosionJsonUrl from '../assets/explosion.json';
+import explosionPngUrl  from '../assets/explosion.png';
 import bgPngUrl      from '../assets/bg.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
@@ -36,6 +38,7 @@ export class WebAssetsManager implements IAssetsManager {
       this.loadDigits(),
       this.loadHearts(),
       this.loadBoomAtlas(),
+      this.loadExplosionAtlas(),
       this.loadBg(),
     ]);
   }
@@ -68,6 +71,13 @@ export class WebAssetsManager implements IAssetsManager {
     const res   = await fetch(boomJsonUrl);
     const atlas = await res.json();
     this.parseAtlas(atlas, PIXI.BaseTexture.from(boomPngUrl));
+  }
+
+  private async loadExplosionAtlas(): Promise<void> {
+    const res   = await fetch(explosionJsonUrl);
+    const atlas = await res.json();
+    const base  = await this.waitForBase(PIXI.BaseTexture.from(explosionPngUrl));
+    this.parseAtlas(atlas, base);
   }
 
   private waitForBase(bt: PIXI.BaseTexture): Promise<PIXI.BaseTexture> {

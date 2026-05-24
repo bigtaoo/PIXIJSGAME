@@ -40,6 +40,27 @@ export class WechatAssetsManager implements IAssetsManager {
 
     const heartEmptyImg = await this.loadImageWX('assets/heart_empty.png');
     this.textures['heart_empty.png'] = new PIXI.Texture(this.imageToBaseTexture(heartEmptyImg));
+
+    // 爆炸粒子图集（加载失败不影响游戏）
+    await this.loadExplosionAtlasWX().catch(() => {/* 忽略 */});
+  }
+
+  private async loadExplosionAtlasWX(): Promise<void> {
+    const [img, json] = await Promise.all([
+      this.loadImageWX('assets/explosion.png'),
+      new Promise<any>((resolve, reject) => {
+        wx.request({
+          url: 'assets/explosion.json',
+          success: (res: any) => resolve(typeof res.data === 'string' ? JSON.parse(res.data) : res.data),
+          fail: reject,
+        });
+      }),
+    ]);
+    const base = this.imageToBaseTexture(img);
+    for (const key in json.frames) {
+      const f = json.frames[key].frame;
+      this.textures[key] = new PIXI.Texture(base, new PIXI.Rectangle(f.x, f.y, f.w, f.h));
+    }
   }
 
   /**
