@@ -94,12 +94,12 @@ export class Header extends PIXI.Container {
     if (seconds === this.lastDisplayedSeconds) return;
     this.lastDisplayedSeconds = seconds;
 
-    // 数字显示（右对齐，最多 3 位）
+    // 数字显示（左对齐，紧靠闹钟右侧，不补零）
     const s = Math.max(0, seconds).toString();
     for (const d of this.timeSprites) d.visible = false;
     for (let i = 0; i < s.length && i < this.timeSprites.length; i++) {
-      const sprite   = this.timeSprites[this.timeSprites.length - 1 - i];
-      sprite.texture = this.ctx.assets.GetTexture(`${s[s.length - 1 - i]}.png`);
+      const sprite   = this.timeSprites[i];
+      sprite.texture = this.ctx.assets.GetTexture(`${s[i]}.png`);
       sprite.visible = true;
     }
 
@@ -281,13 +281,14 @@ export class Header extends PIXI.Container {
 
     this.addChild(this.clockContainer);
 
-    // 时间数字（最多 3 位，右对齐，以 680 为最右）
+    // 时间数字（最多 3 位，左对齐紧跟闹钟右侧，以 668 为起点）
     const digitW = 50, digitH = 65;
+    const timeStartX = 668; // 闹钟右边缘 660 + 8px 间距
     for (let i = 0; i < 3; i++) {
       const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('0.png'));
       s.width  = digitW;
       s.height = digitH;
-      s.x      = 680 - (2 - i) * (digitW + 5);
+      s.x      = timeStartX + i * (digitW + 5);
       s.y      = 98;
       s.visible = false;
       this.addChild(s);
@@ -298,7 +299,7 @@ export class Header extends PIXI.Container {
   private buildLives(): void {
     const heartSize = 60;
     const gap       = 10;
-    const startX    = 760;
+    const startX    = 860; // 时间数字区最右约 828，留 32px 间距
     const y         = 95;
 
     for (let i = 0; i < 3; i++) {
@@ -316,7 +317,7 @@ export class Header extends PIXI.Container {
     const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('settings.png'));
     s.width  = 60;
     s.height = 60;
-    s.x      = 1010;
+    s.x      = 1090; // 爱心区最右约 1060，留 30px 间距
     s.y      = 20;
     this.addChild(s);
     this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: s, onTap: onSettings }));
