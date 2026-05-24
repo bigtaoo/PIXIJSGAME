@@ -4,7 +4,8 @@ import heartPngUrl   from '../assets/heart.png';
 import heartEmptyUrl from '../assets/heart_empty.png';
 import explosionJsonUrl from '../assets/explosion.json';
 import explosionPngUrl  from '../assets/explosion.png';
-import bgPngUrl      from '../assets/bg.png';
+import bgPngUrl      from '../assets/lobby_bg.png';
+import dailyPngUrl   from '../assets/daily_challenge_icon.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -37,12 +38,17 @@ export class WebAssetsManager implements IAssetsManager {
       this.loadHearts(),
       this.loadExplosionAtlas(),
       this.loadBg(),
+      this.loadDailyIcon(),
     ]);
   }
 
   private async loadBg(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(bgPngUrl));
-    this.textures['bg.png'] = new PIXI.Texture(base);
+    this.textures['lobby_bg.png'] = new PIXI.Texture(base);
+  }
+  private async loadDailyIcon(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(dailyPngUrl));
+    this.textures['daily_challenge_icon.png'] = new PIXI.Texture(base);
   }
 
   private async loadDigits(): Promise<void> {

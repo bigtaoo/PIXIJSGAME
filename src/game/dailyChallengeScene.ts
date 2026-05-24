@@ -5,10 +5,16 @@
  *
  * Key differences from GameScene:
  *   - No lives, no target progression: one board, one timer.
- *   - Scoring: +2 per elimination; combo multiplies: +3 / +4 / +5 (cap).
+ *   - Scoring: +2 per elimination; combo multiplier: +3 / +4 / +5 (cap at 4th+).
  *   - Tetris-style row collapse: when a full row is cleared the rows above
  *     fall down and a fresh self-paired row is inserted at the top.
  *   - Board is seeded by today's date so every player faces the same layout.
+ *
+ * Header matches main GameScene conventions:
+ *   - Sprite-based tip formula (□ + □ = Target) in the bottom row of the header.
+ *   - Hint system: 3 s after selecting the first tile, matching tiles flash once.
+ *   - Wrong second click: switches selection to the newly tapped cell (same as
+ *     GameScene — does not reset to empty).
  *
  * Lifecycle:
  *   SceneCoordinator creates this once and calls start() each time the
@@ -30,7 +36,9 @@ import { saveDailyScore, getDailyBestScore, recordDailyPlay } from './dailyChall
 import { makeRng } from './seededRng';
 import { UIElement } from '../inputSystem/uiElement';
 
-const COMBO_WINDOW_MS = 3_000;
+const COMBO_WINDOW_MS  = 3_000;
+const HINT_DELAY_MS    = 3_000;
+const RESULT_DISPLAY_MS = 500;
 
 export class DailyChallengeScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
@@ -43,20 +51,30 @@ export class DailyChallengeScene extends PIXI.Container {
   private effectLayer!:  EffectManager;
   private resultOverlay!: DailyChallengeResult;
 
-  // Header elements (programmatic, no external assets needed)
+  // ── Header row 1: mode title / score / timer ──────────────────────────────
   private headerBar!:   PIXI.Graphics;
   private timerText!:   PIXI.Text;
   private scoreLabel!:  PIXI.Text;
-  private targetLabel!: PIXI.Text;
 
-  // Runtime
-  private selectedIndex   = -1;
-  private score           = 0;
-  private comboCount      = 0;
+  // ── Header row 2: sprite-based tip formula ────────────────────────────────
+  private tipContainer!: PIXI.Container;
+  /** 消除成功后短暂展示完整等式计时器，-1 = 空闲。 */
+  private tipResultElapsed = -1;
+
+  // ── Runtime ───────────────────────────────────────────────────────────────
+  private selectedIndex    = -1;
+  private score            = 0;
+  private comboCount       = 0;
   private lastElimGameTime = -Infinity;
-  private gameTimeMs      = 0;
-  private initialized     = false;
-  private playRecorded    = false; // streak recorded once per session
+  private gameTimeMs       = 0;
+  private initialized      = false;
+  private playRecorded     = false;
+
+  // ── Hint system ───────────────────────────────────────────────────────────
+  /** ms elapsed since the player selected the first tile; -1 = inactive. */
+  private hintTimerMs = -1;
+  /** True once the hint has fired for the current selection. */
+  private hintFired   = false;
 
   constructor(
     private readonly ctx: AppContext,
@@ -72,28 +90,28 @@ export class DailyChallengeScene extends PIXI.Container {
 
   /** Call each time the player enters Daily Challenge (from the lobby). */
   public start(): void {
-    this.score         = 0;
-    this.comboCount    = 0;
+    this.score            = 0;
+    this.comboCount       = 0;
     this.lastElimGameTime = -Infinity;
-    this.gameTimeMs    = 0;
-    this.selectedIndex = -1;
-    this.playRecorded  = false;
+    this.gameTimeMs       = 0;
+    this.selectedIndex    = -1;
+    this.playRecorded     = false;
+    this.resetHintTimer();
 
-    // Reset timer to full 90 s
     this.state.reset();
     this.state.addTime(DAILY_DURATION_MS);
 
-    // Regenerate the seeded board
     const target = getDailyTarget();
     const rng    = makeRng(getDailySeed());
     this.logic.initializeSeeded(target, rng);
 
     if (this.initialized) {
       this.resultOverlay.hide();
-      this.updateHeaderDisplay();
+      this.updateScoreDisplay();
+      this.updateTimerDisplay();
+      this.rebuildTip(null, null);
       this.syncGrid();
     }
-    // else: buildScene() will be called on first resize()
   }
 
   public resize(windowWidth: number, windowHeight: number): void {
@@ -107,7 +125,6 @@ export class DailyChallengeScene extends PIXI.Container {
       drawBackground(this.bg, this.screen.width, this.screen.height);
       this.gridLayer.reconfigure();
       this.numberLayer.reconfigure(this.logic);
-      this.repositionHeader();
     }
 
     this.x = 0;
@@ -119,6 +136,9 @@ export class DailyChallengeScene extends PIXI.Container {
     if (!this.initialized) return;
 
     this.effectLayer.update(deltaMs);
+    // Keep hint animations running even when game is over
+    this.numberLayer.update(deltaMs);
+    this.updateTipResultReset(deltaMs);
 
     if (this.state.isGameEnd) return;
 
@@ -128,13 +148,21 @@ export class DailyChallengeScene extends PIXI.Container {
 
     if (this.state.isTimeUp) {
       this.onTimeUp();
+      return;
+    }
+
+    // ── Hint timer ────────────────────────────────────────────────────
+    if (this.hintTimerMs >= 0 && !this.hintFired) {
+      this.hintTimerMs += deltaMs;
+      if (this.hintTimerMs >= HINT_DELAY_MS) {
+        this.triggerHint();
+      }
     }
   }
 
   // ── Scene construction ─────────────────────────────────────────────────────
 
   private buildScene(): void {
-    // Ensure grid dims are set before anything uses ScreenConfig
     this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
 
     this.bg = new PIXI.Graphics();
@@ -147,7 +175,7 @@ export class DailyChallengeScene extends PIXI.Container {
 
     this.resultOverlay = new DailyChallengeResult(
       this.ctx,
-      () => this.start(),          // play again
+      () => this.start(),
       () => this.onGoLobby(),
     );
 
@@ -158,15 +186,22 @@ export class DailyChallengeScene extends PIXI.Container {
     this.buildHeader();
     this.addChild(this.resultOverlay);
 
-    // Populate board (start() has already seeded logic before first resize)
     this.syncGrid();
-    this.updateHeaderDisplay();
+    this.updateScoreDisplay();
+    this.updateTimerDisplay();
+    this.rebuildTip(null, null);
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
+  /**
+   * Header layout (portrait, GAME_WIDTH = 1080):
+   *
+   * Row 1 (y ≈ 18–90):  [← 每日挑战 (left)]  [SCORE (centre)]  [TIMER (right)]
+   * Row 2 (y ≈ 95–185): [□ + □ = Target  (left, sprite-based)]
+   */
   private buildHeader(): void {
-    const H = OFFSET_Y - 10;
+    const H = OFFSET_Y - 10;   // 290 px
     const W = GAME_WIDTH;
 
     this.headerBar = new PIXI.Graphics();
@@ -175,23 +210,15 @@ export class DailyChallengeScene extends PIXI.Container {
     this.headerBar.y = 10;
     this.addChild(this.headerBar);
 
-    // "每日挑战" label (top-left)
+    // "每日挑战" mode label (row 1, left)
     const modeLabel = new PIXI.Text('每日挑战', {
       fontFamily: 'Arial', fontSize: 36, fontWeight: 'bold', fill: C.icon,
     });
     modeLabel.x = 50;
-    modeLabel.y = 20;
+    modeLabel.y = 18;
     this.addChild(modeLabel);
 
-    // Target label (centre-left)
-    this.targetLabel = new PIXI.Text('', {
-      fontFamily: 'Arial', fontSize: 34, fill: C.icon,
-    });
-    this.targetLabel.x = 50;
-    this.targetLabel.y = 75;
-    this.addChild(this.targetLabel);
-
-    // Score (centre)
+    // Score (row 1, centre)
     this.scoreLabel = new PIXI.Text('0', {
       fontFamily: 'Arial', fontSize: 72, fontWeight: 'bold', fill: 0x2c6e49,
     });
@@ -200,7 +227,7 @@ export class DailyChallengeScene extends PIXI.Container {
     this.scoreLabel.y = 18;
     this.addChild(this.scoreLabel);
 
-    // Timer (right)
+    // Timer (row 1, right)
     this.timerText = new PIXI.Text('90', {
       fontFamily: 'Arial', fontSize: 72, fontWeight: 'bold', fill: C.clockBorder,
     });
@@ -209,7 +236,7 @@ export class DailyChallengeScene extends PIXI.Container {
     this.timerText.y = 18;
     this.addChild(this.timerText);
 
-    // Back-to-lobby tap zone (top-left corner)
+    // Back-to-lobby tap zone (top-left, covers mode label)
     this.buildBackButton();
   }
 
@@ -225,36 +252,111 @@ export class DailyChallengeScene extends PIXI.Container {
     );
   }
 
-  private repositionHeader(): void {
-    /* Header is in logical-pixel space and doesn't need repositioning
-       on resize — it is anchored to the top of the logical canvas. */
-  }
+  // ── Tip formula (row 2 of header) ─────────────────────────────────────────
 
-  private updateHeaderDisplay(): void {
+  /**
+   * Rebuild the sprite-based tip formula in the lower half of the header.
+   *
+   * Layout (portrait, local y ≈ 115–205):
+   *   [Slot1] [+] [Slot2] [=] [Target]
+   *
+   * Uses the same sprite assets and slot/value helpers as the main game Header.
+   */
+  private rebuildTip(first: number | null, second: number | null): void {
+    if (this.tipContainer) {
+      this.removeChild(this.tipContainer);
+      this.tipContainer.destroy({ children: true });
+    }
+    this.tipContainer = new PIXI.Container();
+
+    // Tip row sits in the lower half of the header
+    const W = 65, H = 82, Y = 115;
+
+    this.addTipSlotOrValue(this.tipContainer, first,  50,  Y, W, H);
+
+    const plus  = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
+    plus.width  = W; plus.height = H;
+    plus.x      = 125; plus.y   = Y;
+    this.tipContainer.addChild(plus);
+
+    this.addTipSlotOrValue(this.tipContainer, second, 200, Y, W, H);
+
+    const equa  = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
+    equa.width  = W; equa.height = H;
+    equa.x      = 275; equa.y   = Y;
+    this.tipContainer.addChild(equa);
+
+    // Target digits
     const target = getDailyTarget();
-    this.targetLabel.text = `目标 ${target}`;
-    this.scoreLabel.text  = this.score.toString();
-    this.updateTimerDisplay();
+    target.toString().split('').forEach((ch, i) => {
+      const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+      s.width   = W; s.height = H;
+      s.x       = 350 + i * 70; s.y = Y;
+      this.tipContainer.addChild(s);
+    });
+
+    this.addChild(this.tipContainer);
   }
 
-  private updateTimerDisplay(): void {
-    const secs = this.state.remainingSeconds;
-    this.timerText.text  = secs.toString();
-    this.timerText.style.fill = secs <= 10 ? 0xcc0000 : C.clockBorder;
+  /**
+   * Draw an empty slot (rounded rect + "?") or a digit sprite at (x, y).
+   * Mirrors the equivalent method in header.ts.
+   */
+  private addTipSlotOrValue(
+    container: PIXI.Container,
+    value: number | null,
+    x: number, y: number, w: number, h: number,
+  ): void {
+    if (value === null) {
+      const g = new PIXI.Graphics();
+      g.lineStyle(3, 0xBBBBBB, 1);
+      g.beginFill(0xF0F0F0, 1);
+      g.drawRoundedRect(x, y, w, h, 10);
+      g.endFill();
+      container.addChild(g);
+
+      const q = new PIXI.Text('?', new PIXI.TextStyle({
+        fontFamily: 'Arial', fontSize: Math.round(h * 0.52), fontWeight: 'bold', fill: 0xBBBBBB,
+      }));
+      q.anchor.set(0.5);
+      q.x = x + w / 2;
+      q.y = y + h / 2;
+      container.addChild(q);
+    } else {
+      const digits = value.toString().split('');
+      if (digits.length === 1) {
+        const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${digits[0]}.png`));
+        s.width   = w; s.height = h;
+        s.x       = x; s.y     = y;
+        container.addChild(s);
+      } else {
+        const dw = Math.floor((w - 4) / 2);
+        digits.forEach((ch, i) => {
+          const s = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+          s.width = dw; s.height = h;
+          s.x     = x + i * (dw + 4); s.y = y;
+          container.addChild(s);
+        });
+      }
+    }
+  }
+
+  /** Called every frame to auto-reset tip display after a successful match. */
+  private updateTipResultReset(deltaMs: number): void {
+    if (this.tipResultElapsed < 0) return;
+    this.tipResultElapsed += deltaMs;
+    if (this.tipResultElapsed >= RESULT_DISPLAY_MS) {
+      this.tipResultElapsed = -1;
+      this.rebuildTip(null, null);
+    }
   }
 
   // ── Grid sync ──────────────────────────────────────────────────────────────
 
-  /**
-   * Sync Grid and NumberLayer to the current logic state.
-   * Used after collapse (cells that previously had holes may now be filled)
-   * and after start() resets the board.
-   */
   private syncGrid(): void {
-    this.gridLayer.reconfigure();       // make all active-dim cells visible
+    this.gridLayer.reconfigure();
     this.numberLayer.reconfigure(this.logic);
 
-    // Re-hide cells where the logic value is 0 (eliminated holes)
     for (let col = 0; col < DAILY_GRID_W; col++) {
       for (let row = 0; row < DAILY_GRID_H; row++) {
         const idx = this.screen.cellIndex(col, row);
@@ -272,14 +374,20 @@ export class DailyChallengeScene extends PIXI.Container {
     if (this.logic.getNumberByIndex(index) === 0) return;
 
     if (this.selectedIndex === -1) {
+      // First selection
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
+      this.rebuildTip(this.logic.getNumberByIndex(index), null);
+      this.startHintTimer();
       return;
     }
 
     if (this.selectedIndex === index) {
+      // Tap same cell again → deselect
       this.selectedIndex = -1;
       this.gridLayer.hideSelection();
+      this.rebuildTip(null, null);
+      this.resetHintTimer();
       return;
     }
 
@@ -288,14 +396,23 @@ export class DailyChallengeScene extends PIXI.Container {
     const target = getDailyTarget();
 
     if (a + b === target) {
-      this.eliminatePair(this.selectedIndex, index);
+      this.eliminatePair(this.selectedIndex, index, a, b);
     } else {
+      // Wrong second choice — switch selection to the newly tapped cell
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
+      this.rebuildTip(b, null);
+      this.startHintTimer();
     }
   }
 
-  private eliminatePair(idxA: number, idxB: number): void {
+  private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
+    this.resetHintTimer();
+
+    // Show full match result in tip, then auto-reset after 500 ms
+    this.rebuildTip(a, b);
+    this.tipResultElapsed = 0;
+
     this.gridLayer.hideSelection();
     this.gridLayer.hideCell(idxA);
     this.gridLayer.hideCell(idxB);
@@ -316,21 +433,57 @@ export class DailyChallengeScene extends PIXI.Container {
     }
     this.lastElimGameTime = this.gameTimeMs;
 
+    // +2 / +3 / +4 / +5 (capped at 4th consecutive combo)
     const points = this.comboCount === 1 ? 2
                  : this.comboCount === 2 ? 3
                  : this.comboCount === 3 ? 4
-                 :                         5; // cap at 5
+                 :                         5;
     this.score += points;
-    this.scoreLabel.text = this.score.toString();
+    this.updateScoreDisplay();
 
     // ── Row collapse ───────────────────────────────────────────────────
-    // Keep collapsing until no more empty rows remain (shouldn't chain,
-    // but the loop guards against edge cases).
     let collapsed = this.logic.checkAndCollapse();
     while (collapsed) {
       this.syncGrid();
       collapsed = this.logic.checkAndCollapse();
     }
+  }
+
+  // ── Hint system ────────────────────────────────────────────────────────────
+
+  private resetHintTimer(): void {
+    this.hintTimerMs = -1;
+    this.hintFired   = false;
+  }
+
+  private startHintTimer(): void {
+    this.hintTimerMs = 0;
+    this.hintFired   = false;
+  }
+
+  private triggerHint(): void {
+    if (this.selectedIndex === -1 || this.hintFired) return;
+    this.hintFired = true;
+
+    const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
+    const target        = getDailyTarget();
+    const pairIndices   = this.logic.findPairIndices(selectedValue, target);
+
+    if (pairIndices.length > 0) {
+      this.numberLayer.flashHint(pairIndices);
+    }
+  }
+
+  // ── Display helpers ────────────────────────────────────────────────────────
+
+  private updateScoreDisplay(): void {
+    this.scoreLabel.text = this.score.toString();
+  }
+
+  private updateTimerDisplay(): void {
+    const secs = this.state.remainingSeconds;
+    this.timerText.text       = secs.toString();
+    this.timerText.style.fill = secs <= 10 ? 0xcc0000 : C.clockBorder;
   }
 
   // ── Time up ────────────────────────────────────────────────────────────────
@@ -340,7 +493,6 @@ export class DailyChallengeScene extends PIXI.Container {
     this.selectedIndex   = -1;
     this.gridLayer.hideSelection();
 
-    // Record streak once per session (first time time runs out)
     if (!this.playRecorded) {
       recordDailyPlay();
       this.playRecorded = true;

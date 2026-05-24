@@ -200,7 +200,7 @@ export class GameScene extends PIXI.Container {
       this.state.isGameEnd = true;
       this.selectedIndex   = -1;
       this.gridLayer.hideSelection();
-      const stars = StarManager.calculateStars(this.livesEverLost, this.state.timeRemainingMs);
+      const stars = StarManager.calculateStars(this.stage.stageIndex, this.livesEverLost, this.state.timeRemainingMs);
       StarManager.saveStars(this.stage.stageIndex, stars);
       StageManager.recordComplete(this.stage.stageIndex);
       this.resultOverlay.show(true, stars);

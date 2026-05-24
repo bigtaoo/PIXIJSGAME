@@ -3,14 +3,16 @@
  *
  * Persists and retrieves per-stage star ratings (1–3) via PlayerPrefs.
  *
- * Star criteria (applied at stage win time):
- *   ⭐     Completed (any conditions)
- *   ⭐⭐   Completed + no lives ever lost this stage attempt
- *   ⭐⭐⭐ Completed + no lives lost + time remaining ≥ STAR3_THRESHOLD_MS
+ * Star criteria (applied at stage win time, thresholds from starThresholds.ts):
+ *   ★     timeRemaining > star1Secs  (default: > 0 — simply completed)
+ *   ★★    timeRemaining > star2Secs  (default: > 30 s remaining)
+ *   ★★★   timeRemaining > star3Secs  (default: > 60 s remaining)
+ *
+ * Note: losing a life during the attempt caps the rating at 1 star regardless
+ * of time remaining, since livesEverLost is tracked across retries.
  */
 import { PlayerPrefs } from '../playerPrefs/playerPrefs';
-
-export const STAR3_THRESHOLD_MS = 15_000; // 15 seconds
+import { getStarThresholds } from './starThresholds';
 
 export class StarManager {
   private static key(stageIndex: number): string {
@@ -37,13 +39,20 @@ export class StarManager {
   /**
    * Calculate the star rating given the end-of-stage conditions.
    *
-   * @param livesLost    True if any life was lost during this stage attempt
-   *                     (including after retryStageAfterGameOver resets lives).
+   * Thresholds are per-stage and configurable in starThresholds.ts.
+   *
+   * @param stageIndex       1-based stage number (used to look up thresholds).
+   * @param livesLost        True if any life was lost during this attempt.
    * @param timeRemainingMs  Time left in the pool when all targets were cleared.
    */
-  static calculateStars(livesLost: boolean, timeRemainingMs: number): number {
+  static calculateStars(stageIndex: number, livesLost: boolean, timeRemainingMs: number): number {
     if (livesLost) return 1;
-    if (timeRemainingMs >= STAR3_THRESHOLD_MS) return 3;
-    return 2;
+
+    const { star2Secs, star3Secs } = getStarThresholds(stageIndex);
+    const secsRemaining = timeRemainingMs / 1000;
+
+    if (secsRemaining > star3Secs) return 3;
+    if (secsRemaining > star2Secs) return 2;
+    return 1;
   }
 }

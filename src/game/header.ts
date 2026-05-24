@@ -11,6 +11,81 @@ const WARN_THRESHOLD = 10;
 /** 计算指针角度的参考时长（秒）：超过此值时指针停在 12 点。 */
 const CLOCK_REF_SECS = 30;
 
+// ── 布局配置 ──────────────────────────────────────────────────────────────────
+
+interface HeaderLayout {
+  /** Header 背景条宽度（local 空间）*/
+  barW: number;
+  barH: number;
+
+  // ── 提示公式 ──────────────────────────────────────────────────────────────
+  tipY: number;
+  tipSlotW: number;
+  tipSlotH: number;
+  tipSlot1X: number;    // 左槽 x
+  tipPlusX: number;     // 加号 x
+  tipSlot2X: number;    // 右槽 x
+  tipEquaX: number;     // 等号 x
+  tipTargetX: number;   // 目标数字起始 x
+  tipTargetStep: number;// 每个数字字符的步进宽度
+
+  // ── 闹钟 ──────────────────────────────────────────────────────────────────
+  clockX: number;
+  clockY: number;
+  clockSize: number;   // 表盘直径（clockRadius = clockSize / 2）
+
+  // ── 时间数字 ──────────────────────────────────────────────────────────────
+  timeStartX: number;
+  timeY: number;
+  timeDigitW: number;
+  timeDigitH: number;
+  timeDigitGap: number;
+
+  // ── 命数心形 ──────────────────────────────────────────────────────────────
+  livesStartX: number;
+  livesY: number;
+  heartSize: number;
+  heartGap: number;
+
+  // ── 设置按钮 ──────────────────────────────────────────────────────────────
+  settingsX: number;
+  settingsY: number;
+  settingsSize: number;
+}
+
+/** 横屏布局（Header 居于画布右侧，left offset 350，bar 宽 1350）。 */
+function landscapeLayout(): HeaderLayout {
+  return {
+    barW: 1350, barH: 250,
+    tipY: 85, tipSlotW: 80, tipSlotH: 100,
+    tipSlot1X: 50, tipPlusX: 140, tipSlot2X: 225, tipEquaX: 315,
+    tipTargetX: 405, tipTargetStep: 85,
+    clockX: 580, clockY: 85, clockSize: 80,
+    timeStartX: 668, timeY: 98, timeDigitW: 50, timeDigitH: 65, timeDigitGap: 5,
+    livesStartX: 860, livesY: 95, heartSize: 60, heartGap: 10,
+    settingsX: 1090, settingsY: 20, settingsSize: 60,
+  };
+}
+
+/**
+ * 竖屏布局（Header 居于画布顶部，left offset 30，bar 宽 1020）。
+ * GAME_WIDTH=1080，pad=30 → bar width = 1020。
+ */
+function portraitLayout(): HeaderLayout {
+  return {
+    barW: 1020, barH: 250,
+    tipY: 80, tipSlotW: 70, tipSlotH: 90,
+    tipSlot1X: 20, tipPlusX: 100, tipSlot2X: 180, tipEquaX: 260,
+    tipTargetX: 340, tipTargetStep: 75,
+    clockX: 510, clockY: 85, clockSize: 70,
+    timeStartX: 590, timeY: 95, timeDigitW: 44, timeDigitH: 60, timeDigitGap: 4,
+    livesStartX: 748, livesY: 93, heartSize: 52, heartGap: 8,
+    settingsX: 940, settingsY: 20, settingsSize: 52,
+  };
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
 export class Header extends PIXI.Container {
   // ── 时间显示 ──────────────────────────────────────────────────────
   private timeSprites: PIXI.Sprite[]  = [];
@@ -38,6 +113,9 @@ export class Header extends PIXI.Container {
 
   private _target: number;
 
+  /** 当前布局配置（由构造时的方向决定，全生命周期不变）。 */
+  private readonly layout: HeaderLayout;
+
   constructor(
     private readonly ctx: AppContext,
     private readonly screen: ScreenConfig,
@@ -46,6 +124,10 @@ export class Header extends PIXI.Container {
   ) {
     super();
     this._target = initialTarget;
+    this.layout  = screen.orientation === Orientation.Landscape
+      ? landscapeLayout()
+      : portraitLayout();
+
     this.buildBackground();
     this.buildTip();
     this.buildTime();
@@ -103,7 +185,7 @@ export class Header extends PIXI.Container {
       sprite.visible = true;
     }
 
-    // 指针旋转：ratio=1 → 12点（满时间），sweeps clockwise as time decreases
+    // 指针旋转：ratio=1 → 12点（满时间），随时间减少顺时针旋转
     const ratio = Math.min(Math.max(seconds, 0) / CLOCK_REF_SECS, 1);
     this.clockHandSprite.rotation = Math.PI + (1 - ratio) * Math.PI * 2;
 
@@ -132,10 +214,10 @@ export class Header extends PIXI.Container {
    * 供飞行加时动画定位终点。
    */
   public getClockCenter(): { x: number; y: number } {
-    const CLOCK_RADIUS = 40; // 表盘 80px / 2
+    const r = this.layout.clockSize / 2;
     return {
-      x: this.x + this.clockContainer.x + CLOCK_RADIUS,
-      y: this.y + this.clockContainer.y + CLOCK_RADIUS,
+      x: this.x + this.layout.clockX + r,
+      y: this.y + this.layout.clockY + r,
     };
   }
 
@@ -143,18 +225,16 @@ export class Header extends PIXI.Container {
 
   private buildBackground(): void {
     const bg = new PIXI.Graphics();
-    const h  = 250;
+    const L  = this.layout;
 
     if (this.screen.orientation === Orientation.Landscape) {
       this.x = 350;
       this.y = 10;
-      drawHeaderBar(bg, 1350, h);
     } else {
-      const pad = 30;
-      this.x = pad;
+      this.x = 30;
       this.y = 10;
-      drawHeaderBar(bg, this.screen.width - pad * 2, h);
     }
+    drawHeaderBar(bg, L.barW, L.barH);
     this.addChild(bg);
   }
 
@@ -164,38 +244,36 @@ export class Header extends PIXI.Container {
    * @param second 右槽数值，null = 显示空槽
    */
   private rebuildTip(first: number | null, second: number | null): void {
-    // 销毁旧容器
     if (this.tipContainer) {
       this.removeChild(this.tipContainer);
       this.tipContainer.destroy({ children: true });
     }
     this.tipContainer = new PIXI.Container();
-
-    const w = 80, h = 100, y = 85;
+    const L = this.layout;
 
     // 左槽
-    this.addSlotOrValue(this.tipContainer, first, 50, y, w, h);
+    this.addSlotOrValue(this.tipContainer, first,  L.tipSlot1X, L.tipY, L.tipSlotW, L.tipSlotH);
 
     // 加号
     const plus   = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
-    plus.width   = w; plus.height = h;
-    plus.x       = 140; plus.y   = y;
+    plus.width   = L.tipSlotW; plus.height = L.tipSlotH;
+    plus.x       = L.tipPlusX; plus.y      = L.tipY;
     this.tipContainer.addChild(plus);
 
     // 右槽
-    this.addSlotOrValue(this.tipContainer, second, 225, y, w, h);
+    this.addSlotOrValue(this.tipContainer, second, L.tipSlot2X, L.tipY, L.tipSlotW, L.tipSlotH);
 
     // 等号
     const equa   = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
-    equa.width   = w; equa.height = h;
-    equa.x       = 315; equa.y   = y;
+    equa.width   = L.tipSlotW; equa.height = L.tipSlotH;
+    equa.x       = L.tipEquaX; equa.y      = L.tipY;
     this.tipContainer.addChild(equa);
 
     // 目标数字（可能为 1–2 位）
     this._target.toString().split('').forEach((ch, i) => {
       const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
-      s.width   = w; s.height = h;
-      s.x       = 405 + i * 85; s.y = y;
+      s.width   = L.tipSlotW; s.height = L.tipSlotH;
+      s.x       = L.tipTargetX + i * L.tipTargetStep; s.y = L.tipY;
       this.tipContainer.addChild(s);
     });
 
@@ -213,7 +291,6 @@ export class Header extends PIXI.Container {
     x: number, y: number, w: number, h: number,
   ): void {
     if (value === null) {
-      // 空槽：圆角矩形
       const g = new PIXI.Graphics();
       g.lineStyle(3, 0xBBBBBB, 1);
       g.beginFill(0xF0F0F0, 1);
@@ -221,16 +298,15 @@ export class Header extends PIXI.Container {
       g.endFill();
       container.addChild(g);
 
-      // "?" 占位文字
-      const q  = new PIXI.Text('?', new PIXI.TextStyle({
-        fontFamily: 'Arial', fontSize: 52, fontWeight: 'bold', fill: 0xBBBBBB,
+      const fontSize = Math.round(h * 0.52);
+      const q = new PIXI.Text('?', new PIXI.TextStyle({
+        fontFamily: 'Arial', fontSize, fontWeight: 'bold', fill: 0xBBBBBB,
       }));
       q.anchor.set(0.5);
       q.x = x + w / 2;
       q.y = y + h / 2;
       container.addChild(q);
     } else {
-      // 数字精灵（单位数直接使用全尺寸；两位数并排缩放至槽宽）
       const digits = value.toString().split('');
       if (digits.length === 1) {
         const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${digits[0]}.png`));
@@ -238,12 +314,11 @@ export class Header extends PIXI.Container {
         s.x       = x; s.y      = y;
         container.addChild(s);
       } else {
-        // 两位数：各占约 48% 宽度，中间留 4px 间距
+        // 两位数：各占约 48% 宽度，中间留少量间距
         const dw = Math.floor((w - 4) / 2);
-        const dh = h;
         digits.forEach((ch, i) => {
           const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
-          s.width   = dw; s.height = dh;
+          s.width   = dw; s.height = h;
           s.x       = x + i * (dw + 4); s.y = y;
           container.addChild(s);
         });
@@ -257,39 +332,38 @@ export class Header extends PIXI.Container {
   }
 
   private buildTime(): void {
-    // 闹钟容器
+    const L = this.layout;
+
     this.clockContainer   = new PIXI.Container();
-    this.clockContainer.x = 580;
-    this.clockContainer.y = 85;
+    this.clockContainer.x = L.clockX;
+    this.clockContainer.y = L.clockY;
 
-    // 表盘（静态，generateTexture 后的 Sprite）
-    this.clockFaceSprite = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_face.png'));
-    const face = this.clockFaceSprite;
-    face.width    = 80;
-    face.height   = 80;
-    this.clockContainer.addChild(face);
+    // 表盘
+    this.clockFaceSprite         = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_face.png'));
+    this.clockFaceSprite.width   = L.clockSize;
+    this.clockFaceSprite.height  = L.clockSize;
+    this.clockContainer.addChild(this.clockFaceSprite);
 
-    // 指针：pivot 在顶部中心，放置于表盘圆心 (40, 40)
+    // 指针：pivot 在顶部中心，放置于表盘圆心
+    const r = L.clockSize / 2;
     this.clockHandSprite           = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
     this.clockHandSprite.width     = 6;
     this.clockHandSprite.height    = 26;
     this.clockHandSprite.pivot.set(3, 0);
-    this.clockHandSprite.x        = 40;
-    this.clockHandSprite.y        = 40;
+    this.clockHandSprite.x        = r;
+    this.clockHandSprite.y        = r;
     this.clockHandSprite.rotation = Math.PI; // 12 点位置
     this.clockContainer.addChild(this.clockHandSprite);
 
     this.addChild(this.clockContainer);
 
-    // 时间数字（最多 3 位，左对齐紧跟闹钟右侧，以 668 为起点）
-    const digitW = 50, digitH = 65;
-    const timeStartX = 668; // 闹钟右边缘 660 + 8px 间距
+    // 时间数字（最多 3 位，左对齐紧跟闹钟右侧）
     for (let i = 0; i < 3; i++) {
       const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('0.png'));
-      s.width  = digitW;
-      s.height = digitH;
-      s.x      = timeStartX + i * (digitW + 5);
-      s.y      = 98;
+      s.width  = L.timeDigitW;
+      s.height = L.timeDigitH;
+      s.x      = L.timeStartX + i * (L.timeDigitW + L.timeDigitGap);
+      s.y      = L.timeY;
       s.visible = false;
       this.addChild(s);
       this.timeSprites.push(s);
@@ -297,35 +371,31 @@ export class Header extends PIXI.Container {
   }
 
   private buildLives(): void {
-    const heartSize = 60;
-    const gap       = 10;
-    const startX    = 860; // 时间数字区最右约 828，留 32px 间距
-    const y         = 95;
-
+    const L = this.layout;
     for (let i = 0; i < 3; i++) {
       const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('heart.png'));
-      s.width  = heartSize;
-      s.height = heartSize;
-      s.x      = startX + i * (heartSize + gap);
-      s.y      = y;
+      s.width  = L.heartSize;
+      s.height = L.heartSize;
+      s.x      = L.livesStartX + i * (L.heartSize + L.heartGap);
+      s.y      = L.livesY;
       this.addChild(s);
       this.livesSprites.push(s);
     }
   }
 
   private buildSettingsButton(onSettings: () => void): void {
+    const L = this.layout;
     const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('settings.png'));
-    s.width  = 60;
-    s.height = 60;
-    s.x      = 1090; // 爱心区最右约 1060，留 30px 间距
-    s.y      = 20;
+    s.width  = L.settingsSize;
+    s.height = L.settingsSize;
+    s.x      = L.settingsX;
+    s.y      = L.settingsY;
     this.addChild(s);
     this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: s, onTap: onSettings }));
   }
 
   // ── 消除结果计时器 ────────────────────────────────────────────────
 
-  /** 消除成功后展示完整等式约 500 ms，然后自动重置为空槽。 */
   private updateResultReset(deltaMs: number): void {
     if (this.resultElapsed < 0) return;
     this.resultElapsed += deltaMs;
@@ -349,7 +419,7 @@ export class Header extends PIXI.Container {
       return;
     }
 
-    // 简单正弦弹跳：0 → 1 → 0，峰值缩放 1.25
+    // 正弦弹跳：0 → 1 → 0，峰值缩放 1.25
     const scale = 1 + 0.25 * Math.sin(t * Math.PI);
     this.clockContainer.scale.set(scale);
   }

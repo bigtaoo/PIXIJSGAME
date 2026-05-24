@@ -15,10 +15,10 @@ export class Logic {
     const count = (w * h) / 2;
 
     for (let i = 0; i < count; ++i) {
-      // Ensure both first and second stay within the 1-9 sprite range
-      const maxFirst = Math.min(9, target - 1);
-      const minFirst = Math.max(1, target - 9);
-      const first = minFirst + Math.floor(Math.random() * (maxFirst - minFirst + 1));
+      // Full range: first ∈ [1, target-1], second = target - first.
+      // Both values are valid (≥1) and may be single- or two-digit;
+      // NumberLayer handles two-digit rendering via the 70%-scaled pair layout.
+      const first  = 1 + Math.floor(Math.random() * (target - 1));
       const second = target - first;
       pairs.push(first, second);
     }

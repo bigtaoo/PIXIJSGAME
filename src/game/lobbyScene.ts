@@ -5,38 +5,41 @@ import { STAGES, StageData } from './stageConfig';
 import { StageManager } from './stageManager';
 import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
-import { GAME_WIDTH } from './consts';
+import { GAME_WIDTH, GAME_HEIGHT } from './consts';
 import { drawCircleCell, drawCircleCellSelected, makeTexture, C } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
+import { LOBBY_NODE_POSITIONS, DAILY_CHALLENGE_POS } from './lobbyLayout';
 
 /**
- * 关卡大厅。
+ * 关卡大厅 — 探险地图布局
  *
- * 场景创建一次后全程复用。每次大厅可见时调用 refresh() 刷新各关卡的视觉状态。
+ * 背景图 bg.png（1024×1024）拉伸铺满整个画布（GAME_WIDTH × GAME_HEIGHT）。
+ * 19 个关卡节点沿 lobbyLayout.ts 中定义的蜿蜒路径坐标排布。
+ * 每日挑战图标固定在地图左侧中部，使用 daily.png。
  *
- * 布局：4 列 × 5 行 = 20 格（19 关填满）。
- * 节点视觉规则：
- *   已通关  → 暖白底色（无色调）
- *   当前关  → 金色描边卡片（cell_selected 纹理）
- *   未解锁  → 灰色半透明（tint 0x888888，alpha 0.5）
- *
- * TODO: 后期替换为探险小路布局（纵向滚动地图）。
+ * 如需微调位置，只需修改 lobbyLayout.ts 中的坐标，本文件无需改动。
  */
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
-  /** 关卡卡片 Sprite，与 STAGES 数组平行，由 refresh() 更新。 */
+  /** 节点直径（逻辑像素），对应设计规范 100px */
+  private static readonly NODE_SIZE = 100;
+
+  /** 每日挑战图标直径（逻辑像素），对应设计规范 130px */
+  private static readonly DAILY_SIZE = 130;
+
+  /** 关卡卡片 Sprite，与 STAGES 数组平行，由 refresh() 更新 */
   private stageCards: PIXI.Sprite[] = [];
 
-  /** Star labels per stage card (updated by refresh()). */
+  /** 每个节点下方的星级文字 */
   private starLabels: PIXI.Text[] = [];
 
-  /** Daily challenge panel texts (updated by refresh()). */
-  private dcBestText!:   PIXI.Text;
-  private dcStreakText!:  PIXI.Text;
+  /** 每日挑战面板文字（refresh 时更新） */
+  private dcBestText!: PIXI.Text;
+  private dcStreakText!: PIXI.Text;
 
-  /** 两种卡片纹理（普通 / 选中描边），在 buildUI 时按 btnSize 生成。 */
-  private cardTexture!:         PIXI.Texture;
+  /** 普通 / 选中描边 圆形节点纹理 */
+  private cardTexture!: PIXI.Texture;
   private cardSelectedTexture!: PIXI.Texture;
 
   constructor(
@@ -46,7 +49,7 @@ export class LobbyScene extends PIXI.Container {
   ) {
     super();
     this.screen = new ScreenConfig();
-    this.screen.update(GAME_WIDTH, GAME_WIDTH * 16 / 9); // default portrait ratio
+    this.screen.update(GAME_WIDTH, GAME_HEIGHT);
     this.buildUI();
   }
 
@@ -54,15 +57,14 @@ export class LobbyScene extends PIXI.Container {
 
   public resize(windowWidth: number, windowHeight: number): void {
     this.screen.update(windowWidth, windowHeight);
-    // Logical canvas fills the window exactly — no centering offset needed.
     this.x = 0;
     this.y = 0;
     this.scale.set(this.screen.scale);
   }
 
   /**
-   * 刷新所有关卡节点的视觉状态。
-   * 不新建任何对象，仅修改 tint / alpha / texture / stars。
+   * 刷新所有节点的视觉状态（已通关 / 当前关 / 未解锁 / 星级）。
+   * 不重新构建场景，仅更新现有对象的属性。
    */
   public refresh(): void {
     const maxCompleted = StageManager.getMaxCompleted();
@@ -70,6 +72,8 @@ export class LobbyScene extends PIXI.Container {
     STAGES.forEach((stage, i) => {
       const card      = this.stageCards[i];
       const starLabel = this.starLabels[i];
+      if (!card) return;
+
       const completed = stage.stageIndex <= maxCompleted;
       const isCurrent = stage.stageIndex === maxCompleted + 1;
 
@@ -87,7 +91,6 @@ export class LobbyScene extends PIXI.Container {
         card.alpha   = 0.5;
       }
 
-      // Update star display
       if (completed || isCurrent) {
         const stars = StarManager.getStars(stage.stageIndex);
         if (stars > 0) {
@@ -101,11 +104,11 @@ export class LobbyScene extends PIXI.Container {
       }
     });
 
-    // Daily challenge panel
+    // 每日挑战统计文字
     if (this.dcBestText) {
       const best = getDailyBestScore();
-      this.dcBestText.text   = best > 0 ? `今日最佳  ${best}` : '今日最佳  --';
-      this.dcStreakText.text  = `连续挑战  ${getStreakDays()}  天`;
+      this.dcBestText.text  = best > 0 ? `最佳 ${best}` : `最佳 --`;
+      this.dcStreakText.text = `${getStreakDays()}天`;
     }
   }
 
@@ -113,80 +116,61 @@ export class LobbyScene extends PIXI.Container {
 
   private buildUI(): void {
     this.buildBackground();
-    this.buildTitle();
-    this.buildStageGrid();
-    this.buildDailyChallengePanel();
+    this.buildAdventureMap();
+    this.buildDailyChallenge();
   }
 
-  /** 用 bg.png 图片铺满整个关卡选择场景背景。 */
+  /**
+   * 将 bg.png 拉伸铺满整个画布（GAME_WIDTH × GAME_HEIGHT = 1080 × 1920）。
+   */
   private buildBackground(): void {
-    const h  = GAME_WIDTH * 16 / 9;
-    const bg = new PIXI.Sprite(this.ctx.assets.GetTexture('bg.png'));
+    const bg = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
     bg.width  = GAME_WIDTH;
-    bg.height = h;
+    bg.height = GAME_HEIGHT;
     bg.x = 0;
     bg.y = 0;
     this.addChild(bg);
   }
 
   /**
-   * 标题区域：程序绘制的面板条，作为 Logo 占位。
-   * 后期可替换为游戏 Logo 图片。
+   * 按 lobbyLayout.ts 中定义的坐标，沿蜿蜒路径放置 19 个关卡圆形节点。
    */
-  private buildTitle(): void {
-    const W = 800, H = 120;
-    const banner = new PIXI.Graphics();
-    banner.lineStyle(1.5, 0xE0DAD0, 0.8);
-    banner.beginFill(0xFAFAF8);
-    banner.drawRoundedRect(0, 0, W, H, 16);
-    banner.endFill();
-    banner.x = (GAME_WIDTH - W) / 2;
-    banner.y = 80;
-    this.addChild(banner);
-  }
+  private buildAdventureMap(): void {
+    const sz = LobbyScene.NODE_SIZE;
+    const r  = sz / 2;
 
-  /**
-   * 4 列 × 5 行关卡节点格。
-   * 节点 Sprite 全部从同一纹理创建（状态通过 tint / texture 切换）。
-   */
-  private buildStageGrid(): void {
-    const cols    = 4;
-    const btnSize = 200;
-    const gap     = 40;
-    const totalW  = cols * btnSize + (cols - 1) * gap;
-    const startX  = (GAME_WIDTH - totalW) / 2;
-    const startY  = 280;
-
-    // 生成两种圆形卡片纹理（普通 / 选中）
+    // 生成节点纹理（普通 / 选中）
     this.cardTexture = makeTexture(
       this.ctx.renderer,
-      g => drawCircleCell(g, btnSize),
-      btnSize,
+      g => drawCircleCell(g, sz),
+      sz,
     );
     this.cardSelectedTexture = makeTexture(
       this.ctx.renderer,
-      g => drawCircleCellSelected(g, btnSize),
-      btnSize,
+      g => drawCircleCellSelected(g, sz),
+      sz,
     );
 
     STAGES.forEach((stage, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x   = startX + col * (btnSize + gap);
-      const y   = startY + row * (btnSize + gap);
+      const pos = LOBBY_NODE_POSITIONS[i];
+      if (!pos) return;
 
-      const card = this.buildStageButton(stage, x, y, btnSize);
+      // 节点左上角坐标（Sprite anchor 默认 (0,0)）
+      const nodeX = pos.x - r;
+      const nodeY = pos.y - r;
+
+      const card = this.buildStageButton(stage, nodeX, nodeY, sz);
       this.stageCards.push(card);
 
-      // Star label (bottom-centre of the card)
+      // 星级标签（节点正下方）
       const starLabel = new PIXI.Text('', {
         fontFamily: 'Arial',
-        fontSize:   28,
+        fontSize:   20,
         fill:       0xEAB830,
       });
-      starLabel.anchor.set(0.5, 1);
-      starLabel.x = x + btnSize / 2;
-      starLabel.y = y + btnSize - 8;
+      starLabel.anchor.set(0.5, 0);
+      starLabel.x = pos.x;
+      starLabel.y = pos.y + r + 4;
       starLabel.visible = false;
       this.addChild(starLabel);
       this.starLabels.push(starLabel);
@@ -195,73 +179,94 @@ export class LobbyScene extends PIXI.Container {
     this.refresh();
   }
 
-  /** Daily Challenge entry panel at the bottom of the lobby. */
-  private buildDailyChallengePanel(): void {
-    const W      = 840;
-    const H      = 160;
-    const startX = (GAME_WIDTH - W) / 2;
-    // Place below the 5-row stage grid (startY=280, 5 rows × 240px gap)
-    const startY = 280 + 5 * (200 + 40) + 20;
+  /**
+   * 每日挑战入口图标。
+   * 位置来自 lobbyLayout.ts：DAILY_CHALLENGE_POS。
+   * 图标使用 daily.png（深琥珀金底，排行榜柱图），直径 130px。
+   */
+  private buildDailyChallenge(): void {
+    const { x, y } = DAILY_CHALLENGE_POS;
+    const sz  = LobbyScene.DAILY_SIZE;
+    const r   = sz / 2;
 
-    // Panel background
-    const panel = new PIXI.Graphics();
-    panel.lineStyle(2, C.cellSelBorder, 1);
-    panel.beginFill(0xFBF8EE);
-    panel.drawRoundedRect(0, 0, W, H, 16);
-    panel.endFill();
-    panel.x = startX;
-    panel.y = startY;
-    this.addChild(panel);
+    // ── 底色圆形（程序绘制）──────────────────────────────────────────
+    const circle = new PIXI.Graphics();
+    circle.lineStyle(4, 0x6D4C41, 1);
+    circle.beginFill(0xC8862A);
+    circle.drawCircle(0, 0, r);
+    circle.endFill();
+    circle.x = x;
+    circle.y = y;
+    this.addChild(circle);
 
-    // "每日挑战" title
-    const title = new PIXI.Text('⚡ 每日挑战', {
-      fontFamily: 'Arial', fontSize: 40, fontWeight: 'bold', fill: C.icon,
+    // ── daily.png 图标（居中，70% 缩放填充圆内）─────────────────────
+    const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
+    const targetPx = sz * 0.7;
+    const scale    = targetPx / Math.max(icon.texture.width, icon.texture.height);
+    icon.width  = icon.texture.width  * scale;
+    icon.height = icon.texture.height * scale;
+    icon.anchor.set(0.5, 0.5);
+    icon.x = x;
+    icon.y = y;
+    this.addChild(icon);
+
+    // ── "每日挑战" 文字标签（圆正下方）─────────────────────────────
+    const title = new PIXI.Text('每日挑战', {
+      fontFamily: 'Arial',
+      fontSize:   22,
+      fontWeight: 'bold',
+      fill:       0x5D4037,
+      stroke:     0xFFFFFF,
+      strokeThickness: 2,
     });
-    title.x = startX + 30;
-    title.y = startY + 20;
+    title.anchor.set(0.5, 0);
+    title.x = x;
+    title.y = y + r + 8;
     this.addChild(title);
 
-    // Best score
-    this.dcBestText = new PIXI.Text('今日最佳  --', {
-      fontFamily: 'Arial', fontSize: 30, fill: C.icon,
+    // ── 今日最佳 & 连续天数（小字，标题下方）────────────────────────
+    this.dcBestText = new PIXI.Text('最佳 --', {
+      fontFamily: 'Arial', fontSize: 18, fill: 0x5D4037,
     });
-    this.dcBestText.x = startX + 30;
-    this.dcBestText.y = startY + 80;
+    this.dcBestText.anchor.set(0.5, 0);
+    this.dcBestText.x = x;
+    this.dcBestText.y = y + r + 36;
     this.addChild(this.dcBestText);
 
-    // Streak
-    this.dcStreakText = new PIXI.Text('连续挑战  0  天', {
-      fontFamily: 'Arial', fontSize: 30, fill: C.icon,
+    this.dcStreakText = new PIXI.Text('0天', {
+      fontFamily: 'Arial', fontSize: 18, fill: 0x5D4037,
     });
-    this.dcStreakText.x = startX + 340;
-    this.dcStreakText.y = startY + 80;
+    this.dcStreakText.anchor.set(0.5, 0);
+    this.dcStreakText.x = x;
+    this.dcStreakText.y = y + r + 60;
     this.addChild(this.dcStreakText);
 
-    // Tap zone
-    const hitSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
-    hitSprite.width  = W;
-    hitSprite.height = H;
-    hitSprite.x = startX;
-    hitSprite.y = startY;
-    this.addChild(hitSprite);
+    // ── 点击区域 ─────────────────────────────────────────────────────
+    const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    hit.width  = sz;
+    hit.height = sz;
+    hit.x = x - r;
+    hit.y = y - r;
+    this.addChild(hit);
     this.ctx.input.registerUI(
-      new UIElement({ zIndex: 5, sprite: hitSprite, onTap: () => this.onDailyChallenge() }),
+      new UIElement({ zIndex: 5, sprite: hit, onTap: () => this.onDailyChallenge() }),
     );
   }
 
-  /** 构建单个关卡节点并注册点击事件。返回卡片 Sprite 以供状态管理使用。 */
+  // ── 内部工具方法 ──────────────────────────────────────────────────────
+
+  /** 构建单个关卡节点 Sprite 并注册点击事件。 */
   private buildStageButton(
     stage: StageData,
     x: number,
     y: number,
     size: number,
   ): PIXI.Sprite {
-    // 初始用普通纹理，refresh() 会根据进度覆盖
-    const card   = new PIXI.Sprite(this.cardTexture);
-    card.width   = size;
-    card.height  = size;
-    card.x       = x;
-    card.y       = y;
+    const card  = new PIXI.Sprite(this.cardTexture);
+    card.width  = size;
+    card.height = size;
+    card.x      = x;
+    card.y      = y;
     this.addChild(card);
 
     this.buildStageNumber(stage.stageIndex, x, y, size);
@@ -281,11 +286,11 @@ export class LobbyScene extends PIXI.Container {
     return card;
   }
 
-  /** 将关卡编号数字居中绘制在卡片上。 */
+  /** 将关卡编号数字精灵居中绘制在节点圆内。 */
   private buildStageNumber(n: number, cardX: number, cardY: number, cardSize: number): void {
     const str    = n.toString();
-    const digitW = 70;
-    const digitH = 90;
+    const digitW = Math.round(cardSize * 0.38);   // 单个数字宽度
+    const digitH = Math.round(cardSize * 0.5);    // 数字高度
     const totalW = str.length * digitW;
     const startX = cardX + (cardSize - totalW) / 2;
     const digitY = cardY + (cardSize - digitH) / 2;
