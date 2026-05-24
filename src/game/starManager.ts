@@ -1,12 +1,12 @@
 /**
  * starManager.ts
  *
- * Persists and retrieves per-stage star ratings (1–3) via PlayerPrefs.
+ * Persists and retrieves per-stage star ratings (1-3) via PlayerPrefs.
  *
  * Star criteria (applied at stage win time, thresholds from starThresholds.ts):
- *   ★     timeRemaining > star1Secs  (default: > 0 — simply completed)
- *   ★★    timeRemaining > star2Secs  (default: > 30 s remaining)
- *   ★★★   timeRemaining > star3Secs  (default: > 60 s remaining)
+ *   1 star:  completed (any time remaining)
+ *   2 stars: timeRemaining > star2Secs (default: > 30 s)
+ *   3 stars: timeRemaining > star3Secs (default: > 60 s)
  *
  * Note: losing a life during the attempt caps the rating at 1 star regardless
  * of time remaining, since livesEverLost is tracked across retries.

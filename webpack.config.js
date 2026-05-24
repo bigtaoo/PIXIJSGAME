@@ -15,13 +15,14 @@ module.exports = (env, argv) => {
     devtool: isProd ? false : 'source-map',
     module: {
       rules: [
-        { test: /\.ts$/, use: 'ts-loader', exclude: /node_modules/ },
+        {
+          test: /\.ts$/,
+          use: { loader: 'ts-loader', options: { transpileOnly: true } },
+          exclude: /node_modules/,
+        },
         {
           test: /\.(png|jpg|gif|webp|mp3|wav|ogg|json)$/i,
           type: 'asset/resource',
-          // generator: {
-          //     'assets/[name].[contenthash][ext]'
-          // },
         },
         { test: /\.css$/i, use: ['style-loader', 'css-loader'] },
       ],
@@ -30,7 +31,7 @@ module.exports = (env, argv) => {
     output: {
       filename: 'index.js',
       path: path.resolve(__dirname, 'dist'),
-      clean: true,
+      clean: false,
     },
     plugins: [
       new HtmlWebpackPlugin({ template: './public/index.html' }),
