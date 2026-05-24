@@ -77,21 +77,21 @@ export class ExplosionSystem {
   public play(cx: number, cy: number, isCombo: boolean, gridSize: number): void {
     if (!this.ready) return;
 
-    // Base visual scale: fragment should look ~40 % of a cell for "large"
-    const bs = gridSize / 120;
+    // Base visual scale: fragment should look ~27 % of a cell for "large" (2/3 of original)
+    const bs = gridSize / 180;
 
     if (isCombo) {
-      this.spawnGroup(this.largeTextures,  cx, cy, 3, { speedMin: 10, speedMax: 16, rotMin: 0.05, rotMax: 0.12, scale: bs * 1.0, scaleVar: 0.2, lifeMin: 300, lifeMax: 400, drag: 0.92, gravity: 0.35 });
-      this.spawnGroup(this.mediumTextures, cx, cy, 3, { speedMin:  8, speedMax: 14, rotMin: 0.04, rotMax: 0.10, scale: bs * 0.8, scaleVar: 0.2, lifeMin: 270, lifeMax: 360, drag: 0.91, gravity: 0.30 });
-      this.spawnGroup(this.smallTextures,  cx, cy, 8, { speedMin:  5, speedMax: 12, rotMin: 0.06, rotMax: 0.15, scale: bs * 0.5, scaleVar: 0.15, lifeMin: 220, lifeMax: 340, drag: 0.89, gravity: 0.25 });
-      this.spawnGroup(this.dustTextures,   cx, cy, 4, { speedMin:  2, speedMax:  7, rotMin: 0.01, rotMax: 0.04, scale: bs * 0.5, scaleVar: 0.10, lifeMin: 160, lifeMax: 300, drag: 0.87, gravity: 0.08 });
+      this.spawnGroup(this.largeTextures,  cx, cy, 3, { speedMin: 10, speedMax: 16, rotMin: 0.05, rotMax: 0.12, scale: bs * 1.0, scaleVar: 0.2, lifeMin: 200, lifeMax: 300, drag: 0.92, gravity: 0.35 });
+      this.spawnGroup(this.mediumTextures, cx, cy, 3, { speedMin:  8, speedMax: 14, rotMin: 0.04, rotMax: 0.10, scale: bs * 0.8, scaleVar: 0.2, lifeMin: 170, lifeMax: 260, drag: 0.91, gravity: 0.30 });
+      this.spawnGroup(this.smallTextures,  cx, cy, 8, { speedMin:  5, speedMax: 12, rotMin: 0.06, rotMax: 0.15, scale: bs * 0.5, scaleVar: 0.15, lifeMin: 120, lifeMax: 240, drag: 0.89, gravity: 0.25 });
+      this.spawnGroup(this.dustTextures,   cx, cy, 4, { speedMin:  2, speedMax:  7, rotMin: 0.01, rotMax: 0.04, scale: bs * 0.5, scaleVar: 0.10, lifeMin:  60, lifeMax: 200, drag: 0.87, gravity: 0.08 });
       this.spawnParticle(this.dustCloudTexture, cx, cy,
-        { speedMin: 1, speedMax: 3, rotMin: 0.01, rotMax: 0.02, scale: bs * 1.3, scaleVar: 0.1, lifeMin: 220, lifeMax: 320, drag: 0.85, gravity: 0.0 });
+        { speedMin: 1, speedMax: 3, rotMin: 0.01, rotMax: 0.02, scale: bs * 1.3, scaleVar: 0.1, lifeMin: 120, lifeMax: 220, drag: 0.85, gravity: 0.0 });
     } else {
-      this.spawnGroup(this.largeTextures,  cx, cy, 2, { speedMin:  8, speedMax: 14, rotMin: 0.05, rotMax: 0.12, scale: bs * 1.0, scaleVar: 0.2, lifeMin: 260, lifeMax: 360, drag: 0.92, gravity: 0.30 });
-      this.spawnGroup(this.mediumTextures, cx, cy, 2, { speedMin:  6, speedMax: 12, rotMin: 0.04, rotMax: 0.10, scale: bs * 0.8, scaleVar: 0.2, lifeMin: 240, lifeMax: 330, drag: 0.91, gravity: 0.25 });
-      this.spawnGroup(this.smallTextures,  cx, cy, 4, { speedMin:  4, speedMax: 10, rotMin: 0.06, rotMax: 0.15, scale: bs * 0.5, scaleVar: 0.15, lifeMin: 190, lifeMax: 290, drag: 0.90, gravity: 0.20 });
-      this.spawnGroup(this.dustTextures,   cx, cy, 2, { speedMin:  2, speedMax:  5, rotMin: 0.01, rotMax: 0.03, scale: bs * 0.5, scaleVar: 0.10, lifeMin: 130, lifeMax: 240, drag: 0.88, gravity: 0.05 });
+      this.spawnGroup(this.largeTextures,  cx, cy, 2, { speedMin:  8, speedMax: 14, rotMin: 0.05, rotMax: 0.12, scale: bs * 1.0, scaleVar: 0.2, lifeMin: 160, lifeMax: 260, drag: 0.92, gravity: 0.30 });
+      this.spawnGroup(this.mediumTextures, cx, cy, 2, { speedMin:  6, speedMax: 12, rotMin: 0.04, rotMax: 0.10, scale: bs * 0.8, scaleVar: 0.2, lifeMin: 140, lifeMax: 230, drag: 0.91, gravity: 0.25 });
+      this.spawnGroup(this.smallTextures,  cx, cy, 4, { speedMin:  4, speedMax: 10, rotMin: 0.06, rotMax: 0.15, scale: bs * 0.5, scaleVar: 0.15, lifeMin:  90, lifeMax: 190, drag: 0.90, gravity: 0.20 });
+      this.spawnGroup(this.dustTextures,   cx, cy, 2, { speedMin:  2, speedMax:  5, rotMin: 0.01, rotMax: 0.03, scale: bs * 0.5, scaleVar: 0.10, lifeMin:  30, lifeMax: 140, drag: 0.88, gravity: 0.05 });
     }
   }
 
