@@ -51,6 +51,19 @@ export class Logic {
     return true;
   }
 
+  /**
+   * Return the indices of all cells whose value equals (target − selectedValue).
+   * Used by the hint system to identify which cells should flash.
+   */
+  public findPairIndices(selectedValue: number, target: number): number[] {
+    const needed = target - selectedValue;
+    const result: number[] = [];
+    for (const [idx, val] of this.numbers) {
+      if (val === needed) result.push(idx);
+    }
+    return result;
+  }
+
   protected shuffle(arr: number[]): void {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

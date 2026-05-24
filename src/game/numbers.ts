@@ -13,12 +13,25 @@ interface CellSlots {
   slots: [PIXI.Sprite] | [PIXI.Sprite, PIXI.Sprite];
 }
 
+interface HintAnimation {
+  indices: number[];
+  elapsed: number;
+}
+
+/** Total duration of one hint pulse (fade-out + fade-in), in ms. */
+const HINT_DURATION_MS = 600;
+/** Lowest alpha reached at the mid-point of the pulse. */
+const HINT_MIN_ALPHA = 0.25;
+
 export class NumberLayer extends PIXI.Container {
   /**
    * High-watermark sprite pool, mirroring Grid's cell pool.
    * Cells outside the current stage grid are hidden but never destroyed.
    */
   private cells: Map<number, CellSlots> = new Map();
+
+  /** Active hint pulse animations (at most one at a time in practice). */
+  private hintAnimations: HintAnimation[] = [];
 
   constructor(
     private readonly ctx: AppContext,
@@ -59,6 +72,52 @@ export class NumberLayer extends PIXI.Container {
   public hideNumber(index: number): void {
     const cell = this.cells.get(index);
     if (cell) cell.slots.forEach((s) => (s.visible = false));
+  }
+
+  /**
+   * Trigger a single gentle alpha pulse on the given cells.
+   * Intentionally subtle so the player still feels they "found" the answer.
+   * Safe to call multiple times — each call queues an independent animation.
+   */
+  public flashHint(indices: number[]): void {
+    this.hintAnimations.push({ indices, elapsed: 0 });
+  }
+
+  /**
+   * Advance all running hint animations.  Call once per frame from GameScene.
+   */
+  public update(deltaMs: number): void {
+    if (this.hintAnimations.length === 0) return;
+
+    const half = HINT_DURATION_MS / 2;
+
+    for (let i = this.hintAnimations.length - 1; i >= 0; i--) {
+      const anim = this.hintAnimations[i]!;
+      anim.elapsed += deltaMs;
+
+      // Compute alpha: ease out to min, then ease back to 1
+      let alpha: number;
+      if (anim.elapsed < half) {
+        // fade out: 1 → HINT_MIN_ALPHA
+        const t = anim.elapsed / half;
+        alpha = 1 - (1 - HINT_MIN_ALPHA) * t;
+      } else if (anim.elapsed < HINT_DURATION_MS) {
+        // fade in: HINT_MIN_ALPHA → 1
+        const t = (anim.elapsed - half) / half;
+        alpha = HINT_MIN_ALPHA + (1 - HINT_MIN_ALPHA) * t;
+      } else {
+        alpha = 1;
+      }
+
+      for (const idx of anim.indices) {
+        const cell = this.cells.get(idx);
+        if (cell) cell.slots.forEach((s) => { if (s.visible) s.alpha = alpha; });
+      }
+
+      if (anim.elapsed >= HINT_DURATION_MS) {
+        this.hintAnimations.splice(i, 1);
+      }
+    }
   }
 
   // ── Internal ──────────────────────────────────────────────────────────

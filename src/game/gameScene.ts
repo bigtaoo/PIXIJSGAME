@@ -37,7 +37,14 @@ export class GameScene extends PIXI.Container {
   private lastEliminationGameTime = -Infinity;
   private gameTimeMs = 0;
 
+  /** How many ms have elapsed since the player selected the first tile. −1 = inactive. */
+  private hintTimerMs = -1;
+  /** True once the hint has fired for the current selection (prevents repeat). */
+  private hintFired = false;
+
   private static readonly COMBO_WINDOW_MS = 3000;
+  /** Delay before the hint flash fires after the player selects the first tile. */
+  private static readonly HINT_DELAY_MS = 3000;
 
   /**
    * True if at least one life was lost during the current stage attempt.
@@ -98,6 +105,8 @@ export class GameScene extends PIXI.Container {
 
     this.effectLayer.update(deltaMs);
     this.header.update(deltaMs);
+    // Keep hint flash animations running even while paused/ended
+    this.numberLayer.update(deltaMs);
 
     if (this.state.isGameEnd || this.state.isPause) return;
 
@@ -108,6 +117,14 @@ export class GameScene extends PIXI.Container {
 
     if (this.state.isTimeUp) {
       this.onTimeUp();
+    }
+
+    // ── Hint timer ──────────────────────────────────────────────────────
+    if (this.hintTimerMs >= 0 && !this.hintFired) {
+      this.hintTimerMs += deltaMs;
+      if (this.hintTimerMs >= GameScene.HINT_DELAY_MS) {
+        this.triggerHint();
+      }
     }
   }
 
@@ -171,6 +188,7 @@ export class GameScene extends PIXI.Container {
 
     this.comboCount = 0;
     this.lastEliminationGameTime = -Infinity;
+    this.resetHintTimer();
   }
 
   private onTargetCleared(): void {
@@ -231,14 +249,20 @@ export class GameScene extends PIXI.Container {
     if (this.logic.getNumberByIndex(index) === 0) return;
 
     if (this.selectedIndex === -1) {
+      // First selection — start the hint countdown
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
+      this.header.setFirstSelected(this.logic.getNumberByIndex(index));
+      this.startHintTimer();
       return;
     }
 
     if (this.selectedIndex === index) {
+      // Tap the same cell again → deselect
       this.selectedIndex = -1;
       this.gridLayer.hideSelection();
+      this.header.resetTip();
+      this.resetHintTimer();
       return;
     }
 
@@ -247,14 +271,19 @@ export class GameScene extends PIXI.Container {
     const target = this.stage.targets[this.currentTargetIdx];
 
     if (a + b === target) {
-      this.eliminatePair(this.selectedIndex, index);
+      this.eliminatePair(this.selectedIndex, index, a, b);
     } else {
+      // Wrong second choice — switch selection to the newly tapped cell
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
+      this.header.setFirstSelected(b);
+      this.startHintTimer();   // restart countdown for the new selection
     }
   }
 
-  private eliminatePair(idxA: number, idxB: number): void {
+  private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
+    this.resetHintTimer();   // pair found — cancel any pending hint
+    this.header.showMatchResult(a, b);
     this.gridLayer.hideSelection();
     this.gridLayer.hideCell(idxA);
     this.gridLayer.hideCell(idxB);
@@ -302,6 +331,31 @@ export class GameScene extends PIXI.Container {
 
     if (this.logic.isAllRemoved()) {
       this.onTargetCleared();
+    }
+  }
+
+  // ── Hint system ────────────────────────────────────────────────────────
+
+  private resetHintTimer(): void {
+    this.hintTimerMs = -1;
+    this.hintFired   = false;
+  }
+
+  private startHintTimer(): void {
+    this.hintTimerMs = 0;
+    this.hintFired   = false;
+  }
+
+  private triggerHint(): void {
+    if (this.selectedIndex === -1 || this.hintFired) return;
+    this.hintFired = true;
+
+    const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
+    const target        = this.stage.targets[this.currentTargetIdx];
+    const pairIndices   = this.logic.findPairIndices(selectedValue, target);
+
+    if (pairIndices.length > 0) {
+      this.numberLayer.flashHint(pairIndices);
     }
   }
 

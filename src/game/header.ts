@@ -17,7 +17,11 @@ export class Header extends PIXI.Container {
   private lastDisplayedSeconds        = -1;
 
   // ── 提示公式 ──────────────────────────────────────────────────────
-  private tipSprites: PIXI.Sprite[]   = [];
+  /** 整个提示区容器，每次重建时销毁旧的、重建新的。 */
+  private tipContainer!: PIXI.Container;
+  /** 消除成功后短暂展示完整等式的计时器，-1 = 空闲。 */
+  private resultElapsed = -1;
+  private static readonly RESULT_DISPLAY_MS = 500;
 
   // ── 命数心形 ──────────────────────────────────────────────────────
   private livesSprites: PIXI.Sprite[] = [];
@@ -51,17 +55,38 @@ export class Header extends PIXI.Container {
 
   // ── Public API ────────────────────────────────────────────────────
 
-  /** 目标数变化时调用：销毁旧提示精灵，重建新的。 */
+  /** 目标数变化时调用：销毁旧提示容器，重建新的（显示空槽）。 */
   public updateTarget(target: number): void {
     this._target = target;
-    for (const s of this.tipSprites) { this.removeChild(s); s.destroy(); }
-    this.tipSprites = [];
-    this.buildTip();
+    this.resultElapsed = -1;
+    this.rebuildTip(null, null);
   }
 
-  /** 每帧由 GameScene 调用，驱动弹跳动画。 */
+  /** 玩家选中第一个数字后调用，将其填入左槽。 */
+  public setFirstSelected(value: number): void {
+    this.resultElapsed = -1;
+    this.rebuildTip(value, null);
+  }
+
+  /** 取消选中 / 进入新 Target 时重置为双空槽。 */
+  public resetTip(): void {
+    this.resultElapsed = -1;
+    this.rebuildTip(null, null);
+  }
+
+  /**
+   * 消除成功后调用：短暂展示完整等式（a + b = Target），
+   * 约 500 ms 后自动重置为空槽。
+   */
+  public showMatchResult(a: number, b: number): void {
+    this.rebuildTip(a, b);
+    this.resultElapsed = 0;
+  }
+
+  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器。 */
   public update(deltaMs: number): void {
     this.updateBounce(deltaMs);
+    this.updateResultReset(deltaMs);
   }
 
   /** 更新时间显示 + 闹钟指针 + 预警变色。秒数未变时为空操作。 */
@@ -134,34 +159,101 @@ export class Header extends PIXI.Container {
   }
 
   /**
-   * 提示区：展示当前 Target 的一组示例配对，如 "3 + 7 = 10"。
-   * 每次 updateTarget() 调用时销毁旧精灵并重建。
+   * 提示区：□ + □ = Target，玩家选中数字后逐步填入空槽。
+   * @param first  左槽数值，null = 显示空槽
+   * @param second 右槽数值，null = 显示空槽
    */
-  private buildTip(): void {
+  private rebuildTip(first: number | null, second: number | null): void {
+    // 销毁旧容器
+    if (this.tipContainer) {
+      this.removeChild(this.tipContainer);
+      this.tipContainer.destroy({ children: true });
+    }
+    this.tipContainer = new PIXI.Container();
+
     const w = 80, h = 100, y = 85;
 
-    const maxFirst = Math.min(9, this._target - 1);
-    const minFirst = Math.max(1, this._target - 9);
-    const first    = minFirst + Math.floor(Math.random() * (maxFirst - minFirst + 1));
-    const second   = this._target - first;
+    // 左槽
+    this.addSlotOrValue(this.tipContainer, first, 50, y, w, h);
 
-    const items: [string, number][] = [
-      [`${first}.png`,  50],
-      ['plus.png',     140],
-      [`${second}.png`, 225],
-      ['equa.png',     315],
-    ];
+    // 加号
+    const plus   = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
+    plus.width   = w; plus.height = h;
+    plus.x       = 140; plus.y   = y;
+    this.tipContainer.addChild(plus);
+
+    // 右槽
+    this.addSlotOrValue(this.tipContainer, second, 225, y, w, h);
+
+    // 等号
+    const equa   = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
+    equa.width   = w; equa.height = h;
+    equa.x       = 315; equa.y   = y;
+    this.tipContainer.addChild(equa);
+
+    // 目标数字（可能为 1–2 位）
     this._target.toString().split('').forEach((ch, i) => {
-      items.push([`${ch}.png`, 405 + i * 85]);
+      const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+      s.width   = w; s.height = h;
+      s.x       = 405 + i * 85; s.y = y;
+      this.tipContainer.addChild(s);
     });
 
-    for (const [key, x] of items) {
-      const s  = new PIXI.Sprite(this.ctx.assets.GetTexture(key));
-      s.width  = w; s.height = h;
-      s.x      = x; s.y      = y;
-      this.addChild(s);
-      this.tipSprites.push(s);
+    this.addChild(this.tipContainer);
+  }
+
+  /**
+   * 在容器内的 (x, y) 位置绘制空槽或数字精灵。
+   * - value === null → 绘制圆角矩形空槽（灰色边框 + "?" 文字）
+   * - value !== null → 绘制对应数字精灵（两位数时并排缩放至槽宽）
+   */
+  private addSlotOrValue(
+    container: PIXI.Container,
+    value: number | null,
+    x: number, y: number, w: number, h: number,
+  ): void {
+    if (value === null) {
+      // 空槽：圆角矩形
+      const g = new PIXI.Graphics();
+      g.lineStyle(3, 0xBBBBBB, 1);
+      g.beginFill(0xF0F0F0, 1);
+      g.drawRoundedRect(x, y, w, h, 10);
+      g.endFill();
+      container.addChild(g);
+
+      // "?" 占位文字
+      const q  = new PIXI.Text('?', new PIXI.TextStyle({
+        fontFamily: 'Arial', fontSize: 52, fontWeight: 'bold', fill: 0xBBBBBB,
+      }));
+      q.anchor.set(0.5);
+      q.x = x + w / 2;
+      q.y = y + h / 2;
+      container.addChild(q);
+    } else {
+      // 数字精灵（单位数直接使用全尺寸；两位数并排缩放至槽宽）
+      const digits = value.toString().split('');
+      if (digits.length === 1) {
+        const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${digits[0]}.png`));
+        s.width   = w; s.height = h;
+        s.x       = x; s.y      = y;
+        container.addChild(s);
+      } else {
+        // 两位数：各占约 48% 宽度，中间留 4px 间距
+        const dw = Math.floor((w - 4) / 2);
+        const dh = h;
+        digits.forEach((ch, i) => {
+          const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+          s.width   = dw; s.height = dh;
+          s.x       = x + i * (dw + 4); s.y = y;
+          container.addChild(s);
+        });
+      }
     }
+  }
+
+  /** 在构造时首次建立提示（双空槽）。 */
+  private buildTip(): void {
+    this.rebuildTip(null, null);
   }
 
   private buildTime(): void {
@@ -228,6 +320,18 @@ export class Header extends PIXI.Container {
     s.y      = 20;
     this.addChild(s);
     this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: s, onTap: onSettings }));
+  }
+
+  // ── 消除结果计时器 ────────────────────────────────────────────────
+
+  /** 消除成功后展示完整等式约 500 ms，然后自动重置为空槽。 */
+  private updateResultReset(deltaMs: number): void {
+    if (this.resultElapsed < 0) return;
+    this.resultElapsed += deltaMs;
+    if (this.resultElapsed >= Header.RESULT_DISPLAY_MS) {
+      this.resultElapsed = -1;
+      this.rebuildTip(null, null);
+    }
   }
 
   // ── 弹跳动画 ─────────────────────────────────────────────────────
