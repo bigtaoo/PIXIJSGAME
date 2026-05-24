@@ -29,6 +29,21 @@ subtle pencil sketch texture, slightly imperfect edges, NO GRADIENT, NO SHINE,
 centered on 160x160 canvas. Empty/depleted state, clean and warm.
 --ar 1:1 --v 6 --style raw --chaos 15
 
+每日挑战
+A single circular game UI icon on transparent background, hand-drawn sketch style,
+warm amber gold circle (#C8862A) with subtle paper grain texture and radial highlight (15% brighter center),
+dark brown border (#6D4C41) 3px,
+inside: three vertical bars leaderboard chart,
+  center bar tallest (80% height) filled gold (#FFD700),
+  left bar shortest (50% height) filled bronze (#CD7F32),
+  right bar medium (65% height) filled silver (#C0C0C0),
+all bars width 20px with 10px spacing, dark brown outline (#5D4037) 2px,
+thin 1px horizontal baseline at bottom,
+flat colors, no gradient, no shadow, no glow,
+pencil sketch texture, stationery notepad aesthetic,
+centered on 260x260 canvas. --ar 1:1 --v 6 --style raw --quality 2
+
+
 爆炸效果
 推荐实现方式（适合 PixiJS）：
 

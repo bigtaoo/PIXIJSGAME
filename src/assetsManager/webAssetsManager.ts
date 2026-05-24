@@ -2,8 +2,6 @@ import * as PIXI from 'pixi.js-legacy';
 import digitsPngUrl  from '../assets/digits.png';
 import heartPngUrl   from '../assets/heart.png';
 import heartEmptyUrl from '../assets/heart_empty.png';
-import boomJsonUrl      from '../assets/boom.json';
-import boomPngUrl       from '../assets/boom.png';
 import explosionJsonUrl from '../assets/explosion.json';
 import explosionPngUrl  from '../assets/explosion.png';
 import bgPngUrl      from '../assets/bg.png';
@@ -37,7 +35,6 @@ export class WebAssetsManager implements IAssetsManager {
     await Promise.all([
       this.loadDigits(),
       this.loadHearts(),
-      this.loadBoomAtlas(),
       this.loadExplosionAtlas(),
       this.loadBg(),
     ]);
@@ -65,12 +62,6 @@ export class WebAssetsManager implements IAssetsManager {
     ]);
     this.textures['heart.png']       = new PIXI.Texture(hb);
     this.textures['heart_empty.png'] = new PIXI.Texture(heb);
-  }
-
-  private async loadBoomAtlas(): Promise<void> {
-    const res   = await fetch(boomJsonUrl);
-    const atlas = await res.json();
-    this.parseAtlas(atlas, PIXI.BaseTexture.from(boomPngUrl));
   }
 
   private async loadExplosionAtlas(): Promise<void> {
