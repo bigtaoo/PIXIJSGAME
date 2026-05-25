@@ -102,9 +102,9 @@ function portraitDCLayout(): DCHeaderLayout {
  * 横屏布局（canvas 高 = GAME_WIDTH = 1080；bar 从 x=350 开始，宽 1350）。
  * 与主游戏 Header 横屏偏移一致，避免与网格区域重叠。
  */
-function landscapeDCLayout(screenW: number): DCHeaderLayout {
-  const barX = 350;
-  const barW = screenW - barX - 20;
+function landscapeDCLayout(): DCHeaderLayout {
+  const barX = 480;
+  const barW = 1300;
   const cx   = barX + barW / 2;
   return {
     barX,  barY: 10, barW, barH: OFFSET_Y - 20,
@@ -122,7 +122,7 @@ function landscapeDCLayout(screenW: number): DCHeaderLayout {
 
 function getDCLayout(screen: ScreenConfig): DCHeaderLayout {
   return screen.orientation === Orientation.Landscape
-    ? landscapeDCLayout(screen.width)
+    ? landscapeDCLayout()
     : portraitDCLayout();
 }
 

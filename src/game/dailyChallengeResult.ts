@@ -54,8 +54,8 @@ interface DailyChallengeResultLayout {
 
 function portraitLayout(): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX = 500;
-  const panelY = 280;
+  const panelX = 750;
+  const panelY = 250;
   const scoreDigitH = 110;
   const btnSize = 160;
   return {
@@ -71,8 +71,8 @@ function portraitLayout(): DailyChallengeResultLayout {
 
 function landscapeLayout(): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX = 650;
-  const panelY = 300;
+  const panelX =1250;
+  const panelY = 250;
   const scoreDigitH = 110;
   const btnSize = 160;
   return {
