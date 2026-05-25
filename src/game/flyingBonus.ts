@@ -26,10 +26,11 @@ export class FlyingBonus extends PIXI.Container {
   // 各精灵的尺寸（在 scale=1 时）
   private static readonly SPRITE_H    = 80;
   private static readonly SPRITE_W    = Math.round(80 * 120 / 160); // 60，digits 等比
-  private static readonly PLUS_W      = 60;
-  private static readonly S_W         = 50;
-  private static readonly S_H         = 70;
-  private static readonly GAP         = 4;
+  private static readonly PLUS_W      = 40;
+  private static readonly PLUS_H      = 40;
+  private static readonly S_W         = 20;
+  private static readonly S_H         = 30;
+  private static readonly GAP         = -8;
 
   constructor(
     private readonly sx: number,
@@ -47,6 +48,7 @@ export class FlyingBonus extends PIXI.Container {
     const H     = FlyingBonus.SPRITE_H;
     const DW    = FlyingBonus.SPRITE_W;
     const PW    = FlyingBonus.PLUS_W;
+    const PH    = FlyingBonus.PLUS_H;
     const SW    = FlyingBonus.S_W;
     const SH    = FlyingBonus.S_H;
     const GAP   = FlyingBonus.GAP;
@@ -60,9 +62,9 @@ export class FlyingBonus extends PIXI.Container {
     // 加号
     const plus = new PIXI.Sprite(ctx.assets.GetTexture('plus.png'));
     plus.width  = PW;
-    plus.height = H;
+    plus.height = PH;
     plus.x      = curX;
-    plus.y      = -(H / 2);
+    plus.y      = -(PH / 2);
     plus.tint   = color;
     this.addChild(plus);
     curX += PW + GAP;
@@ -85,7 +87,7 @@ export class FlyingBonus extends PIXI.Container {
     s.width  = SW;
     s.height = SH;
     s.x      = curX;
-    s.y      = -(SH / 2);
+    s.y      = -(SH / 2) + 7;
     s.tint   = color;
     this.addChild(s);
 

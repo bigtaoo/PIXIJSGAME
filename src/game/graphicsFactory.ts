@@ -326,7 +326,7 @@ export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: nu
  * 用白色（0xFFFFFF）描边，调用方通过 sprite.tint 着色为金色或绿色。
  */
 export function drawLetterS(g: PIXI.Graphics, w: number, h: number): void {
-  const sw = Math.round(Math.min(w, h) * 0.17);
+  const sw = Math.round(Math.min(w, h) * 0.37);
   g.lineStyle(sw, 0xFFFFFF, 1);
 
   // 上半 C 弧（向左开口）
