@@ -201,17 +201,23 @@ export function drawRetryIcon(g: PIXI.Graphics, size: number): void {
   g.arc(cx, cy, r, -Math.PI * 0.75, Math.PI * 0.67);
 
   // 弧末端三角形箭头
-  const endA = Math.PI * 0.67;
-  const ax   = cx + Math.cos(endA) * r;
-  const ay   = cy + Math.sin(endA) * r;
-  const ah   = sw * 2.2;
-  const tA   = endA + Math.PI / 2; // 切线方向
+  const endA  = Math.PI * 0.67;
+  const ax    = cx + Math.cos(endA) * r;
+  const ay    = cy + Math.sin(endA) * r;
+  const tA    = endA + Math.PI / 2; // 切线方向（弧行进方向）
+  const ah    = sw * 2.5;           // 箭头长度
+  const hw    = sw * 1.3;           // 箭头半宽
+  const backA = tA + Math.PI;       // 与切线反向（箭头底部方向）
+  const perpA = tA + Math.PI / 2;   // 垂直于切线
+  // 底边中心点（在尖端后方）
+  const bx = ax + Math.cos(backA) * ah;
+  const by = ay + Math.sin(backA) * ah;
   g.lineStyle(0);
   g.beginFill(C.icon);
   g.drawPolygon([
-    ax, ay,
-    ax + Math.cos(tA - 2.4) * ah, ay + Math.sin(tA - 2.4) * ah,
-    ax + Math.cos(tA + 0.5) * ah, ay + Math.sin(tA + 0.5) * ah,
+    ax, ay,                                                    // 箭头尖端
+    bx + Math.cos(perpA) * hw, by + Math.sin(perpA) * hw,    // 底角 1
+    bx - Math.cos(perpA) * hw, by - Math.sin(perpA) * hw,    // 底角 2
   ]);
   g.endFill();
 }
