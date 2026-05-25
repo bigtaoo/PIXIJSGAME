@@ -2,21 +2,81 @@ import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
 import { UIElement } from '../inputSystem/uiElement';
 import { drawPanel } from './graphicsFactory';
+import { ScreenConfig } from './screenConfig';
+import { Orientation } from './enums';
+import { GAME_WIDTH } from './consts';
 
-// 星星行参数
+// ── 星星行尺寸（固定，两种方向相同）────────────────────────────────────────────
+
 const STAR_SIZE    = 72;
 const STAR_GAP     = 8;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
+// ── Layout ────────────────────────────────────────────────────────────────────
+
+interface GameResultLayout {
+  panelW:    number;
+  panelH:    number;
+  panelX:    number;
+  panelY:    number;
+  btnSize:   number;
+  btnY:      number;
+  btnLeftX:  number;
+  btnRightX: number;
+  starRowX:  number;
+  starRowY:  number;
+}
+
+function portraitLayout(): GameResultLayout {
+  const panelW = 700, panelH = 500;
+  const panelX = (GAME_WIDTH - panelW) / 2;   // 190
+  const panelY = 710;
+  const btnSize = 200;
+  const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
+  return {
+    panelW, panelH, panelX, panelY, btnSize, btnY,
+    btnLeftX:  panelX + 80,
+    btnRightX: panelX + panelW - 80 - btnSize,
+    starRowX:  panelX + panelW / 2 - TOTAL_STAR_W / 2,
+    starRowY:  panelY + 84,
+  };
+}
+
+function landscapeLayout(screenW: number): GameResultLayout {
+  const panelW = 700, panelH = 500;
+  const panelX = Math.round((screenW - panelW) / 2);
+  const panelY = 290;
+  const btnSize = 200;
+  const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
+  return {
+    panelW, panelH, panelX, panelY, btnSize, btnY,
+    btnLeftX:  panelX + 80,
+    btnRightX: panelX + panelW - 80 - btnSize,
+    starRowX:  panelX + panelW / 2 - TOTAL_STAR_W / 2,
+    starRowY:  panelY + 84,
+  };
+}
+
+function getLayout(screen: ScreenConfig): GameResultLayout {
+  return screen.orientation === Orientation.Landscape
+    ? landscapeLayout(screen.width)
+    : portraitLayout();
+}
+
+// ── GameResultOverlay ─────────────────────────────────────────────────────────
+
 export class GameResultOverlay extends PIXI.Container {
-  private retryBtn:    PIXI.Sprite;
-  private nextBtn:     PIXI.Sprite;
-  private lobbyBtn:    PIXI.Sprite;
-  private starRow!:    PIXI.Container;
-  private starSprites: PIXI.Sprite[] = [];
+  private readonly bg:          PIXI.Graphics;
+  private readonly retryBtn:    PIXI.Sprite;
+  private readonly nextBtn:     PIXI.Sprite;
+  private readonly lobbyBtn:    PIXI.Sprite;
+  private readonly starRow:     PIXI.Container;
+  private readonly starSprites: PIXI.Sprite[] = [];
+  private lastPanelW = 0;
+  private lastPanelH = 0;
 
   constructor(
-    ctx: AppContext,
+    ctx:     AppContext,
     onRetry: () => void,
     onNext:  () => void,
     onLobby: () => void,
@@ -24,60 +84,41 @@ export class GameResultOverlay extends PIXI.Container {
     super();
     this.visible = false;
 
-    const PANEL_W = 700;
-    const PANEL_H = 500;
-    const PANEL_X = 490;
-    const PANEL_Y = 360;
-
-    const bg = new PIXI.Graphics();
-    drawPanel(bg, PANEL_W, PANEL_H);
-    bg.x = PANEL_X;
-    bg.y = PANEL_Y;
-    this.addChild(bg);
-
-    const btnSize   = 200;
-    const btnY      = PANEL_Y + PANEL_H / 2 - btnSize / 2 + 30;
-    const btnLeftX  = PANEL_X + 80;
-    const btnRightX = PANEL_X + PANEL_W - 80 - btnSize;
+    this.bg = new PIXI.Graphics();
+    this.addChild(this.bg);
 
     this.retryBtn = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
-    this.retryBtn.width  = btnSize;
-    this.retryBtn.height = btnSize;
-    this.retryBtn.x = btnLeftX;
-    this.retryBtn.y = btnY;
     this.addChild(this.retryBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.retryBtn, onTap: onRetry }));
 
     this.nextBtn = new PIXI.Sprite(ctx.assets.GetTexture('next.png'));
-    this.nextBtn.width  = btnSize;
-    this.nextBtn.height = btnSize;
-    this.nextBtn.x = btnLeftX;
-    this.nextBtn.y = btnY;
     this.addChild(this.nextBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.nextBtn, onTap: onNext }));
 
     this.lobbyBtn = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
-    this.lobbyBtn.width  = btnSize;
-    this.lobbyBtn.height = btnSize;
-    this.lobbyBtn.x = btnRightX;
-    this.lobbyBtn.y = btnY;
     this.addChild(this.lobbyBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }));
 
-    // 3 颗星精灵（代替 "★☆" 文字）
+    // 3 颗星精灵
     this.starRow = new PIXI.Container();
-    this.starRow.x = PANEL_X + PANEL_W / 2 - TOTAL_STAR_W / 2;
-    this.starRow.y = PANEL_Y + 84;
     for (let i = 0; i < 3; i++) {
-      const s    = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
-      s.width    = STAR_SIZE;
-      s.height   = STAR_SIZE;
-      s.x        = i * (STAR_SIZE + STAR_GAP);
-      s.y        = 0;
+      const s  = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
+      s.width  = STAR_SIZE;
+      s.height = STAR_SIZE;
+      s.x      = i * (STAR_SIZE + STAR_GAP);
+      s.y      = 0;
       this.starRow.addChild(s);
       this.starSprites.push(s);
     }
     this.addChild(this.starRow);
+
+    this.applyLayout(portraitLayout());
+  }
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+
+  public resize(screen: ScreenConfig): void {
+    this.applyLayout(getLayout(screen));
   }
 
   public show(win: boolean, stars = 0): void {
@@ -90,18 +131,38 @@ export class GameResultOverlay extends PIXI.Container {
     if (win) {
       for (let i = 0; i < 3; i++) {
         const sp = this.starSprites[i]!;
-        if (i < stars) {
-          sp.tint  = 0xEAB830;  // 实心星——金色
-          sp.alpha = 1.0;
-        } else {
-          sp.tint  = 0x888888;  // 空星——灰色半透明
-          sp.alpha = 0.35;
-        }
+        sp.tint  = i < stars ? 0xEAB830 : 0x888888;
+        sp.alpha = i < stars ? 1.0       : 0.35;
       }
     }
   }
 
   public hide(): void {
     this.visible = false;
+  }
+
+  // ── Private ────────────────────────────────────────────────────────────────
+
+  private applyLayout(L: GameResultLayout): void {
+    if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
+      this.bg.clear();
+      drawPanel(this.bg, L.panelW, L.panelH);
+      this.lastPanelW = L.panelW;
+      this.lastPanelH = L.panelH;
+    }
+    this.bg.x = L.panelX;
+    this.bg.y = L.panelY;
+
+    this.retryBtn.width  = L.btnSize; this.retryBtn.height = L.btnSize;
+    this.retryBtn.x = L.btnLeftX;    this.retryBtn.y = L.btnY;
+
+    this.nextBtn.width   = L.btnSize; this.nextBtn.height  = L.btnSize;
+    this.nextBtn.x = L.btnLeftX;     this.nextBtn.y = L.btnY;
+
+    this.lobbyBtn.width  = L.btnSize; this.lobbyBtn.height = L.btnSize;
+    this.lobbyBtn.x = L.btnRightX;   this.lobbyBtn.y = L.btnY;
+
+    this.starRow.x = L.starRowX;
+    this.starRow.y = L.starRowY;
   }
 }

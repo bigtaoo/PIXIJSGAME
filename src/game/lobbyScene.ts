@@ -8,7 +8,7 @@ import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
 import { drawCircleCell, drawCircleCellSelected, makeTexture } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
-import { LOBBY_NODE_POSITIONS, DAILY_CHALLENGE_POS } from './lobbyLayout';
+import { getLobbyLayout, LobbyLayout } from './lobbyLayout';
 import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
 
@@ -30,18 +30,15 @@ const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // 30
 
 // Per-node runtime data for repositioning on resize
 interface NodeEntry {
-  portraitCX:    number;
-  portraitCY:    number;
+  stageIndex:    number;
   card:          PIXI.Sprite;
   numDisplay:    DigitDisplay;
   starContainer: PIXI.Container;
-  starSprites:   PIXI.Sprite[];   // always 3
+  starSprites:   PIXI.Sprite[];
 }
 
 // Daily challenge element refs for repositioning on resize
 interface DailyChallengeEntry {
-  portraitX:     number;
-  portraitY:     number;
   circle:        PIXI.Graphics;
   icon:          PIXI.Sprite;
   bestRow:       PIXI.Container;
@@ -59,8 +56,8 @@ export class LobbyScene extends PIXI.Container {
 
   private bg!: PIXI.Sprite;
 
-  private nodeEntries:        NodeEntry[]      = [];
-  private dailyEntry!:        DailyChallengeEntry;
+  private nodeEntries: NodeEntry[]         = [];
+  private dailyEntry!: DailyChallengeEntry;
 
   // Parallel arrays kept for refresh()
   private stageCards:         PIXI.Sprite[]    = [];
@@ -123,13 +120,8 @@ export class LobbyScene extends PIXI.Container {
         starCont.visible = stars > 0;
         for (let s = 0; s < 3; s++) {
           const sp = starSprts[s]!;
-          if (s < stars) {
-            sp.tint  = 0xEAB830;
-            sp.alpha = 1.0;
-          } else {
-            sp.tint  = 0x888888;
-            sp.alpha = 0.35;
-          }
+          sp.tint  = s < stars ? 0xEAB830 : 0x888888;
+          sp.alpha = s < stars ? 1.0 : 0.35;
         }
       } else {
         starCont.visible = false;
@@ -163,8 +155,11 @@ export class LobbyScene extends PIXI.Container {
     this.cardTexture         = makeTexture(this.ctx.renderer, g => drawCircleCell(g, sz), sz);
     this.cardSelectedTexture = makeTexture(this.ctx.renderer, g => drawCircleCellSelected(g, sz), sz);
 
+    // 用竖屏布局初始建立节点（resize() 会按当前方向重定位）
+    const layout = getLobbyLayout(this.screen);
+
     STAGES.forEach((stage, i) => {
-      const pos = LOBBY_NODE_POSITIONS[i];
+      const pos = layout.nodePositions[i];
       if (!pos) return;
       const cx = pos.x;
       const cy = pos.y;
@@ -172,14 +167,12 @@ export class LobbyScene extends PIXI.Container {
       const card = this.buildStageButton(stage, cx - r, cy - r, sz);
       this.stageCards.push(card);
 
-      // Digit sprites for stage number
       const numDisplay = new DigitDisplay(this.ctx, NODE_DIGIT_W, NODE_DIGIT_H);
       numDisplay.update(stage.stageIndex);
       numDisplay.x = cx - numDisplay.totalWidth / 2;
       numDisplay.y = cy - NODE_DIGIT_H / 2;
       this.addChild(numDisplay);
 
-      // 3 star sprites
       const { container: starContainer, sprites: starSprites } = this.buildStarRow();
       starContainer.x       = cx - TOTAL_STAR_W / 2;
       starContainer.y       = cy + r + 4;
@@ -189,7 +182,7 @@ export class LobbyScene extends PIXI.Container {
       this.nodeStarSprites.push(starSprites);
 
       this.nodeEntries.push({
-        portraitCX: cx, portraitCY: cy,
+        stageIndex: stage.stageIndex,
         card, numDisplay, starContainer, starSprites,
       });
     });
@@ -197,7 +190,6 @@ export class LobbyScene extends PIXI.Container {
     this.refresh();
   }
 
-  /** 构建 3 颗星的水平行。 */
   private buildStarRow(): { container: PIXI.Container; sprites: PIXI.Sprite[] } {
     const container = new PIXI.Container();
     const sprites: PIXI.Sprite[] = [];
@@ -215,7 +207,8 @@ export class LobbyScene extends PIXI.Container {
   }
 
   private buildDailyChallenge(): void {
-    const { x, y } = DAILY_CHALLENGE_POS;
+    const layout = getLobbyLayout(this.screen);
+    const { x, y } = layout.dailyChallengePos;
     const sz = LobbyScene.DAILY_SIZE;
     const r  = sz / 2;
 
@@ -238,11 +231,9 @@ export class LobbyScene extends PIXI.Container {
     icon.y = y;
     this.addChild(icon);
 
-    // 最佳分数行：奖杯图标 + 数字
-    const best = this.buildIconDigitRow('trophy.png');
+    const best   = this.buildIconDigitRow('trophy.png');
     this.addChild(best.container);
 
-    // 连续天数行：火焰图标 + 数字
     const streak = this.buildIconDigitRow('fire.png');
     this.addChild(streak.container);
 
@@ -257,7 +248,6 @@ export class LobbyScene extends PIXI.Container {
     );
 
     this.dailyEntry = {
-      portraitX: x, portraitY: y,
       circle, icon,
       bestRow:       best.container,   bestDisplay:   best.display,
       streakRow:     streak.container, streakDisplay: streak.display,
@@ -267,7 +257,6 @@ export class LobbyScene extends PIXI.Container {
     this.refreshDailyRows();
   }
 
-  /** 构建 [小图标 + DigitDisplay] 行，返回 container 和 display 的引用。 */
   private buildIconDigitRow(iconKey: string): { container: PIXI.Container; display: DigitDisplay } {
     const container  = new PIXI.Container();
     const iconSprite = new PIXI.Sprite(this.ctx.assets.GetTexture(iconKey));
@@ -286,32 +275,32 @@ export class LobbyScene extends PIXI.Container {
   }
 
   /**
-   * 更新每日挑战区数字内容并重新居中两行。
-   * 同时被 refresh() 和 repositionAll() 调用，以 toLogicalPos 获取当前坐标。
+   * 用最新数值刷新每日挑战数字行，并按当前坐标重新居中。
+   * 由 refresh() 和 repositionAll() 共同调用。
    */
   private refreshDailyRows(): void {
     if (!this.dailyEntry) return;
-    const pos = this.toLogicalPos(this.dailyEntry.portraitX, this.dailyEntry.portraitY);
-    const dr  = LobbyScene.DAILY_SIZE / 2;
 
-    // 最佳分数行
+    const layout = getLobbyLayout(this.screen);
+    const { x, y } = layout.dailyChallengePos;
+    const dr = LobbyScene.DAILY_SIZE / 2;
+
     const best = getDailyBestScore();
     if (best > 0) {
       this.dailyEntry.bestDisplay.update(best);
       const rowW = DC_ICON_W + DC_GAP + this.dailyEntry.bestDisplay.totalWidth;
-      this.dailyEntry.bestRow.x       = pos.x - rowW / 2;
-      this.dailyEntry.bestRow.y       = pos.y + dr + 8;
+      this.dailyEntry.bestRow.x       = x - rowW / 2;
+      this.dailyEntry.bestRow.y       = y + dr + 8;
       this.dailyEntry.bestRow.visible = true;
     } else {
       this.dailyEntry.bestRow.visible = false;
     }
 
-    // 连续天数行
     const streakDays = getStreakDays();
     this.dailyEntry.streakDisplay.update(streakDays);
     const streakW = DC_ICON_W + DC_GAP + this.dailyEntry.streakDisplay.totalWidth;
-    this.dailyEntry.streakRow.x       = pos.x - streakW / 2;
-    this.dailyEntry.streakRow.y       = pos.y + dr + (best > 0 ? 32 : 8);
+    this.dailyEntry.streakRow.x       = x - streakW / 2;
+    this.dailyEntry.streakRow.y       = y + dr + (best > 0 ? 32 : 8);
     this.dailyEntry.streakRow.visible = true;
   }
 
@@ -328,40 +317,40 @@ export class LobbyScene extends PIXI.Container {
     }
   }
 
-  private toLogicalPos(portraitX: number, portraitY: number): { x: number; y: number } {
-    if (this.screen.orientation !== Orientation.Landscape) {
-      return { x: portraitX, y: portraitY };
-    }
-    return {
-      x: (portraitX / GAME_WIDTH)  * this.screen.width,
-      y: (portraitY / GAME_HEIGHT) * GAME_WIDTH,
-    };
-  }
-
+  /**
+   * 根据当前方向对应的 LobbyLayout 重定位所有节点和每日挑战元素。
+   * 取代原来的 toLogicalPos() 比例映射，使用明确的 layout 坐标。
+   */
   private repositionAll(): void {
+    const layout = getLobbyLayout(this.screen);
     const sz = LobbyScene.NODE_SIZE;
     const r  = sz / 2;
 
     for (const entry of this.nodeEntries) {
-      const pos = this.toLogicalPos(entry.portraitCX, entry.portraitCY);
-      entry.card.x          = pos.x - r;
-      entry.card.y          = pos.y - r;
-      entry.numDisplay.x    = pos.x - entry.numDisplay.totalWidth / 2;
-      entry.numDisplay.y    = pos.y - NODE_DIGIT_H / 2;
-      entry.starContainer.x = pos.x - TOTAL_STAR_W / 2;
-      entry.starContainer.y = pos.y + r + 4;
+      const pos = layout.nodePositions.find(p => p.stageIndex === entry.stageIndex);
+      if (!pos) continue;
+      const cx = pos.x;
+      const cy = pos.y;
+
+      entry.card.x          = cx - r;
+      entry.card.y          = cy - r;
+      entry.numDisplay.x    = cx - entry.numDisplay.totalWidth / 2;
+      entry.numDisplay.y    = cy - NODE_DIGIT_H / 2;
+      entry.starContainer.x = cx - TOTAL_STAR_W / 2;
+      entry.starContainer.y = cy + r + 4;
     }
 
     if (this.dailyEntry) {
-      const pos = this.toLogicalPos(this.dailyEntry.portraitX, this.dailyEntry.portraitY);
-      const dr  = LobbyScene.DAILY_SIZE / 2;
-      this.dailyEntry.circle.x = pos.x;
-      this.dailyEntry.circle.y = pos.y;
-      this.dailyEntry.icon.x   = pos.x;
-      this.dailyEntry.icon.y   = pos.y;
-      this.dailyEntry.hit.x    = pos.x - dr;
-      this.dailyEntry.hit.y    = pos.y - dr;
-      // 重新居中数字行（含最新数值）
+      const { x, y } = layout.dailyChallengePos;
+      const dr = LobbyScene.DAILY_SIZE / 2;
+
+      this.dailyEntry.circle.x = x;
+      this.dailyEntry.circle.y = y;
+      this.dailyEntry.icon.x   = x;
+      this.dailyEntry.icon.y   = y;
+      this.dailyEntry.hit.x    = x - dr;
+      this.dailyEntry.hit.y    = y - dr;
+
       this.refreshDailyRows();
     }
   }

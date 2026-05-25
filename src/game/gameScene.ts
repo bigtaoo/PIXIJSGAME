@@ -94,6 +94,9 @@ export class GameScene extends PIXI.Container {
       drawBackground(this.bg, this.screen.width, this.screen.height);
       this.gridLayer.reconfigure();
       this.numberLayer.reconfigure(this.logic);
+      this.header.resize(this.screen);
+      this.resultOverlay.resize(this.screen);
+      this.settingsOverlay.resize(this.screen);
     }
 
     this.x = 0;

@@ -2,13 +2,6 @@
  * dailyChallengeResult.ts
  *
  * Result overlay shown when the 90-second Daily Challenge timer expires.
- *
- * Displays:
- *   - Final score（digit sprites）
- *   - Today's personal best（trophy icon + digit sprites）
- *   - Consecutive-streak count（fire icon + digit sprites）
- *   - "Play Again" and "Lobby" icon buttons（retry.png / lobby.png）
- *   - CrazyGames leaderboard submission (fire-and-forget, silent on failure)
  */
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
@@ -17,19 +10,20 @@ import { drawPanel } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 import { GAME_WIDTH } from './consts';
 import { DigitDisplay } from './digitDisplay';
+import { ScreenConfig } from './screenConfig';
+import { Orientation } from './enums';
 
-// ── CrazyGames leaderboard (optional integration) ──────────────────────────────
-// Replace ENCRYPTION_KEY with the 32-byte base64 key agreed with CrazyGames.
+// ── CrazyGames leaderboard (optional) ─────────────────────────────────────────
 const ENCRYPTION_KEY = '';   // TODO: set before going live
 
 async function encryptScore(score: number, key: string): Promise<string> {
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const iv       = window.crypto.getRandomValues(new Uint8Array(12));
   const alg: AesGcmParams = { name: 'AES-GCM', iv };
   const keyBytes = Uint8Array.from(atob(key), c => c.charCodeAt(0));
   const cryptoKey = await window.crypto.subtle.importKey('raw', keyBytes, alg, false, ['encrypt']);
-  const data = new TextEncoder().encode(score.toString());
+  const data      = new TextEncoder().encode(score.toString());
   const encrypted = await window.crypto.subtle.encrypt(alg, cryptoKey, data);
-  const combined = new Uint8Array(12 + encrypted.byteLength);
+  const combined  = new Uint8Array(12 + encrypted.byteLength);
   combined.set(iv);
   combined.set(new Uint8Array(encrypted), 12);
   return btoa(String.fromCharCode(...combined));
@@ -47,67 +41,135 @@ function submitScoreToCrazyGames(score: number): void {
     .catch(() => { /* silent */ });
 }
 
-// ── Panel layout constants ─────────────────────────────────────────────────────
+// ── Layout ────────────────────────────────────────────────────────────────────
 
-const PANEL_W = 720;
-const PANEL_H = 520;
-const PANEL_X = (GAME_WIDTH - PANEL_W) / 2;
-const PANEL_Y = 680;
+interface DailyChallengeResultLayout {
+  panelW: number; panelH: number; panelX: number; panelY: number;
+  scoreDigitW: number; scoreDigitH: number; scoreY: number;
+  rowIconW: number; rowIconH: number;
+  rowDigitW: number; rowDigitH: number; rowGap: number;
+  bestRowY: number; streakRowY: number;
+  btnSize: number; btnGap: number; btnY: number;
+}
 
-// 得分 digit 尺寸
-const SCORE_DIGIT_H = 110;
-const SCORE_DIGIT_W = Math.round(SCORE_DIGIT_H * 120 / 160); // ~82
+function portraitLayout(): DailyChallengeResultLayout {
+  const panelW = 720, panelH = 520;
+  const panelX = (GAME_WIDTH - panelW) / 2;
+  const panelY = 680;
+  const scoreDigitH = 110;
+  const btnSize = 160;
+  return {
+    panelW, panelH, panelX, panelY,
+    scoreDigitW: Math.round(scoreDigitH * 120 / 160), scoreDigitH,
+    scoreY: panelY + 60,
+    rowIconW: 36, rowIconH: 36,
+    rowDigitW: Math.round(36 * 120 / 160), rowDigitH: 36, rowGap: 8,
+    bestRowY: panelY + 220, streakRowY: panelY + 270,
+    btnSize, btnGap: 80, btnY: panelY + panelH - btnSize - 40,
+  };
+}
 
-// 图标行 icon / digit 尺寸
-const ROW_ICON_H  = 36;
-const ROW_ICON_W  = 36;
-const ROW_DIGIT_H = 36;
-const ROW_DIGIT_W = Math.round(ROW_DIGIT_H * 120 / 160); // ~27
-const ROW_GAP     = 8;
+function landscapeLayout(screenW: number): DailyChallengeResultLayout {
+  const panelW = 720, panelH = 520;
+  const panelX = Math.round((screenW - panelW) / 2);
+  const panelY = 280;
+  const scoreDigitH = 110;
+  const btnSize = 160;
+  return {
+    panelW, panelH, panelX, panelY,
+    scoreDigitW: Math.round(scoreDigitH * 120 / 160), scoreDigitH,
+    scoreY: panelY + 60,
+    rowIconW: 36, rowIconH: 36,
+    rowDigitW: Math.round(36 * 120 / 160), rowDigitH: 36, rowGap: 8,
+    bestRowY: panelY + 220, streakRowY: panelY + 270,
+    btnSize, btnGap: 80, btnY: panelY + panelH - btnSize - 40,
+  };
+}
+
+function getLayout(screen: ScreenConfig): DailyChallengeResultLayout {
+  return screen.orientation === Orientation.Landscape
+    ? landscapeLayout(screen.width)
+    : portraitLayout();
+}
 
 // ── DailyChallengeResult ───────────────────────────────────────────────────────
 
 export class DailyChallengeResult extends PIXI.Container {
-  private scoreDisplay!:  DigitDisplay;
+  private readonly bg:           PIXI.Graphics;
+  private readonly scoreDisplay: DigitDisplay;
+  private readonly retryBtn:     PIXI.Sprite;
+  private readonly lobbyBtn:     PIXI.Sprite;
+
+  // Assigned during buildIconRows() called in constructor — non-readonly intentionally
   private bestDisplay!:   DigitDisplay;
   private streakDisplay!: DigitDisplay;
   private bestRow!:       PIXI.Container;
   private streakRow!:     PIXI.Container;
 
+  private layout:     DailyChallengeResultLayout;
+  private lastPanelW = 0;
+  private lastPanelH = 0;
+
   constructor(
-    ctx: AppContext,
+    private readonly ctx: AppContext,
     private readonly onPlayAgain: () => void,
     private readonly onLobby:     () => void,
   ) {
     super();
     this.visible = false;
-    this.buildPanel(ctx);
+
+    const L = portraitLayout();
+    this.layout = L;
+
+    this.bg = new PIXI.Graphics();
+    this.addChild(this.bg);
+
+    this.scoreDisplay = new DigitDisplay(ctx, L.scoreDigitW, L.scoreDigitH);
+    this.scoreDisplay.update(0);
+    this.addChild(this.scoreDisplay);
+
+    this.buildIconRows(L);
+
+    this.retryBtn = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
+    this.addChild(this.retryBtn);
+    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: this.retryBtn, onTap: this.onPlayAgain }));
+
+    this.lobbyBtn = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
+    this.addChild(this.lobbyBtn);
+    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: this.lobbyBtn, onTap: this.onLobby }));
+
+    this.applyLayout(L);
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  public show(score: number, _isNewBest: boolean): void {
-    const cx = PANEL_X + PANEL_W / 2;
+  public resize(screen: ScreenConfig): void {
+    this.layout = getLayout(screen);
+    this.applyLayout(this.layout);
+  }
 
-    // 得分（大数字，居中）
+  public show(score: number, _isNewBest: boolean): void {
+    const L  = this.layout;
+    const cx = L.panelX + L.panelW / 2;
+
+    this.scoreDisplay.digitW = L.scoreDigitW;
+    this.scoreDisplay.digitH = L.scoreDigitH;
     this.scoreDisplay.update(score);
     this.scoreDisplay.x = cx - this.scoreDisplay.totalWidth / 2;
 
-    // 最佳分数行
     const best = getDailyBestScore();
     if (best > 0) {
       this.bestDisplay.update(best);
-      const rowW = ROW_ICON_W + ROW_GAP + this.bestDisplay.totalWidth;
+      const rowW = L.rowIconW + L.rowGap + this.bestDisplay.totalWidth;
       this.bestRow.x       = cx - rowW / 2;
       this.bestRow.visible = true;
     } else {
       this.bestRow.visible = false;
     }
 
-    // 连续天数行
     const streak = getStreakDays();
     this.streakDisplay.update(streak);
-    const streakW = ROW_ICON_W + ROW_GAP + this.streakDisplay.totalWidth;
+    const streakW = L.rowIconW + L.rowGap + this.streakDisplay.totalWidth;
     this.streakRow.x       = cx - streakW / 2;
     this.streakRow.visible = true;
 
@@ -115,87 +177,59 @@ export class DailyChallengeResult extends PIXI.Container {
     this.visible = true;
   }
 
-  public hide(): void {
-    this.visible = false;
-  }
+  public hide(): void { this.visible = false; }
 
-  // ── UI construction ────────────────────────────────────────────────────────
+  // ── Private ────────────────────────────────────────────────────────────────
 
-  private buildPanel(ctx: AppContext): void {
-    const bg = new PIXI.Graphics();
-    drawPanel(bg, PANEL_W, PANEL_H);
-    bg.x = PANEL_X;
-    bg.y = PANEL_Y;
-    this.addChild(bg);
-
-    const cx = PANEL_X + PANEL_W / 2;
-
-    // 得分（大数字，初始 "0"）
-    this.scoreDisplay = new DigitDisplay(ctx, SCORE_DIGIT_W, SCORE_DIGIT_H);
-    this.scoreDisplay.update(0);
-    this.scoreDisplay.x = cx - this.scoreDisplay.totalWidth / 2;
-    this.scoreDisplay.y = PANEL_Y + 60;
-    this.addChild(this.scoreDisplay);
-
-    // 最佳分数行：奖杯 + 数字
-    this.bestRow = this.buildIconRow(ctx, 'trophy.png', 'best');
-    this.bestRow.y = PANEL_Y + 220;
+  /** 构建奖杯行 + 火焰行，赋值到 bestRow / streakRow / bestDisplay / streakDisplay。 */
+  private buildIconRows(L: DailyChallengeResultLayout): void {
+    // 最佳分数行
+    const bestCont  = new PIXI.Container();
+    const bestIcon  = new PIXI.Sprite(this.ctx.assets.GetTexture('trophy.png'));
+    bestIcon.width  = L.rowIconW; bestIcon.height = L.rowIconH;
+    bestIcon.x = 0; bestIcon.y = (L.rowDigitH - L.rowIconH) / 2;
+    bestCont.addChild(bestIcon);
+    this.bestDisplay   = new DigitDisplay(this.ctx, L.rowDigitW, L.rowDigitH);
+    this.bestDisplay.x = L.rowIconW + L.rowGap;
+    bestCont.addChild(this.bestDisplay);
+    this.bestRow = bestCont;
     this.addChild(this.bestRow);
 
-    // 连续天数行：火焰 + 数字
-    this.streakRow = this.buildIconRow(ctx, 'fire.png', 'streak');
-    this.streakRow.y = PANEL_Y + 270;
+    // 连续天数行
+    const streakCont  = new PIXI.Container();
+    const streakIcon  = new PIXI.Sprite(this.ctx.assets.GetTexture('fire.png'));
+    streakIcon.width  = L.rowIconW; streakIcon.height = L.rowIconH;
+    streakIcon.x = 0; streakIcon.y = (L.rowDigitH - L.rowIconH) / 2;
+    streakCont.addChild(streakIcon);
+    this.streakDisplay   = new DigitDisplay(this.ctx, L.rowDigitW, L.rowDigitH);
+    this.streakDisplay.x = L.rowIconW + L.rowGap;
+    streakCont.addChild(this.streakDisplay);
+    this.streakRow = streakCont;
     this.addChild(this.streakRow);
-
-    // 按钮
-    this.buildButtons(ctx);
   }
 
-  /** 构建 [图标 + DigitDisplay] 水平行。role 决定将 display 引用存到哪个字段。 */
-  private buildIconRow(ctx: AppContext, iconKey: string, role: 'best' | 'streak'): PIXI.Container {
-    const container  = new PIXI.Container();
+  private applyLayout(L: DailyChallengeResultLayout): void {
+    if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
+      this.bg.clear();
+      drawPanel(this.bg, L.panelW, L.panelH);
+      this.lastPanelW = L.panelW; this.lastPanelH = L.panelH;
+    }
+    this.bg.x = L.panelX; this.bg.y = L.panelY;
 
-    const iconSprite = new PIXI.Sprite(ctx.assets.GetTexture(iconKey));
-    iconSprite.width  = ROW_ICON_W;
-    iconSprite.height = ROW_ICON_H;
-    iconSprite.x      = 0;
-    iconSprite.y      = (ROW_DIGIT_H - ROW_ICON_H) / 2;
-    container.addChild(iconSprite);
+    this.scoreDisplay.y = L.scoreY;
+    // scoreDisplay.x は show() の中でコンテンツ幅に合わせて設定する
 
-    const display = new DigitDisplay(ctx, ROW_DIGIT_W, ROW_DIGIT_H);
-    display.x = ROW_ICON_W + ROW_GAP;
-    display.y = 0;
-    container.addChild(display);
+    this.bestRow.y   = L.bestRowY;
+    this.streakRow.y = L.streakRowY;
 
-    if (role === 'best')   this.bestDisplay   = display;
-    if (role === 'streak') this.streakDisplay = display;
+    const totalW = L.btnSize * 2 + L.btnGap;
+    const startX = L.panelX + (L.panelW - totalW) / 2;
 
-    return container;
-  }
+    this.retryBtn.width  = L.btnSize; this.retryBtn.height = L.btnSize;
+    this.retryBtn.x = startX;         this.retryBtn.y = L.btnY;
 
-  private buildButtons(ctx: AppContext): void {
-    const btnSize = 160;
-    const gap     = 80;
-    const totalW  = btnSize * 2 + gap;
-    const startX  = PANEL_X + (PANEL_W - totalW) / 2;
-    const btnY    = PANEL_Y + PANEL_H - btnSize - 40;
-
-    // "再玩"——复用 retry.png（程序化生成的图标）
-    const retrySprite = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
-    retrySprite.width  = btnSize;
-    retrySprite.height = btnSize;
-    retrySprite.x      = startX;
-    retrySprite.y      = btnY;
-    this.addChild(retrySprite);
-    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: retrySprite, onTap: this.onPlayAgain }));
-
-    // "大厅"——复用 lobby.png（程序化生成的图标）
-    const lobbySprite = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
-    lobbySprite.width  = btnSize;
-    lobbySprite.height = btnSize;
-    lobbySprite.x      = startX + btnSize + gap;
-    lobbySprite.y      = btnY;
-    this.addChild(lobbySprite);
-    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: lobbySprite, onTap: this.onLobby }));
+    this.lobbyBtn.width  = L.btnSize; this.lobbyBtn.height = L.btnSize;
+    this.lobbyBtn.x = startX + L.btnSize + L.btnGap;
+    this.lobbyBtn.y = L.btnY;
   }
 }

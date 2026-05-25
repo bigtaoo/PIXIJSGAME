@@ -101,6 +101,9 @@ export class Header extends PIXI.Container {
   // ── 命数心形 ──────────────────────────────────────────────────────
   private livesSprites: PIXI.Sprite[] = [];
 
+  // ── 背景条 ────────────────────────────────────────────────────────
+  private bgGraphics!: PIXI.Graphics;
+
   // ── 闹钟 ──────────────────────────────────────────────────────────
   /** 闹钟整体容器（表盘 + 指针），弹跳 / 变色在此容器上操作。 */
   private clockContainer!: PIXI.Container;
@@ -112,9 +115,10 @@ export class Header extends PIXI.Container {
   private static readonly BOUNCE_DURATION = 200; // ms
 
   private _target: number;
+  private settingsSprite!: PIXI.Sprite;
 
-  /** 当前布局配置（由构造时的方向决定，全生命周期不变）。 */
-  private readonly layout: HeaderLayout;
+  /** 当前布局配置（由最近一次 resize 决定）。 */
+  private layout: HeaderLayout;
 
   constructor(
     private readonly ctx: AppContext,
@@ -210,6 +214,64 @@ export class Header extends PIXI.Container {
   }
 
   /**
+   * 切换方向时由父场景调用，重新选择布局并重定位所有子元素。
+   * 同时重建提示区（rebuildTip）以匹配新的坐标体系。
+   */
+  public resize(screen: ScreenConfig): void {
+    this.layout = screen.orientation === Orientation.Landscape
+      ? landscapeLayout()
+      : portraitLayout();
+
+    const L = this.layout;
+
+    // 自身偏移
+    if (screen.orientation === Orientation.Landscape) {
+      this.x = 350; this.y = 10;
+    } else {
+      this.x = 30;  this.y = 10;
+    }
+
+    // 背景条
+    this.bgGraphics.clear();
+    drawHeaderBar(this.bgGraphics, L.barW, L.barH);
+
+    // 闹钟容器
+    this.clockContainer.x = L.clockX;
+    this.clockContainer.y = L.clockY;
+    this.clockFaceSprite.width  = L.clockSize;
+    this.clockFaceSprite.height = L.clockSize;
+
+    // 时间数字精灵
+    for (let i = 0; i < this.timeSprites.length; i++) {
+      const s  = this.timeSprites[i];
+      s.width  = L.timeDigitW;
+      s.height = L.timeDigitH;
+      s.x      = L.timeStartX + i * (L.timeDigitW + L.timeDigitGap);
+      s.y      = L.timeY;
+    }
+    this.lastDisplayedSeconds = -1; // 强制下一帧刷新
+
+    // 命数心形
+    for (let i = 0; i < this.livesSprites.length; i++) {
+      const s  = this.livesSprites[i];
+      s.width  = L.heartSize;
+      s.height = L.heartSize;
+      s.x      = L.livesStartX + i * (L.heartSize + L.heartGap);
+      s.y      = L.livesY;
+    }
+
+    // 设置按钮
+    this.settingsSprite.width  = L.settingsSize;
+    this.settingsSprite.height = L.settingsSize;
+    this.settingsSprite.x      = L.settingsX;
+    this.settingsSprite.y      = L.settingsY;
+
+    // 提示区：销毁旧容器，用新坐标重建
+    this.rebuildTip(null, null);
+    this._target = this._target; // no-op，保持 target 不变
+  }
+
+  /**
    * 返回闹钟圆心在 Header 父容器（GameScene 本地坐标）中的位置，
    * 供飞行加时动画定位终点。
    */
@@ -224,8 +286,8 @@ export class Header extends PIXI.Container {
   // ── 私有构建方法 ──────────────────────────────────────────────────
 
   private buildBackground(): void {
-    const bg = new PIXI.Graphics();
-    const L  = this.layout;
+    this.bgGraphics = new PIXI.Graphics();
+    const L = this.layout;
 
     if (this.screen.orientation === Orientation.Landscape) {
       this.x = 350;
@@ -234,8 +296,8 @@ export class Header extends PIXI.Container {
       this.x = 30;
       this.y = 10;
     }
-    drawHeaderBar(bg, L.barW, L.barH);
-    this.addChild(bg);
+    drawHeaderBar(this.bgGraphics, L.barW, L.barH);
+    this.addChild(this.bgGraphics);
   }
 
   /**
@@ -379,13 +441,13 @@ export class Header extends PIXI.Container {
 
   private buildSettingsButton(onSettings: () => void): void {
     const L = this.layout;
-    const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('settings.png'));
-    s.width  = L.settingsSize;
-    s.height = L.settingsSize;
-    s.x      = L.settingsX;
-    s.y      = L.settingsY;
-    this.addChild(s);
-    this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: s, onTap: onSettings }));
+    this.settingsSprite        = new PIXI.Sprite(this.ctx.assets.GetTexture('settings.png'));
+    this.settingsSprite.width  = L.settingsSize;
+    this.settingsSprite.height = L.settingsSize;
+    this.settingsSprite.x      = L.settingsX;
+    this.settingsSprite.y      = L.settingsY;
+    this.addChild(this.settingsSprite);
+    this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: this.settingsSprite, onTap: onSettings }));
   }
 
   // ── 消除结果计时器 ────────────────────────────────────────────────

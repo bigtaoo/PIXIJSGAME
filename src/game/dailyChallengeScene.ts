@@ -29,17 +29,104 @@ import { NumberLayer } from './numbers';
 import { EffectManager } from './effectManager';
 import { DailyChallengeLogic } from './dailyChallengeLogic';
 import { DailyChallengeResult } from './dailyChallengeResult';
-import { drawBackground, drawHeaderBar, drawQuestionMark, C } from './graphicsFactory';
+import { drawBackground, drawHeaderBar, drawQuestionMark } from './graphicsFactory';
 import { DigitDisplay } from './digitDisplay';
 import { GAME_WIDTH, OFFSET_Y } from './consts';
 import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
 import { saveDailyScore, getDailyBestScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 import { UIElement } from '../inputSystem/uiElement';
+import { Orientation } from './enums';
 
-const COMBO_WINDOW_MS  = 3_000;
-const HINT_DELAY_MS    = 3_000;
+const COMBO_WINDOW_MS   = 3_000;
+const HINT_DELAY_MS     = 3_000;
 const RESULT_DISPLAY_MS = 500;
+
+// ── Daily Challenge Header Layout ─────────────────────────────────────────────
+//
+// 内联 header 的所有元素均相对于 DailyChallengeScene 容器（场景坐标）定位，
+// 而非相对于某个子容器。scoreCenterX / timerRightX 用于动态计算数字 x 位置。
+
+interface DCHeaderLayout {
+  // 背景条
+  barX:        number;
+  barY:        number;
+  barW:        number;
+  barH:        number;
+  // 图标
+  iconX:       number;
+  iconY:       number;
+  iconH:       number;
+  // 返回按钮 hit area
+  hitX:        number;
+  hitY:        number;
+  hitW:        number;
+  hitH:        number;
+  // 得分数字
+  scoreCenterX: number;   // 分数显示区水平中心
+  scoreY:       number;
+  scoreDigitH:  number;
+  // 倒计时数字
+  timerRightX:  number;   // 倒计时右对齐基准 x
+  timerY:       number;
+  timerDigitH:  number;
+  // 提示公式
+  tipY:         number;
+  tipSlotW:     number;
+  tipSlotH:     number;
+  tipSlot1X:    number;
+  tipPlusX:     number;
+  tipSlot2X:    number;
+  tipEquaX:     number;
+  tipTargetX:   number;
+  tipTargetStep:number;
+}
+
+/** 竖屏布局（canvas 宽 = GAME_WIDTH = 1080）。 */
+function portraitDCLayout(): DCHeaderLayout {
+  return {
+    barX: 20,   barY: 10,  barW: GAME_WIDTH - 40, barH: OFFSET_Y - 20,
+    iconX: 50,  iconY: 15, iconH: 70,
+    hitX: 20,   hitY: 10,  hitW: 260, hitH: 110,
+    scoreCenterX: GAME_WIDTH / 2,
+    scoreY: 18, scoreDigitH: 72,
+    timerRightX: GAME_WIDTH - 50,
+    timerY: 18, timerDigitH: 72,
+    tipY: 115, tipSlotW: 65, tipSlotH: 82,
+    tipSlot1X: 50,  tipPlusX: 125, tipSlot2X: 200,
+    tipEquaX: 275,  tipTargetX: 350, tipTargetStep: 70,
+  };
+}
+
+/**
+ * 横屏布局（canvas 高 = GAME_WIDTH = 1080；bar 从 x=350 开始，宽 1350）。
+ * 与主游戏 Header 横屏偏移一致，避免与网格区域重叠。
+ */
+function landscapeDCLayout(screenW: number): DCHeaderLayout {
+  const barX = 350;
+  const barW = screenW - barX - 20;
+  const cx   = barX + barW / 2;
+  return {
+    barX,  barY: 10, barW, barH: OFFSET_Y - 20,
+    iconX: barX + 30, iconY: 15, iconH: 70,
+    hitX:  barX,      hitY: 10,  hitW: 260, hitH: 110,
+    scoreCenterX: cx,
+    scoreY: 18, scoreDigitH: 72,
+    timerRightX: barX + barW - 20,
+    timerY: 18, timerDigitH: 72,
+    tipY: 115, tipSlotW: 65, tipSlotH: 82,
+    tipSlot1X: barX + 30, tipPlusX: barX + 105, tipSlot2X: barX + 180,
+    tipEquaX:  barX + 255, tipTargetX: barX + 330, tipTargetStep: 70,
+  };
+}
+
+function getDCLayout(screen: ScreenConfig): DCHeaderLayout {
+  return screen.orientation === Orientation.Landscape
+    ? landscapeDCLayout(screen.width)
+    : portraitDCLayout();
+}
+
+// ── DailyChallengeScene ───────────────────────────────────────────────────────
 
 export class DailyChallengeScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
@@ -52,15 +139,19 @@ export class DailyChallengeScene extends PIXI.Container {
   private effectLayer!:  EffectManager;
   private resultOverlay!: DailyChallengeResult;
 
-  // ── Header row 1: mode icon / score / timer ───────────────────────────────
+  // ── Header 元素 ───────────────────────────────────────────────────────────
   private headerBar!:    PIXI.Graphics;
-  private scoreDisplay!: DigitDisplay;   // 得分（数字精灵）
-  private timerDisplay!: DigitDisplay;   // 倒计时（数字精灵）
+  private headerIcon!:   PIXI.Sprite;
+  private headerHit!:    PIXI.Sprite;
+  private scoreDisplay!: DigitDisplay;
+  private timerDisplay!: DigitDisplay;
 
-  // ── Header row 2: sprite-based tip formula ────────────────────────────────
+  // ── Header tip formula ────────────────────────────────────────────────────
   private tipContainer!: PIXI.Container;
-  /** 消除成功后短暂展示完整等式计时器，-1 = 空闲。 */
   private tipResultElapsed = -1;
+
+  // ── 当前 header 布局（resize / updateScore / updateTimer 共用）────────────
+  private dcLayout!: DCHeaderLayout;
 
   // ── Runtime ───────────────────────────────────────────────────────────────
   private selectedIndex    = -1;
@@ -72,9 +163,7 @@ export class DailyChallengeScene extends PIXI.Container {
   private playRecorded     = false;
 
   // ── Hint system ───────────────────────────────────────────────────────────
-  /** ms elapsed since the player selected the first tile; -1 = inactive. */
   private hintTimerMs = -1;
-  /** True once the hint has fired for the current selection. */
   private hintFired   = false;
 
   constructor(
@@ -89,7 +178,6 @@ export class DailyChallengeScene extends PIXI.Container {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /** Call each time the player enters Daily Challenge (from the lobby). */
   public start(): void {
     this.score            = 0;
     this.comboCount       = 0;
@@ -118,6 +206,7 @@ export class DailyChallengeScene extends PIXI.Container {
   public resize(windowWidth: number, windowHeight: number): void {
     this.screen.update(windowWidth, windowHeight);
     this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
+    this.dcLayout = getDCLayout(this.screen);
 
     if (!this.initialized) {
       this.buildScene();
@@ -126,6 +215,11 @@ export class DailyChallengeScene extends PIXI.Container {
       drawBackground(this.bg, this.screen.width, this.screen.height);
       this.gridLayer.reconfigure();
       this.numberLayer.reconfigure(this.logic);
+      this.repositionHeader();
+      this.updateScoreDisplay();
+      this.updateTimerDisplay();
+      this.rebuildTip(null, null);
+      this.resultOverlay.resize(this.screen);
     }
 
     this.x = 0;
@@ -137,7 +231,6 @@ export class DailyChallengeScene extends PIXI.Container {
     if (!this.initialized) return;
 
     this.effectLayer.update(deltaMs);
-    // Keep hint animations running even when game is over
     this.numberLayer.update(deltaMs);
     this.updateTipResultReset(deltaMs);
 
@@ -152,7 +245,6 @@ export class DailyChallengeScene extends PIXI.Container {
       return;
     }
 
-    // ── Hint timer ────────────────────────────────────────────────────
     if (this.hintTimerMs >= 0 && !this.hintFired) {
       this.hintTimerMs += deltaMs;
       if (this.hintTimerMs >= HINT_DELAY_MS) {
@@ -195,72 +287,87 @@ export class DailyChallengeScene extends PIXI.Container {
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Header layout (portrait, GAME_WIDTH = 1080):
-   *
-   * Row 1 (y ≈ 18–90):  [← daily icon (left)]  [SCORE (centre)]  [TIMER (right)]
-   * Row 2 (y ≈ 95–185): [□ + □ = Target  (left, sprite-based)]
-   */
   private buildHeader(): void {
-    const H = OFFSET_Y - 10;   // 290 px
-    const W = GAME_WIDTH;
+    const L = this.dcLayout;
 
+    // 背景条
     this.headerBar = new PIXI.Graphics();
-    drawHeaderBar(this.headerBar, W - 40, H - 20);
-    this.headerBar.x = 20;
-    this.headerBar.y = 10;
+    drawHeaderBar(this.headerBar, L.barW, L.barH);
+    this.headerBar.x = L.barX;
+    this.headerBar.y = L.barY;
     this.addChild(this.headerBar);
 
-    // Daily challenge icon（代替文字标签，row 1, left）
-    const ICON_H = 70;
-    const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
-    const iconScale = ICON_H / Math.max(icon.texture.width, icon.texture.height);
-    icon.width  = icon.texture.width  * iconScale;
-    icon.height = icon.texture.height * iconScale;
-    icon.x = 50;
-    icon.y = 15;
-    this.addChild(icon);
+    // Daily challenge 图标
+    this.headerIcon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
+    const iconScale = L.iconH / Math.max(this.headerIcon.texture.width, this.headerIcon.texture.height);
+    this.headerIcon.width  = this.headerIcon.texture.width  * iconScale;
+    this.headerIcon.height = this.headerIcon.texture.height * iconScale;
+    this.headerIcon.x = L.iconX;
+    this.headerIcon.y = L.iconY;
+    this.addChild(this.headerIcon);
 
-    // Score（row 1, centre）— digit sprites，居中
-    const SCORE_DIGIT_H = 72;
-    const SCORE_DIGIT_W = Math.round(SCORE_DIGIT_H * 120 / 160);
-    this.scoreDisplay = new DigitDisplay(this.ctx, SCORE_DIGIT_W, SCORE_DIGIT_H);
-    this.scoreDisplay.y = 18;
+    // 得分数字
+    const scoreDigitW = Math.round(L.scoreDigitH * 120 / 160);
+    this.scoreDisplay = new DigitDisplay(this.ctx, scoreDigitW, L.scoreDigitH);
+    this.scoreDisplay.y = L.scoreY;
     this.addChild(this.scoreDisplay);
 
-    // Timer（row 1, right）— digit sprites，右对齐
-    const TIMER_DIGIT_H = 72;
-    const TIMER_DIGIT_W = Math.round(TIMER_DIGIT_H * 120 / 160);
-    this.timerDisplay = new DigitDisplay(this.ctx, TIMER_DIGIT_W, TIMER_DIGIT_H);
-    this.timerDisplay.y = 18;
+    // 倒计时数字
+    const timerDigitW = Math.round(L.timerDigitH * 120 / 160);
+    this.timerDisplay = new DigitDisplay(this.ctx, timerDigitW, L.timerDigitH);
+    this.timerDisplay.y = L.timerY;
     this.addChild(this.timerDisplay);
 
-    // Back-to-lobby tap zone（覆盖图标区域）
-    this.buildBackButton();
-  }
-
-  private buildBackButton(): void {
-    const hitArea = new PIXI.Sprite(PIXI.Texture.EMPTY);
-    hitArea.width  = 260;
-    hitArea.height = 110;
-    hitArea.x = 20;
-    hitArea.y = 10;
-    this.addChild(hitArea);
+    // 返回大厅点击区（覆盖图标）
+    this.headerHit = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    this.headerHit.width  = L.hitW;
+    this.headerHit.height = L.hitH;
+    this.headerHit.x = L.hitX;
+    this.headerHit.y = L.hitY;
+    this.addChild(this.headerHit);
     this.ctx.input.registerUI(
-      new UIElement({ zIndex: 15, sprite: hitArea, onTap: () => this.onGoLobby() }),
+      new UIElement({ zIndex: 15, sprite: this.headerHit, onTap: () => this.onGoLobby() }),
     );
   }
 
-  // ── Tip formula (row 2 of header) ─────────────────────────────────────────
-
   /**
-   * Rebuild the sprite-based tip formula in the lower half of the header.
-   *
-   * Layout (portrait, local y ≈ 115–205):
-   *   [Slot1] [+] [Slot2] [=] [Target]
-   *
-   * Uses the same sprite assets and slot/value helpers as the main game Header.
+   * 在 resize 时重新定位 header 的固定元素（背景条、图标、hit area）。
+   * 得分 / 倒计时由 updateScoreDisplay / updateTimerDisplay 处理。
    */
+  private repositionHeader(): void {
+    const L = this.dcLayout;
+
+    // 背景条：尺寸变化则重绘
+    this.headerBar.clear();
+    drawHeaderBar(this.headerBar, L.barW, L.barH);
+    this.headerBar.x = L.barX;
+    this.headerBar.y = L.barY;
+
+    // 图标
+    const iconScale = L.iconH / Math.max(this.headerIcon.texture.width, this.headerIcon.texture.height);
+    this.headerIcon.width  = this.headerIcon.texture.width  * iconScale;
+    this.headerIcon.height = this.headerIcon.texture.height * iconScale;
+    this.headerIcon.x = L.iconX;
+    this.headerIcon.y = L.iconY;
+
+    // 得分 / 倒计时数字尺寸更新（内容由 update 方法刷新）
+    this.scoreDisplay.digitW = Math.round(L.scoreDigitH * 120 / 160);
+    this.scoreDisplay.digitH = L.scoreDigitH;
+    this.scoreDisplay.y      = L.scoreY;
+
+    this.timerDisplay.digitW = Math.round(L.timerDigitH * 120 / 160);
+    this.timerDisplay.digitH = L.timerDigitH;
+    this.timerDisplay.y      = L.timerY;
+
+    // Hit area
+    this.headerHit.x = L.hitX;
+    this.headerHit.y = L.hitY;
+    this.headerHit.width  = L.hitW;
+    this.headerHit.height = L.hitH;
+  }
+
+  // ── Tip formula ────────────────────────────────────────────────────────────
+
   private rebuildTip(first: number | null, second: number | null): void {
     if (this.tipContainer) {
       this.removeChild(this.tipContainer);
@@ -268,39 +375,33 @@ export class DailyChallengeScene extends PIXI.Container {
     }
     this.tipContainer = new PIXI.Container();
 
-    // Tip row sits in the lower half of the header
-    const W = 65, H = 82, Y = 115;
+    const L = this.dcLayout;
+    const { tipY: Y, tipSlotW: W, tipSlotH: H } = L;
 
-    this.addTipSlotOrValue(this.tipContainer, first,  50,  Y, W, H);
+    this.addTipSlotOrValue(this.tipContainer, first,  L.tipSlot1X, Y, W, H);
 
     const plus  = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
     plus.width  = W; plus.height = H;
-    plus.x      = 125; plus.y   = Y;
+    plus.x      = L.tipPlusX; plus.y = Y;
     this.tipContainer.addChild(plus);
 
-    this.addTipSlotOrValue(this.tipContainer, second, 200, Y, W, H);
+    this.addTipSlotOrValue(this.tipContainer, second, L.tipSlot2X, Y, W, H);
 
     const equa  = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
     equa.width  = W; equa.height = H;
-    equa.x      = 275; equa.y   = Y;
+    equa.x      = L.tipEquaX; equa.y = Y;
     this.tipContainer.addChild(equa);
 
-    // Target digits
-    const target = getDailyTarget();
-    target.toString().split('').forEach((ch, i) => {
+    getDailyTarget().toString().split('').forEach((ch, i) => {
       const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
       s.width   = W; s.height = H;
-      s.x       = 350 + i * 70; s.y = Y;
+      s.x       = L.tipTargetX + i * L.tipTargetStep; s.y = Y;
       this.tipContainer.addChild(s);
     });
 
     this.addChild(this.tipContainer);
   }
 
-  /**
-   * Draw an empty slot (rounded rect + "?") or a digit sprite at (x, y).
-   * Mirrors the equivalent method in header.ts.
-   */
   private addTipSlotOrValue(
     container: PIXI.Container,
     value: number | null,
@@ -312,7 +413,6 @@ export class DailyChallengeScene extends PIXI.Container {
       g.beginFill(0xF0F0F0, 1);
       g.drawRoundedRect(x, y, w, h, 10);
       g.endFill();
-      // 问号：程序绘制，替代原 PIXI.Text('?')
       drawQuestionMark(g, x + w / 2, y + h / 2, h);
       container.addChild(g);
     } else {
@@ -334,7 +434,6 @@ export class DailyChallengeScene extends PIXI.Container {
     }
   }
 
-  /** Called every frame to auto-reset tip display after a successful match. */
   private updateTipResultReset(deltaMs: number): void {
     if (this.tipResultElapsed < 0) return;
     this.tipResultElapsed += deltaMs;
@@ -367,7 +466,6 @@ export class DailyChallengeScene extends PIXI.Container {
     if (this.logic.getNumberByIndex(index) === 0) return;
 
     if (this.selectedIndex === -1) {
-      // First selection
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
       this.rebuildTip(this.logic.getNumberByIndex(index), null);
@@ -376,7 +474,6 @@ export class DailyChallengeScene extends PIXI.Container {
     }
 
     if (this.selectedIndex === index) {
-      // Tap same cell again → deselect
       this.selectedIndex = -1;
       this.gridLayer.hideSelection();
       this.rebuildTip(null, null);
@@ -391,7 +488,6 @@ export class DailyChallengeScene extends PIXI.Container {
     if (a + b === target) {
       this.eliminatePair(this.selectedIndex, index, a, b);
     } else {
-      // Wrong second choice — switch selection to the newly tapped cell
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
       this.rebuildTip(b, null);
@@ -402,7 +498,6 @@ export class DailyChallengeScene extends PIXI.Container {
   private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
     this.resetHintTimer();
 
-    // Show full match result in tip, then auto-reset after 500 ms
     this.rebuildTip(a, b);
     this.tipResultElapsed = 0;
 
@@ -417,7 +512,6 @@ export class DailyChallengeScene extends PIXI.Container {
     this.logic.removeNumber(idxB);
     this.selectedIndex = -1;
 
-    // ── Combo & scoring ────────────────────────────────────────────────
     const elapsed = this.gameTimeMs - this.lastElimGameTime;
     if (elapsed <= COMBO_WINDOW_MS) {
       this.comboCount++;
@@ -426,7 +520,6 @@ export class DailyChallengeScene extends PIXI.Container {
     }
     this.lastElimGameTime = this.gameTimeMs;
 
-    // +2 / +3 / +4 / +5 (capped at 4th consecutive combo)
     const points = this.comboCount === 1 ? 2
                  : this.comboCount === 2 ? 3
                  : this.comboCount === 3 ? 4
@@ -434,7 +527,6 @@ export class DailyChallengeScene extends PIXI.Container {
     this.score += points;
     this.updateScoreDisplay();
 
-    // ── Row collapse ───────────────────────────────────────────────────
     let collapsed = this.logic.checkAndCollapse();
     while (collapsed) {
       this.syncGrid();
@@ -471,16 +563,13 @@ export class DailyChallengeScene extends PIXI.Container {
 
   private updateScoreDisplay(): void {
     this.scoreDisplay.update(this.score);
-    // 居中
-    this.scoreDisplay.x = GAME_WIDTH / 2 - this.scoreDisplay.totalWidth / 2;
+    this.scoreDisplay.x = this.dcLayout.scoreCenterX - this.scoreDisplay.totalWidth / 2;
   }
 
   private updateTimerDisplay(): void {
     const secs = this.state.remainingSeconds;
     this.timerDisplay.update(secs);
-    // 右对齐
-    this.timerDisplay.x = GAME_WIDTH - 50 - this.timerDisplay.totalWidth;
-    // 低时间警告：tint 变红（前提是 digits.png 为浅色）
+    this.timerDisplay.x    = this.dcLayout.timerRightX - this.timerDisplay.totalWidth;
     this.timerDisplay.tint = secs <= 10 ? 0xff4444 : 0xFFFFFF;
   }
 
