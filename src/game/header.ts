@@ -59,7 +59,7 @@ function landscapeLayout(): HeaderLayout {
     barW: 1350, barH: 250,
     tipY: 85, tipSlotW: 80, tipSlotH: 100,
     tipSlot1X: 50, tipPlusX: 140, tipSlot2X: 225, tipEquaX: 315,
-    tipTargetX: 405, tipTargetStep: 85,
+    tipTargetX: 395, tipTargetStep: 65,
     clockX: 550, clockY: 70, clockSize: 110,
     timeStartX: 668, timeY: 70, timeDigitW: 80, timeDigitH: 110, timeDigitGap: -20,
     livesStartX: 860, livesY: 95, heartSize: 60, heartGap: 10,
@@ -273,7 +273,8 @@ export class Header extends PIXI.Container {
     this._target.toString().split('').forEach((ch, i) => {
       const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
       s.width   = L.tipSlotW; s.height = L.tipSlotH;
-      s.x       = L.tipTargetX + i * L.tipTargetStep; s.y = L.tipY;
+      s.x       = L.tipTargetX + i * L.tipTargetStep;
+      s.y       = L.tipY;
       this.tipContainer.addChild(s);
     });
 
