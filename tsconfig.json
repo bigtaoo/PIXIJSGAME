@@ -8,6 +8,6 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     //  "resolveJsonModule": true,
-    "ignoreDeprecations": "6.0"  // ← 抑制所有 6.0 的弃用警告
+    "ignoreDeprecations": "6.0"
   }
 }

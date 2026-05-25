@@ -9,22 +9,18 @@ import { GAME_WIDTH } from './consts';
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 interface SettingsLayout {
-  panelW:    number;
-  panelH:    number;
-  panelX:    number;
-  panelY:    number;
-  btnSize:   number;
-  btnY:      number;
-  btnLeftX:  number;
-  btnRightX: number;
+  panelW: number; panelH: number;
+  panelX: number; panelY: number;
+  btnSize: number; btnY: number;
+  btnLeftX: number; btnRightX: number;
 }
 
 function portraitLayout(): SettingsLayout {
   const panelW = 700, panelH = 400;
-  const panelX = (GAME_WIDTH - panelW) / 2;   // 190
+  const panelX = (GAME_WIDTH - panelW) / 2;
   const panelY = 760;
   const btnSize = 200;
-  const btnY    = panelY + panelH / 2 - btnSize / 2 + 20;
+  const btnY = panelY + panelH / 2 - btnSize / 2 + 20;
   return {
     panelW, panelH, panelX, panelY, btnSize, btnY,
     btnLeftX:  panelX + 80,
@@ -37,7 +33,7 @@ function landscapeLayout(screenW: number): SettingsLayout {
   const panelX = Math.round((screenW - panelW) / 2);
   const panelY = 340;
   const btnSize = 200;
-  const btnY    = panelY + panelH / 2 - btnSize / 2 + 20;
+  const btnY = panelY + panelH / 2 - btnSize / 2 + 20;
   return {
     panelW, panelH, panelX, panelY, btnSize, btnY,
     btnLeftX:  panelX + 80,
@@ -57,15 +53,10 @@ export class SettingsOverlay extends PIXI.Container {
   private readonly bg:        PIXI.Graphics;
   private readonly resumeBtn: PIXI.Sprite;
   private readonly lobbyBtn:  PIXI.Sprite;
-  /** 上一次绘制的面板尺寸，用于判断是否需要重绘。 */
   private lastPanelW = 0;
   private lastPanelH = 0;
 
-  constructor(
-    ctx:       AppContext,
-    onResume:  () => void,
-    onGoLobby: () => void,
-  ) {
+  constructor(ctx: AppContext, onResume: () => void, onGoLobby: () => void) {
     super();
     this.visible = false;
 
@@ -83,27 +74,18 @@ export class SettingsOverlay extends PIXI.Container {
     this.applyLayout(portraitLayout());
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
-
-  public resize(screen: ScreenConfig): void {
-    this.applyLayout(getLayout(screen));
-  }
-
-  public show(): void { this.visible = true;  }
+  public resize(screen: ScreenConfig): void { this.applyLayout(getLayout(screen)); }
+  public show(): void { this.visible = true; }
   public hide(): void { this.visible = false; }
 
-  // ── Private ────────────────────────────────────────────────────────────────
-
   private applyLayout(L: SettingsLayout): void {
-    // 仅在面板尺寸变化时重绘 Graphics
     if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
       this.bg.clear();
       drawPanel(this.bg, L.panelW, L.panelH);
       this.lastPanelW = L.panelW;
       this.lastPanelH = L.panelH;
     }
-    this.bg.x = L.panelX;
-    this.bg.y = L.panelY;
+    this.bg.x = L.panelX; this.bg.y = L.panelY;
 
     this.resumeBtn.width  = L.btnSize; this.resumeBtn.height = L.btnSize;
     this.resumeBtn.x = L.btnLeftX;    this.resumeBtn.y = L.btnY;

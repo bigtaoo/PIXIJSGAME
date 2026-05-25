@@ -76,7 +76,7 @@ export class GameResultOverlay extends PIXI.Container {
   private lastPanelH = 0;
 
   constructor(
-    ctx:     AppContext,
+    private readonly ctx: AppContext,
     onRetry: () => void,
     onNext:  () => void,
     onLobby: () => void,
@@ -99,14 +99,13 @@ export class GameResultOverlay extends PIXI.Container {
     this.addChild(this.lobbyBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }));
 
-    // 3 颗星精灵
+    // Build star row (3 stars, repositioned in applyLayout)
     this.starRow = new PIXI.Container();
     for (let i = 0; i < 3; i++) {
-      const s  = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
+      const s = new PIXI.Sprite(ctx.assets.GetTexture('star_empty.png'));
       s.width  = STAR_SIZE;
       s.height = STAR_SIZE;
-      s.x      = i * (STAR_SIZE + STAR_GAP);
-      s.y      = 0;
+      s.x = i * (STAR_SIZE + STAR_GAP);
       this.starRow.addChild(s);
       this.starSprites.push(s);
     }
@@ -121,25 +120,20 @@ export class GameResultOverlay extends PIXI.Container {
     this.applyLayout(getLayout(screen));
   }
 
-  public show(win: boolean, stars = 0): void {
-    this.visible          = true;
-    this.retryBtn.visible = !win;
-    this.nextBtn.visible  = win;
-    this.lobbyBtn.visible = true;
-    this.starRow.visible  = win;
+  public show(success: boolean, stars?: number): void {
+    this.retryBtn.visible = !success;
+    this.nextBtn.visible  = success;
 
-    if (win) {
-      for (let i = 0; i < 3; i++) {
-        const sp = this.starSprites[i]!;
-        sp.tint  = i < stars ? 0xEAB830 : 0x888888;
-        sp.alpha = i < stars ? 1.0       : 0.35;
-      }
+    const filled = success ? (stars ?? 0) : 0;
+    for (let i = 0; i < 3; i++) {
+      this.starSprites[i].texture =
+        this.ctx.assets.GetTexture(i < filled ? 'star_filled.png' : 'star_empty.png');
     }
+
+    this.visible = true;
   }
 
-  public hide(): void {
-    this.visible = false;
-  }
+  public hide(): void { this.visible = false; }
 
   // ── Private ────────────────────────────────────────────────────────────────
 
@@ -150,17 +144,16 @@ export class GameResultOverlay extends PIXI.Container {
       this.lastPanelW = L.panelW;
       this.lastPanelH = L.panelH;
     }
-    this.bg.x = L.panelX;
-    this.bg.y = L.panelY;
+    this.bg.x = L.panelX; this.bg.y = L.panelY;
 
     this.retryBtn.width  = L.btnSize; this.retryBtn.height = L.btnSize;
     this.retryBtn.x = L.btnLeftX;    this.retryBtn.y = L.btnY;
 
-    this.nextBtn.width   = L.btnSize; this.nextBtn.height  = L.btnSize;
-    this.nextBtn.x = L.btnLeftX;     this.nextBtn.y = L.btnY;
+    this.nextBtn.width  = L.btnSize; this.nextBtn.height = L.btnSize;
+    this.nextBtn.x = L.btnRightX;   this.nextBtn.y = L.btnY;
 
     this.lobbyBtn.width  = L.btnSize; this.lobbyBtn.height = L.btnSize;
-    this.lobbyBtn.x = L.btnRightX;   this.lobbyBtn.y = L.btnY;
+    this.lobbyBtn.x = L.btnLeftX;    this.lobbyBtn.y = L.btnY;
 
     this.starRow.x = L.starRowX;
     this.starRow.y = L.starRowY;

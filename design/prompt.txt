@@ -7,6 +7,9 @@ Warm brown, olive green, and earthy yellow palette. Watercolor pencil style, sof
 Square composition (1:1 aspect ratio), seamless at edges for 90-degree rotation.
 --ar 1:1 --v 6 --style raw --chaos 15
 
+音符
+A single music note icon, gold fill color (#FFD700), dark brown outline (#333333, 2px width), bold rounded thick lines, minimalist hand-drawn sketch style, flat design, no gradient, no shadow, transparent background, clean game UI asset, centered on 512x512 canvas, simple and readable. --ar 1:1 --v 6 --style raw
+
 数字
 A sprite sheet of digits 0-9 in **bold rounded sans-serif font** (similar to Noto Sans Bold), arranged in a **single horizontal row** on a **transparent background**.
 - **Each digit**: 120x160 pixels, **light brown fill (#D4B896)**, **dark brown outline (#3E2723, 2px stroke width)**.

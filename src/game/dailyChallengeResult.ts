@@ -71,7 +71,7 @@ function portraitLayout(): DailyChallengeResultLayout {
 
 function landscapeLayout(): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX =1250;
+  const panelX = 1250;
   const panelY = 250;
   const scoreDigitH = 110;
   const btnSize = 160;
@@ -217,7 +217,7 @@ export class DailyChallengeResult extends PIXI.Container {
     this.bg.x = L.panelX; this.bg.y = L.panelY;
 
     this.scoreDisplay.y = L.scoreY;
-    // scoreDisplay.x は show() の中でコンテンツ幅に合わせて設定する
+    // scoreDisplay.x is set in show() based on content width
 
     this.bestRow.y   = L.bestRowY;
     this.streakRow.y = L.streakRowY;
