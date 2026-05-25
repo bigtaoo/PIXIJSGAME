@@ -54,8 +54,8 @@ interface DailyChallengeResultLayout {
 
 function portraitLayout(): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX = (GAME_WIDTH - panelW) / 2;
-  const panelY = 680;
+  const panelX = 500;
+  const panelY = 280;
   const scoreDigitH = 110;
   const btnSize = 160;
   return {
@@ -69,10 +69,10 @@ function portraitLayout(): DailyChallengeResultLayout {
   };
 }
 
-function landscapeLayout(screenW: number): DailyChallengeResultLayout {
+function landscapeLayout(): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX = Math.round((screenW - panelW) / 2);
-  const panelY = 280;
+  const panelX = 650;
+  const panelY = 300;
   const scoreDigitH = 110;
   const btnSize = 160;
   return {
@@ -88,7 +88,7 @@ function landscapeLayout(screenW: number): DailyChallengeResultLayout {
 
 function getLayout(screen: ScreenConfig): DailyChallengeResultLayout {
   return screen.orientation === Orientation.Landscape
-    ? landscapeLayout(screen.width)
+    ? landscapeLayout()
     : portraitLayout();
 }
 

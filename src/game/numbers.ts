@@ -158,10 +158,10 @@ export class NumberLayer extends PIXI.Container {
     const s = cell.slots[0];
 
     s.texture = this.ctx.assets.GetTexture(`${digit}.png`);
-    s.width   = gs * 0.9;
-    s.height  = gs * 0.9;
-    s.x       = cellX;
-    s.y       = cellY;
+    s.width   = gs * 0.8;
+    s.height  = gs * 1.0;
+    s.x       = cellX + 5;
+    s.y       = cellY - 8;
     s.visible = true;
 
     // Hide the tens slot if it exists

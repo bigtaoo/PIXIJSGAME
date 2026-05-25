@@ -47,7 +47,9 @@ export class DailyChallengeLogic extends Logic {
     // Shuffle with the same seeded RNG for full reproducibility
     for (let i = pairs.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
-      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+      const tmp = pairs[i];
+      pairs[i] = pairs[j];
+      pairs[j] = tmp;
     }
 
     let k = 0;
