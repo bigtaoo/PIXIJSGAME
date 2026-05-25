@@ -51,6 +51,11 @@ interface HeaderLayout {
   settingsX: number;
   settingsY: number;
   settingsSize: number;
+
+  // ── 音乐按钮（紧邻设置按钮左侧）─────────────────────────────────────────────
+  musicX: number;
+  musicY: number;
+  musicSize: number;
 }
 
 /** 横屏布局（Header 居于画布右侧，left offset 350，bar 宽 1350）。 */
@@ -63,7 +68,8 @@ function landscapeLayout(): HeaderLayout {
     clockX: 550, clockY: 70, clockSize: 110,
     timeStartX: 668, timeY: 70, timeDigitW: 80, timeDigitH: 110, timeDigitGap: -20,
     livesStartX: 860, livesY: 95, heartSize: 60, heartGap: 10,
-    settingsX: 1130, settingsY: 70, settingsSize: 100,
+    settingsX: 1240, settingsY: 70, settingsSize: 100,
+    musicX:    1130, musicY:    70, musicSize:    100,
   };
 }
 
@@ -80,7 +86,8 @@ function portraitLayout(): HeaderLayout {
     clockX: 510, clockY: 85, clockSize: 70,
     timeStartX: 590, timeY: 95, timeDigitW: 44, timeDigitH: 60, timeDigitGap: 4,
     livesStartX: 748, livesY: 93, heartSize: 52, heartGap: 8,
-    settingsX: 940, settingsY: 20, settingsSize: 52,
+    settingsX: 960, settingsY: 20, settingsSize: 52,
+    musicX:    900, musicY:    20, musicSize:    52,
   };
 }
 
@@ -116,6 +123,7 @@ export class Header extends PIXI.Container {
 
   private _target: number;
   private settingsSprite!: PIXI.Sprite;
+  private musicSprite!:    PIXI.Sprite;
 
   /** 当前布局配置（由最近一次 resize 决定）。 */
   private layout: HeaderLayout;
@@ -137,6 +145,7 @@ export class Header extends PIXI.Container {
     this.buildTime();
     this.buildLives();
     this.buildSettingsButton(onSettings);
+    this.buildMusicButton();
   }
 
   // ── Public API ────────────────────────────────────────────────────
@@ -265,6 +274,12 @@ export class Header extends PIXI.Container {
     this.settingsSprite.height = L.settingsSize;
     this.settingsSprite.x      = L.settingsX;
     this.settingsSprite.y      = L.settingsY;
+
+    // 音乐按钮
+    this.musicSprite.width  = L.musicSize;
+    this.musicSprite.height = L.musicSize;
+    this.musicSprite.x      = L.musicX;
+    this.musicSprite.y      = L.musicY;
 
     // 提示区：销毁旧容器，用新坐标重建
     this.rebuildTip(null, null);
@@ -448,6 +463,30 @@ export class Header extends PIXI.Container {
     this.settingsSprite.y      = L.settingsY;
     this.addChild(this.settingsSprite);
     this.ctx.input.registerUI(new UIElement({ zIndex: 15, sprite: this.settingsSprite, onTap: onSettings }));
+  }
+
+  private buildMusicButton(): void {
+    const L   = this.layout;
+    const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
+    btn.width  = L.musicSize;
+    btn.height = L.musicSize;
+    btn.x      = L.musicX;
+    btn.y      = L.musicY;
+    this.applyMusicTint(btn);
+    this.addChild(btn);
+    this.musicSprite = btn;
+    this.ctx.input.registerUI(new UIElement({
+      zIndex: 15,
+      sprite: btn,
+      onTap: () => {
+        this.ctx.audio.toggleMusic();
+        this.applyMusicTint(btn);
+      },
+    }));
+  }
+
+  private applyMusicTint(sprite: PIXI.Sprite): void {
+    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
   }
 
   // ── 消除结果计时器 ────────────────────────────────────────────────

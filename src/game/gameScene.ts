@@ -139,25 +139,27 @@ export class GameScene extends PIXI.Container {
     drawBackground(this.bg, this.screen.width, this.screen.height);
     this.addChild(this.bg);
 
+    const audio = this.ctx.audio;
+
     this.gridLayer   = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
     this.numberLayer = new NumberLayer(this.ctx, this.screen);
     this.effectLayer = new EffectManager(this.ctx, this.screen);
     this.header      = new Header(
       this.ctx, this.screen,
       this.stage.targets[0],
-      () => this.openSettings(),
+      () => { audio.playClick(); this.openSettings(); },
     );
 
     this.resultOverlay = new GameResultOverlay(
       this.ctx,
-      () => this.retryStageAfterGameOver(),
-      () => this.onStageComplete(this.stage),
-      () => this.onGoLobby(),
+      () => { audio.playClick(); this.retryStageAfterGameOver(); },
+      () => { audio.playClick(); this.onStageComplete(this.stage); },
+      () => { audio.playClick(); this.onGoLobby(); },
     );
     this.settingsOverlay = new SettingsOverlay(
       this.ctx,
-      () => this.resumeGame(),
-      () => this.onGoLobby(),
+      () => { audio.playClick(); this.resumeGame(); },
+      () => { audio.playClick(); this.onGoLobby(); },
     );
 
     this.addChild(this.gridLayer);
@@ -207,6 +209,7 @@ export class GameScene extends PIXI.Container {
       const stars = StarManager.calculateStars(this.stage.stageIndex, this.livesEverLost, this.state.timeRemainingMs);
       StarManager.saveStars(this.stage.stageIndex, stars);
       StageManager.recordComplete(this.stage.stageIndex);
+      this.ctx.audio.playVictory();
       this.resultOverlay.show(true, stars);
     } else {
       this.startCurrentTarget();
@@ -239,6 +242,7 @@ export class GameScene extends PIXI.Container {
 
   private tryExtraLife(): void {
     if (this._extraLifeUsed || !this.ctx.platform) {
+      this.ctx.audio.playGameOver();
       this.resultOverlay.show(false);
       return;
     }
@@ -253,6 +257,7 @@ export class GameScene extends PIXI.Container {
         this.state.isGameEnd = false;
         this.retryStage();
       } else {
+        this.ctx.audio.playGameOver();
         this.resultOverlay.show(false);
       }
     });
@@ -283,6 +288,8 @@ export class GameScene extends PIXI.Container {
     if (this.state.isGameEnd || this.state.isPause) return;
 
     if (this.logic.getNumberByIndex(index) === 0) return;
+
+    this.ctx.audio.playClick();
 
     if (this.selectedIndex === -1) {
       // First selection — start the hint countdown
@@ -349,6 +356,7 @@ export class GameScene extends PIXI.Container {
                    :                         4;
 
     this.state.addTime(bonusSec * 1000);
+    this.ctx.audio.playAddTime();
 
     // Flying bonus animation — bursts from the centre of the last-tapped cell (idxB)
     const half  = this.screen.gridSize / 2;

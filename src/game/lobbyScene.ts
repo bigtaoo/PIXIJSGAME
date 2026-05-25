@@ -48,6 +48,8 @@ interface DailyChallengeEntry {
   hit:           PIXI.Sprite;
 }
 
+const MUSIC_BTN_SIZE = 56;
+
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
@@ -58,6 +60,7 @@ export class LobbyScene extends PIXI.Container {
 
   private nodeEntries: NodeEntry[]         = [];
   private dailyEntry!: DailyChallengeEntry;
+  private musicBtn!:   PIXI.Sprite;
 
   // Parallel arrays kept for refresh()
   private stageCards:         PIXI.Sprite[]    = [];
@@ -137,6 +140,7 @@ export class LobbyScene extends PIXI.Container {
     this.buildBackground();
     this.buildAdventureMap();
     this.buildDailyChallenge();
+    this.buildMusicButton();
   }
 
   private buildBackground(): void {
@@ -244,7 +248,7 @@ export class LobbyScene extends PIXI.Container {
     hit.y      = y - r;
     this.addChild(hit);
     this.ctx.input.registerUI(
-      new UIElement({ zIndex: 5, sprite: hit, onTap: () => this.onDailyChallenge() }),
+      new UIElement({ zIndex: 5, sprite: hit, onTap: () => { this.ctx.audio.playClick(); this.onDailyChallenge(); } }),
     );
 
     this.dailyEntry = {
@@ -353,6 +357,46 @@ export class LobbyScene extends PIXI.Container {
 
       this.refreshDailyRows();
     }
+
+    if (this.musicBtn) {
+      const { x, y } = layout.dailyChallengePos;
+      const dr = LobbyScene.DAILY_SIZE / 2;
+      this.musicBtn.x = x - MUSIC_BTN_SIZE / 2;
+      this.musicBtn.y = y - dr - MUSIC_BTN_SIZE - 10;
+    }
+  }
+
+  // ── Music button ────────────────────────────────────────────────────────────
+
+  private buildMusicButton(): void {
+    const layout = getLobbyLayout(this.screen);
+    const { x, y } = layout.dailyChallengePos;
+    const dr = LobbyScene.DAILY_SIZE / 2;
+
+    const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
+    btn.width  = MUSIC_BTN_SIZE;
+    btn.height = MUSIC_BTN_SIZE;
+    btn.x      = x - MUSIC_BTN_SIZE / 2;
+    btn.y      = y - dr - MUSIC_BTN_SIZE - 10;
+
+    this.applyMusicBtnTint(btn);
+    this.addChild(btn);
+    this.musicBtn = btn;
+
+    this.ctx.input.registerUI(
+      new UIElement({
+        zIndex: 10,
+        sprite: btn,
+        onTap: () => {
+          this.ctx.audio.toggleMusic();
+          this.applyMusicBtnTint(btn);
+        },
+      }),
+    );
+  }
+
+  private applyMusicBtnTint(sprite: PIXI.Sprite): void {
+    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
   }
 
   // ── Internal builders ───────────────────────────────────────────────────────
@@ -368,7 +412,12 @@ export class LobbyScene extends PIXI.Container {
       new UIElement({
         zIndex: 5,
         sprite: card,
-        onTap: () => { if (StageManager.isUnlocked(stage.stageIndex)) this.onSelectStage(stage); },
+        onTap: () => {
+          if (StageManager.isUnlocked(stage.stageIndex)) {
+            this.ctx.audio.playClick();
+            this.onSelectStage(stage);
+          }
+        },
       }),
     );
     return card;

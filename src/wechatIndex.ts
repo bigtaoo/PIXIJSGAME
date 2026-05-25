@@ -5,6 +5,7 @@ import { setupWeChatInput } from './inputSystem/wechatAdapter';
 import { AppContext } from './game/appContext';
 import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
+import { AudioManager } from './game/audioManager';
 import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
 
 async function Init() {
@@ -25,7 +26,8 @@ async function Init() {
   });
 
   // Initialise storage first
-  setPlayerPrefsImpl(new WechatPlayerPrefs());
+  const prefs = new WechatPlayerPrefs();
+  setPlayerPrefsImpl(prefs);
 
   const assets = new WechatAssetsManager();
   await assets.loadAssets();
@@ -35,7 +37,8 @@ async function Init() {
 
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
 
-  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer };
+  const audio = new AudioManager(prefs);
+  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);

@@ -45,6 +45,8 @@ export interface DCHeaderLayout {
   tipSlot1X: number; tipPlusX: number;
   tipSlot2X: number; tipEquaX: number;
   tipTargetX: number; tipTargetStep: number;
+  // 音乐按钮
+  musicX: number; musicY: number; musicSize: number;
 }
 
 // ── Layout functions ──────────────────────────────────────────────────────────
@@ -62,6 +64,7 @@ export function portraitDCLayout(): DCHeaderLayout {
     tipY: 115, tipSlotW: 65, tipSlotH: 82,
     tipSlot1X: 50,  tipPlusX: 125, tipSlot2X: 200,
     tipEquaX: 275,  tipTargetX: 350, tipTargetStep: 70,
+    musicX: GAME_WIDTH - 160, musicY: 18, musicSize: 72,
   };
 }
 
@@ -80,11 +83,12 @@ export function landscapeDCLayout(): DCHeaderLayout {
     hitX:  barX,      hitY: 10,  hitW: 260, hitH: 110,
     scoreCenterX: cx,
     scoreY: 18, scoreDigitH: 72,
-    timerRightX: barX + barW - 20,
+    timerRightX: barX + barW - 100,
     timerY: 18, timerDigitH: 72,
     tipY: 115, tipSlotW: 65, tipSlotH: 82,
     tipSlot1X: barX + 30, tipPlusX: barX + 105, tipSlot2X: barX + 180,
     tipEquaX:  barX + 255, tipTargetX: barX + 330, tipTargetStep: 70,
+    musicX: barX + barW - 90, musicY: 18, musicSize: 72,
   };
 }
 
@@ -108,6 +112,7 @@ export class DailyChallengeHeader extends PIXI.Container {
   private tipContainer!:    PIXI.Container;
   private tipResultElapsed = -1;
 
+  private musicSprite!: PIXI.Sprite;
   private layout: DCHeaderLayout;
 
   constructor(
@@ -150,6 +155,9 @@ export class DailyChallengeHeader extends PIXI.Container {
       new UIElement({ zIndex: 15, sprite: this.hit, onTap: () => this.onGoLobby() }),
     );
 
+    // 音乐按钮
+    this.buildMusicButton(L);
+
     // 初始提示（双空槽）
     this.rebuildTip(null, null);
   }
@@ -177,6 +185,11 @@ export class DailyChallengeHeader extends PIXI.Container {
 
     this.hit.x = L.hitX; this.hit.y = L.hitY;
     this.hit.width = L.hitW; this.hit.height = L.hitH;
+
+    this.musicSprite.width  = L.musicSize;
+    this.musicSprite.height = L.musicSize;
+    this.musicSprite.x      = L.musicX;
+    this.musicSprite.y      = L.musicY;
 
     this.rebuildTip(null, null);
   }
@@ -244,6 +257,29 @@ export class DailyChallengeHeader extends PIXI.Container {
   }
 
   // ── Private ────────────────────────────────────────────────────────────────
+
+  private buildMusicButton(L: DCHeaderLayout): void {
+    const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
+    btn.width  = L.musicSize;
+    btn.height = L.musicSize;
+    btn.x      = L.musicX;
+    btn.y      = L.musicY;
+    this.applyMusicTint(btn);
+    this.addChild(btn);
+    this.musicSprite = btn;
+    this.ctx.input.registerUI(new UIElement({
+      zIndex: 15,
+      sprite: btn,
+      onTap: () => {
+        this.ctx.audio.toggleMusic();
+        this.applyMusicTint(btn);
+      },
+    }));
+  }
+
+  private applyMusicTint(sprite: PIXI.Sprite): void {
+    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
+  }
 
   private applyIconScale(L: DCHeaderLayout): void {
     const scale = L.iconH / Math.max(this.icon.texture.width, this.icon.texture.height);

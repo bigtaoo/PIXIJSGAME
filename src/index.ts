@@ -6,6 +6,7 @@ import { AppContext } from './game/appContext';
 import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
+import { AudioManager } from './game/audioManager';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -17,7 +18,8 @@ window.onload = async () => {
   const canvas = app.view as HTMLCanvasElement;
   document.body.appendChild(canvas);
 
-  setPlayerPrefsImpl(new WebPlayerPrefs());
+  const prefs = new WebPlayerPrefs();
+  setPlayerPrefsImpl(prefs);
 
   const assets = new WebAssetsManager();
   await assets.loadAssets();
@@ -28,7 +30,9 @@ window.onload = async () => {
   const input = new InputManager();
   setupWebInput(canvas, input);
 
-  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer };
+  const audio = new AudioManager(prefs);
+
+  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);
@@ -54,6 +58,13 @@ window.onload = async () => {
 
   doResize();
   window.addEventListener('resize', doResize);
+
+  // Start background music on first user gesture (browser autoplay policy).
+  const startMusicOnce = (): void => {
+    audio.playBgMusic();
+    canvas.removeEventListener('pointerdown', startMusicOnce);
+  };
+  canvas.addEventListener('pointerdown', startMusicOnce);
 
   // ── Debug: orientation-toggle button (development build only) ───────
   // Clicking toggles the stored preference and reloads — the freshly

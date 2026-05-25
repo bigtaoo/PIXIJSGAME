@@ -9,6 +9,7 @@ import dailyPngUrl   from '../assets/daily_challenge_icon.png';
 import starPngUrl    from '../assets/star.png';
 import trophyPngUrl  from '../assets/trophy.png';
 import firePngUrl    from '../assets/fire.png';
+import musicPngUrl   from '../assets/music.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -46,6 +47,7 @@ export class WebAssetsManager implements IAssetsManager {
       this.loadStar(),
       this.loadTrophy(),
       this.loadFire(),
+      this.loadMusic(),
     ]);
   }
 
@@ -69,6 +71,10 @@ export class WebAssetsManager implements IAssetsManager {
   private async loadFire(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(firePngUrl));
     this.textures['fire.png'] = new PIXI.Texture(base);
+  }
+  private async loadMusic(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(musicPngUrl));
+    this.textures['music.png'] = new PIXI.Texture(base);
   }
 
   private async loadDigits(): Promise<void> {

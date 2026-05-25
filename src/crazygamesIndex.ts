@@ -14,6 +14,7 @@ import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
 import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
+import { AudioManager } from './game/audioManager';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 import { crazyGames } from './platform/crazygamesService';
 
@@ -35,7 +36,8 @@ window.onload = async () => {
   document.body.appendChild(canvas);
 
   // ── 4. Platform services (reuse web implementations) ──────────────
-  setPlayerPrefsImpl(new WebPlayerPrefs());
+  const prefs = new WebPlayerPrefs();
+  setPlayerPrefsImpl(prefs);
 
   const assets = new WebAssetsManager();
   await assets.loadAssets();
@@ -48,10 +50,12 @@ window.onload = async () => {
   crazyGames.loadingStop();
 
   // ── 6. Build scene graph ──────────────────────────────────────────
+  const audio = new AudioManager(prefs);
   const ctx: AppContext = {
     assets,
     input,
     renderer: app.renderer as unknown as PIXI.Renderer,
+    audio,
     platform: {
       gameplayStart:        () => crazyGames.gameplayStart(),
       gameplayStop:         () => crazyGames.gameplayStop(),

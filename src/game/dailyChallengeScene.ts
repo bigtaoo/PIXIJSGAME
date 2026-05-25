@@ -151,12 +151,13 @@ export class DailyChallengeScene extends PIXI.Container {
     this.gridLayer   = new Grid(this.ctx, this.screen, idx => this.onCellClick(idx));
     this.numberLayer = new NumberLayer(this.ctx, this.screen);
     this.effectLayer = new EffectManager(this.ctx, this.screen);
-    this.header      = new DailyChallengeHeader(this.ctx, () => this.onGoLobby(), this.screen);
+    const audio = this.ctx.audio;
+    this.header      = new DailyChallengeHeader(this.ctx, () => { audio.playClick(); this.onGoLobby(); }, this.screen);
 
     this.resultOverlay = new DailyChallengeResult(
       this.ctx,
-      () => this.start(),
-      () => this.onGoLobby(),
+      () => { audio.playClick(); this.start(); },
+      () => { audio.playClick(); this.onGoLobby(); },
     );
 
     this.addChild(this.gridLayer);
@@ -191,6 +192,8 @@ export class DailyChallengeScene extends PIXI.Container {
   private onCellClick(index: number): void {
     if (this.state.isGameEnd) return;
     if (this.logic.getNumberByIndex(index) === 0) return;
+
+    this.ctx.audio.playClick();
 
     if (this.selectedIndex === -1) {
       this.selectedIndex = index;
@@ -298,6 +301,12 @@ export class DailyChallengeScene extends PIXI.Container {
     if (!this.playRecorded) {
       recordDailyPlay();
       this.playRecorded = true;
+    }
+
+    if (this.score > 0) {
+      this.ctx.audio.playVictory();
+    } else {
+      this.ctx.audio.playGameOver();
     }
 
     const isNewBest = saveDailyScore(this.score);
