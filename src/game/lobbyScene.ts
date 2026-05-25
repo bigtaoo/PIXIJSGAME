@@ -10,52 +10,65 @@ import { drawCircleCell, drawCircleCellSelected, makeTexture } from './graphicsF
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 import { LOBBY_NODE_POSITIONS, DAILY_CHALLENGE_POS } from './lobbyLayout';
 import { Orientation } from './enums';
+import { DigitDisplay } from './digitDisplay';
+
+// ── 节点星星尺寸 ──────────────────────────────────────────────────────────────
+const STAR_SIZE    = 18;
+const STAR_GAP     = 2;
+const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
+
+// ── 每日挑战区图标 + 数字行尺寸 ───────────────────────────────────────────────
+const DC_ICON_H  = 20;
+const DC_ICON_W  = 20;
+const DC_DIGIT_H = 20;
+const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~15
+const DC_GAP     = 4;
+
+// ── 节点关卡数字尺寸 ──────────────────────────────────────────────────────────
+const NODE_DIGIT_H = 40;
+const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // 30
 
 // Per-node runtime data for repositioning on resize
 interface NodeEntry {
-  portraitCX: number;
-  portraitCY: number;
-  card: PIXI.Sprite;
-  numberText: PIXI.Text;
-  starLabel: PIXI.Text;
+  portraitCX:    number;
+  portraitCY:    number;
+  card:          PIXI.Sprite;
+  numDisplay:    DigitDisplay;
+  starContainer: PIXI.Container;
+  starSprites:   PIXI.Sprite[];   // always 3
 }
 
 // Daily challenge element refs for repositioning on resize
 interface DailyChallengeEntry {
-  portraitX: number;
-  portraitY: number;
-  circle: PIXI.Graphics;
-  icon: PIXI.Sprite;
-  title: PIXI.Text;
-  bestText: PIXI.Text;
-  streakText: PIXI.Text;
-  hit: PIXI.Sprite;
+  portraitX:     number;
+  portraitY:     number;
+  circle:        PIXI.Graphics;
+  icon:          PIXI.Sprite;
+  bestRow:       PIXI.Container;
+  bestDisplay:   DigitDisplay;
+  streakRow:     PIXI.Container;
+  streakDisplay: DigitDisplay;
+  hit:           PIXI.Sprite;
 }
 
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
-  private static readonly NODE_SIZE = 100;
+  private static readonly NODE_SIZE  = 100;
   private static readonly DAILY_SIZE = 130;
 
-  // Background sprite - resized in resize()
   private bg!: PIXI.Sprite;
 
-  // Node data for dynamic repositioning
-  private nodeEntries: NodeEntry[] = [];
-  private dailyEntry!: DailyChallengeEntry;
+  private nodeEntries:        NodeEntry[]      = [];
+  private dailyEntry!:        DailyChallengeEntry;
 
-  // Parallel arrays for refresh()
-  private stageCards: PIXI.Sprite[] = [];
-  private starLabels: PIXI.Text[] = [];
+  // Parallel arrays kept for refresh()
+  private stageCards:         PIXI.Sprite[]    = [];
+  private nodeStarContainers: PIXI.Container[] = [];
+  private nodeStarSprites:    PIXI.Sprite[][]  = [];
 
-  // Node textures
-  private cardTexture!: PIXI.Texture;
+  private cardTexture!:         PIXI.Texture;
   private cardSelectedTexture!: PIXI.Texture;
-
-  // Kept for refresh() - also stored in dailyEntry
-  private dcBestText!: PIXI.Text;
-  private dcStreakText!: PIXI.Text;
 
   constructor(
     private readonly ctx: AppContext,
@@ -68,9 +81,7 @@ export class LobbyScene extends PIXI.Container {
     this.buildUI();
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
+  // ── Public API ──────────────────────────────────────────────────────────────
 
   public resize(windowWidth: number, windowHeight: number): void {
     this.screen.update(windowWidth, windowHeight);
@@ -86,8 +97,9 @@ export class LobbyScene extends PIXI.Container {
 
     STAGES.forEach((stage, i) => {
       const card      = this.stageCards[i];
-      const starLabel = this.starLabels[i];
-      if (!card) return;
+      const starCont  = this.nodeStarContainers[i];
+      const starSprts = this.nodeStarSprites[i];
+      if (!card || !starCont || !starSprts) return;
 
       const completed = stage.stageIndex <= maxCompleted;
       const isCurrent = stage.stageIndex === maxCompleted + 1;
@@ -108,27 +120,26 @@ export class LobbyScene extends PIXI.Container {
 
       if (completed || isCurrent) {
         const stars = StarManager.getStars(stage.stageIndex);
-        if (stars > 0) {
-          starLabel.text    = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-          starLabel.visible = true;
-        } else {
-          starLabel.visible = false;
+        starCont.visible = stars > 0;
+        for (let s = 0; s < 3; s++) {
+          const sp = starSprts[s]!;
+          if (s < stars) {
+            sp.tint  = 0xEAB830;
+            sp.alpha = 1.0;
+          } else {
+            sp.tint  = 0x888888;
+            sp.alpha = 0.35;
+          }
         }
       } else {
-        starLabel.visible = false;
+        starCont.visible = false;
       }
     });
 
-    if (this.dcBestText) {
-      const best = getDailyBestScore();
-      this.dcBestText.text   = best > 0 ? (`最佳 ${best}`) : "最佳 --";
-      this.dcStreakText.text  = `${getStreakDays()}天`;
-    }
+    this.refreshDailyRows();
   }
 
-  // -------------------------------------------------------------------------
-  // Build helpers
-  // -------------------------------------------------------------------------
+  // ── Build helpers ───────────────────────────────────────────────────────────
 
   private buildUI(): void {
     this.buildBackground();
@@ -149,45 +160,58 @@ export class LobbyScene extends PIXI.Container {
     const sz = LobbyScene.NODE_SIZE;
     const r  = sz / 2;
 
-    this.cardTexture = makeTexture(
-      this.ctx.renderer,
-      g => drawCircleCell(g, sz),
-      sz,
-    );
-    this.cardSelectedTexture = makeTexture(
-      this.ctx.renderer,
-      g => drawCircleCellSelected(g, sz),
-      sz,
-    );
+    this.cardTexture         = makeTexture(this.ctx.renderer, g => drawCircleCell(g, sz), sz);
+    this.cardSelectedTexture = makeTexture(this.ctx.renderer, g => drawCircleCellSelected(g, sz), sz);
 
     STAGES.forEach((stage, i) => {
       const pos = LOBBY_NODE_POSITIONS[i];
       if (!pos) return;
-
       const cx = pos.x;
       const cy = pos.y;
 
       const card = this.buildStageButton(stage, cx - r, cy - r, sz);
       this.stageCards.push(card);
 
-      const numberText = this.buildStageNumber(stage.stageIndex, cx, cy, sz);
+      // Digit sprites for stage number
+      const numDisplay = new DigitDisplay(this.ctx, NODE_DIGIT_W, NODE_DIGIT_H);
+      numDisplay.update(stage.stageIndex);
+      numDisplay.x = cx - numDisplay.totalWidth / 2;
+      numDisplay.y = cy - NODE_DIGIT_H / 2;
+      this.addChild(numDisplay);
 
-      const starLabel = new PIXI.Text('', {
-        fontFamily: 'Arial',
-        fontSize:   20,
-        fill:       0xEAB830,
+      // 3 star sprites
+      const { container: starContainer, sprites: starSprites } = this.buildStarRow();
+      starContainer.x       = cx - TOTAL_STAR_W / 2;
+      starContainer.y       = cy + r + 4;
+      starContainer.visible = false;
+      this.addChild(starContainer);
+      this.nodeStarContainers.push(starContainer);
+      this.nodeStarSprites.push(starSprites);
+
+      this.nodeEntries.push({
+        portraitCX: cx, portraitCY: cy,
+        card, numDisplay, starContainer, starSprites,
       });
-      starLabel.anchor.set(0.5, 0);
-      starLabel.x = cx;
-      starLabel.y = cy + r + 4;
-      starLabel.visible = false;
-      this.addChild(starLabel);
-      this.starLabels.push(starLabel);
-
-      this.nodeEntries.push({ portraitCX: cx, portraitCY: cy, card, numberText, starLabel });
     });
 
     this.refresh();
+  }
+
+  /** 构建 3 颗星的水平行。 */
+  private buildStarRow(): { container: PIXI.Container; sprites: PIXI.Sprite[] } {
+    const container = new PIXI.Container();
+    const sprites: PIXI.Sprite[] = [];
+    for (let i = 0; i < 3; i++) {
+      const s    = new PIXI.Sprite(this.ctx.assets.GetTexture('star.png'));
+      s.width    = STAR_SIZE;
+      s.height   = STAR_SIZE;
+      s.x        = i * (STAR_SIZE + STAR_GAP);
+      s.y        = 0;
+      s.tint     = 0xEAB830;
+      container.addChild(s);
+      sprites.push(s);
+    }
+    return { container, sprites };
   }
 
   private buildDailyChallenge(): void {
@@ -205,7 +229,7 @@ export class LobbyScene extends PIXI.Container {
     this.addChild(circle);
 
     const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
-    const targetPx = sz * 0.7;
+    const targetPx  = sz * 0.7;
     const iconScale = targetPx / Math.max(icon.texture.width, icon.texture.height);
     icon.width  = icon.texture.width  * iconScale;
     icon.height = icon.texture.height * iconScale;
@@ -214,58 +238,85 @@ export class LobbyScene extends PIXI.Container {
     icon.y = y;
     this.addChild(icon);
 
-    const title = new PIXI.Text('每日挑战', {
-      fontFamily: 'Arial',
-      fontSize:   22,
-      fontWeight: 'bold',
-      fill:       0x5D4037,
-      stroke:     0xFFFFFF,
-      strokeThickness: 2,
-    });
-    title.anchor.set(0.5, 0);
-    title.x = x;
-    title.y = y + r + 8;
-    this.addChild(title);
+    // 最佳分数行：奖杯图标 + 数字
+    const best = this.buildIconDigitRow('trophy.png');
+    this.addChild(best.container);
 
-    const bestText = new PIXI.Text("最佳 --", {
-      fontFamily: 'Arial', fontSize: 18, fill: 0x5D4037,
-    });
-    bestText.anchor.set(0.5, 0);
-    bestText.x = x;
-    bestText.y = y + r + 36;
-    this.addChild(bestText);
-
-    const streakText = new PIXI.Text("0天", {
-      fontFamily: 'Arial', fontSize: 18, fill: 0x5D4037,
-    });
-    streakText.anchor.set(0.5, 0);
-    streakText.x = x;
-    streakText.y = y + r + 60;
-    this.addChild(streakText);
+    // 连续天数行：火焰图标 + 数字
+    const streak = this.buildIconDigitRow('fire.png');
+    this.addChild(streak.container);
 
     const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
     hit.width  = sz;
     hit.height = sz;
-    hit.x = x - r;
-    hit.y = y - r;
+    hit.x      = x - r;
+    hit.y      = y - r;
     this.addChild(hit);
     this.ctx.input.registerUI(
       new UIElement({ zIndex: 5, sprite: hit, onTap: () => this.onDailyChallenge() }),
     );
 
-    this.dcBestText   = bestText;
-    this.dcStreakText  = streakText;
+    this.dailyEntry = {
+      portraitX: x, portraitY: y,
+      circle, icon,
+      bestRow:       best.container,   bestDisplay:   best.display,
+      streakRow:     streak.container, streakDisplay: streak.display,
+      hit,
+    };
 
-    this.dailyEntry = { portraitX: x, portraitY: y, circle, icon, title, bestText, streakText, hit };
+    this.refreshDailyRows();
   }
 
-  // -------------------------------------------------------------------------
-  // Resize helpers
-  // -------------------------------------------------------------------------
+  /** 构建 [小图标 + DigitDisplay] 行，返回 container 和 display 的引用。 */
+  private buildIconDigitRow(iconKey: string): { container: PIXI.Container; display: DigitDisplay } {
+    const container  = new PIXI.Container();
+    const iconSprite = new PIXI.Sprite(this.ctx.assets.GetTexture(iconKey));
+    iconSprite.width  = DC_ICON_W;
+    iconSprite.height = DC_ICON_H;
+    iconSprite.x      = 0;
+    iconSprite.y      = (DC_DIGIT_H - DC_ICON_H) / 2;
+    container.addChild(iconSprite);
 
-  // Landscape: bg fills the full logical screen width (square image, so height==width).
-  // The bottom overflow is clipped naturally by the canvas bounds.
-  // Portrait: bg stretches to GAME_WIDTH x GAME_HEIGHT.
+    const display = new DigitDisplay(this.ctx, DC_DIGIT_W, DC_DIGIT_H, 0x5D4037);
+    display.x = DC_ICON_W + DC_GAP;
+    display.y = 0;
+    container.addChild(display);
+
+    return { container, display };
+  }
+
+  /**
+   * 更新每日挑战区数字内容并重新居中两行。
+   * 同时被 refresh() 和 repositionAll() 调用，以 toLogicalPos 获取当前坐标。
+   */
+  private refreshDailyRows(): void {
+    if (!this.dailyEntry) return;
+    const pos = this.toLogicalPos(this.dailyEntry.portraitX, this.dailyEntry.portraitY);
+    const dr  = LobbyScene.DAILY_SIZE / 2;
+
+    // 最佳分数行
+    const best = getDailyBestScore();
+    if (best > 0) {
+      this.dailyEntry.bestDisplay.update(best);
+      const rowW = DC_ICON_W + DC_GAP + this.dailyEntry.bestDisplay.totalWidth;
+      this.dailyEntry.bestRow.x       = pos.x - rowW / 2;
+      this.dailyEntry.bestRow.y       = pos.y + dr + 8;
+      this.dailyEntry.bestRow.visible = true;
+    } else {
+      this.dailyEntry.bestRow.visible = false;
+    }
+
+    // 连续天数行
+    const streakDays = getStreakDays();
+    this.dailyEntry.streakDisplay.update(streakDays);
+    const streakW = DC_ICON_W + DC_GAP + this.dailyEntry.streakDisplay.totalWidth;
+    this.dailyEntry.streakRow.x       = pos.x - streakW / 2;
+    this.dailyEntry.streakRow.y       = pos.y + dr + (best > 0 ? 32 : 8);
+    this.dailyEntry.streakRow.visible = true;
+  }
+
+  // ── Resize helpers ──────────────────────────────────────────────────────────
+
   private updateBgSize(): void {
     if (!this.bg) return;
     if (this.screen.orientation === Orientation.Landscape) {
@@ -277,12 +328,6 @@ export class LobbyScene extends PIXI.Container {
     }
   }
 
-  // Map a portrait logical coordinate to the current orientation's logical space.
-  // Portrait: returned unchanged.
-  // Landscape logical dimensions: width = screen.width, height = GAME_WIDTH.
-  //   x_new = portraitX / GAME_WIDTH  * screen.width
-  //   y_new = portraitY / GAME_HEIGHT * GAME_WIDTH
-  // This guarantees all nodes stay within [0, screen.width] x [0, GAME_WIDTH].
   private toLogicalPos(portraitX: number, portraitY: number): { x: number; y: number } {
     if (this.screen.orientation !== Orientation.Landscape) {
       return { x: portraitX, y: portraitY };
@@ -293,88 +338,50 @@ export class LobbyScene extends PIXI.Container {
     };
   }
 
-  // Reposition every node and daily-challenge element to match the current orientation.
   private repositionAll(): void {
     const sz = LobbyScene.NODE_SIZE;
     const r  = sz / 2;
 
     for (const entry of this.nodeEntries) {
       const pos = this.toLogicalPos(entry.portraitCX, entry.portraitCY);
-      entry.card.x        = pos.x - r;
-      entry.card.y        = pos.y - r;
-      entry.numberText.x  = pos.x;
-      entry.numberText.y  = pos.y;
-      entry.starLabel.x   = pos.x;
-      entry.starLabel.y   = pos.y + r + 4;
+      entry.card.x          = pos.x - r;
+      entry.card.y          = pos.y - r;
+      entry.numDisplay.x    = pos.x - entry.numDisplay.totalWidth / 2;
+      entry.numDisplay.y    = pos.y - NODE_DIGIT_H / 2;
+      entry.starContainer.x = pos.x - TOTAL_STAR_W / 2;
+      entry.starContainer.y = pos.y + r + 4;
     }
 
     if (this.dailyEntry) {
       const pos = this.toLogicalPos(this.dailyEntry.portraitX, this.dailyEntry.portraitY);
       const dr  = LobbyScene.DAILY_SIZE / 2;
-      this.dailyEntry.circle.x     = pos.x;
-      this.dailyEntry.circle.y     = pos.y;
-      this.dailyEntry.icon.x       = pos.x;
-      this.dailyEntry.icon.y       = pos.y;
-      this.dailyEntry.title.x      = pos.x;
-      this.dailyEntry.title.y      = pos.y + dr + 8;
-      this.dailyEntry.bestText.x   = pos.x;
-      this.dailyEntry.bestText.y   = pos.y + dr + 36;
-      this.dailyEntry.streakText.x = pos.x;
-      this.dailyEntry.streakText.y = pos.y + dr + 60;
-      this.dailyEntry.hit.x        = pos.x - dr;
-      this.dailyEntry.hit.y        = pos.y - dr;
+      this.dailyEntry.circle.x = pos.x;
+      this.dailyEntry.circle.y = pos.y;
+      this.dailyEntry.icon.x   = pos.x;
+      this.dailyEntry.icon.y   = pos.y;
+      this.dailyEntry.hit.x    = pos.x - dr;
+      this.dailyEntry.hit.y    = pos.y - dr;
+      // 重新居中数字行（含最新数值）
+      this.refreshDailyRows();
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Internal builders
-  // -------------------------------------------------------------------------
+  // ── Internal builders ───────────────────────────────────────────────────────
 
-  private buildStageButton(
-    stage: StageData,
-    x: number,
-    y: number,
-    size: number,
-  ): PIXI.Sprite {
+  private buildStageButton(stage: StageData, x: number, y: number, size: number): PIXI.Sprite {
     const card  = new PIXI.Sprite(this.cardTexture);
     card.width  = size;
     card.height = size;
     card.x      = x;
     card.y      = y;
     this.addChild(card);
-
     this.ctx.input.registerUI(
       new UIElement({
         zIndex: 5,
         sprite: card,
-        onTap: () => {
-          if (StageManager.isUnlocked(stage.stageIndex)) {
-            this.onSelectStage(stage);
-          }
-        },
+        onTap: () => { if (StageManager.isUnlocked(stage.stageIndex)) this.onSelectStage(stage); },
       }),
     );
-
     return card;
-  }
-
-  // Renders the stage number as PIXI.Text centered on the node circle.
-  // Using Text (rather than digit sprites) avoids the visual gap caused by
-  // fixed-width sprite frames around narrow glyphs like "1".
-  private buildStageNumber(n: number, centerX: number, centerY: number, cardSize: number): PIXI.Text {
-    const text = new PIXI.Text(n.toString(), {
-      fontFamily:      'Arial',
-      fontSize:        Math.round(cardSize * 0.40),
-      fontWeight:      'bold',
-      fill:            0x5D4037,
-      stroke:          0xFFFFFF,
-      strokeThickness: 3,
-      align:           'center',
-    });
-    text.anchor.set(0.5, 0.5);
-    text.x = centerX;
-    text.y = centerY;
-    this.addChild(text);
-    return text;
   }
 }

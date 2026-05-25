@@ -3,7 +3,7 @@ import { AppContext } from './appContext';
 import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
 import { Orientation } from './enums';
-import { drawHeaderBar } from './graphicsFactory';
+import { drawHeaderBar, drawQuestionMark } from './graphicsFactory';
 
 /** 时间警告阈值（秒）：低于此值时闹钟容器变红。 */
 const WARN_THRESHOLD = 10;
@@ -296,16 +296,9 @@ export class Header extends PIXI.Container {
       g.beginFill(0xF0F0F0, 1);
       g.drawRoundedRect(x, y, w, h, 10);
       g.endFill();
+      // 问号：程序绘制，替代原 PIXI.Text('?')
+      drawQuestionMark(g, x + w / 2, y + h / 2, h);
       container.addChild(g);
-
-      const fontSize = Math.round(h * 0.52);
-      const q = new PIXI.Text('?', new PIXI.TextStyle({
-        fontFamily: 'Arial', fontSize, fontWeight: 'bold', fill: 0xBBBBBB,
-      }));
-      q.anchor.set(0.5);
-      q.x = x + w / 2;
-      q.y = y + h / 2;
-      container.addChild(q);
     } else {
       const digits = value.toString().split('');
       if (digits.length === 1) {

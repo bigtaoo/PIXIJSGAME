@@ -1,16 +1,20 @@
 import * as PIXI from 'pixi.js-legacy';
+import { AppContext } from './appContext';
 
 /**
- * A "+Xs" label that animates in three phases:
- *   Phase 1 (0-100 ms)  : Appear at click position, scale 0 -> 2
- *   Phase 2 (100-200 ms): Hold at click position at scale 2 (large, easy to read)
- *   Phase 3 (200-300 ms): Fly from click position to the clock icon, shrink and fade
+ * A "+Xs" animation that flies from the tapped cell to the clock icon.
+ *
+ * Three phases:
+ *   Phase 1 (0-100 ms)  : pop in at click position, scale 0 → 2
+ *   Phase 2 (100-200 ms): hold at click position at scale 2
+ *   Phase 3 (200-300 ms): fly to clock, shrink and fade
+ *
+ * Visual: [plus.png] [digit sprite(s)] [s.png]，全部 tint 为金色（普通）或绿色（combo）。
  */
 export class FlyingBonus extends PIXI.Container {
   private elapsed = 0;
   private _isDone = false;
 
-  /** onReached fires at this time (ms) — during phase 3, before the animation ends. */
   private callbackFired = false;
   private static readonly CALLBACK_TIME = 250;
 
@@ -18,6 +22,14 @@ export class FlyingBonus extends PIXI.Container {
   private static readonly PHASE_HOLD = 100;
   private static readonly PHASE_FLY  = 100;
   public  static readonly DURATION   = 300;
+
+  // 各精灵的尺寸（在 scale=1 时）
+  private static readonly SPRITE_H    = 80;
+  private static readonly SPRITE_W    = Math.round(80 * 120 / 160); // 60，digits 等比
+  private static readonly PLUS_W      = 60;
+  private static readonly S_W         = 50;
+  private static readonly S_H         = 70;
+  private static readonly GAP         = 4;
 
   constructor(
     private readonly sx: number,
@@ -27,20 +39,55 @@ export class FlyingBonus extends PIXI.Container {
     bonusSeconds: number,
     isCombo: boolean,
     private readonly onReached: () => void,
+    ctx: AppContext,
   ) {
     super();
 
-    const label = new PIXI.Text('+' + bonusSeconds + 's', {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: 80,
-      fontWeight: 'bold',
-      fill: isCombo ? '#76FF03' : '#FFD700',
-      stroke: '#333333',
-      strokeThickness: 8,
-    } as object);
+    const color = isCombo ? 0x76FF03 : 0xFFD700;
+    const H     = FlyingBonus.SPRITE_H;
+    const DW    = FlyingBonus.SPRITE_W;
+    const PW    = FlyingBonus.PLUS_W;
+    const SW    = FlyingBonus.S_W;
+    const SH    = FlyingBonus.S_H;
+    const GAP   = FlyingBonus.GAP;
 
-    (label as PIXI.Text).anchor.set(0.5);
-    this.addChild(label);
+    const digits = bonusSeconds.toString().split('');
+    const totalW  = PW + GAP + digits.length * DW + GAP + SW;
+    const startX  = -totalW / 2;  // 居中于 (0, 0)
+
+    let curX = startX;
+
+    // 加号
+    const plus = new PIXI.Sprite(ctx.assets.GetTexture('plus.png'));
+    plus.width  = PW;
+    plus.height = H;
+    plus.x      = curX;
+    plus.y      = -(H / 2);
+    plus.tint   = color;
+    this.addChild(plus);
+    curX += PW + GAP;
+
+    // 数字（可能为 1 位或 2 位）
+    for (const ch of digits) {
+      const d = new PIXI.Sprite(ctx.assets.GetTexture(`${ch}.png`));
+      d.width  = DW;
+      d.height = H;
+      d.x      = curX;
+      d.y      = -(H / 2);
+      d.tint   = color;
+      this.addChild(d);
+      curX += DW;
+    }
+    curX += GAP;
+
+    // 字母 s
+    const s = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
+    s.width  = SW;
+    s.height = SH;
+    s.x      = curX;
+    s.y      = -(SH / 2);
+    s.tint   = color;
+    this.addChild(s);
 
     this.x = sx;
     this.y = sy;
@@ -55,7 +102,6 @@ export class FlyingBonus extends PIXI.Container {
 
     this.elapsed += deltaMs;
 
-    // Fire onReached at 250ms (mid-flight, as the label approaches the clock).
     if (!this.callbackFired && this.elapsed >= FlyingBonus.CALLBACK_TIME) {
       this.callbackFired = true;
       this.onReached();
@@ -66,7 +112,6 @@ export class FlyingBonus extends PIXI.Container {
     const FLY  = FlyingBonus.PHASE_FLY;
 
     if (this.elapsed < GROW) {
-      // Phase 1: pop up at click position, scale 0 -> 2
       const t = this.elapsed / GROW;
       const s = (t < 0.75) ? (t / 0.75 * 2.2) : (2.2 - (t - 0.75) / 0.25 * 0.2);
       this.scale.set(Math.max(0, s));
@@ -74,15 +119,13 @@ export class FlyingBonus extends PIXI.Container {
       this.y = this.sy;
       this.alpha = 1;
     } else if (this.elapsed < GROW + HOLD) {
-      // Phase 2: hold at 2x scale
       this.scale.set(2);
       this.x = this.sx;
       this.y = this.sy;
       this.alpha = 1;
     } else if (this.elapsed < GROW + HOLD + FLY) {
-      // Phase 3: fly to clock (ease-in), shrink from 2 to near 0, fade out
       const raw = (this.elapsed - GROW - HOLD) / FLY;
-      const t = raw * raw;
+      const t   = raw * raw;
       this.x = this.sx + (this.ex - this.sx) * t;
       this.y = this.sy + (this.ey - this.sy) * t;
       this.scale.set(2 * (1 - raw * 0.9));
@@ -90,7 +133,6 @@ export class FlyingBonus extends PIXI.Container {
     } else {
       this._isDone = true;
       this.visible = false;
-      // onReached already fired at CALLBACK_TIME (250ms)
     }
   }
 }

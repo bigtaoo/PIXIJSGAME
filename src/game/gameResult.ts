@@ -1,13 +1,19 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
 import { UIElement } from '../inputSystem/uiElement';
-import { drawPanel, C } from './graphicsFactory';
+import { drawPanel } from './graphicsFactory';
+
+// 星星行参数
+const STAR_SIZE    = 72;
+const STAR_GAP     = 8;
+const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
 export class GameResultOverlay extends PIXI.Container {
-  private retryBtn:  PIXI.Sprite;
-  private nextBtn:   PIXI.Sprite;
-  private lobbyBtn:  PIXI.Sprite;
-  private starText!: PIXI.Text;
+  private retryBtn:    PIXI.Sprite;
+  private nextBtn:     PIXI.Sprite;
+  private lobbyBtn:    PIXI.Sprite;
+  private starRow!:    PIXI.Container;
+  private starSprites: PIXI.Sprite[] = [];
 
   constructor(
     ctx: AppContext,
@@ -58,16 +64,20 @@ export class GameResultOverlay extends PIXI.Container {
     this.addChild(this.lobbyBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }));
 
-    // Star display shown on win
-    this.starText = new PIXI.Text('', {
-      fontFamily: 'Arial',
-      fontSize:   72,
-      fill:       0xEAB830,
-    });
-    this.starText.anchor.set(0.5, 0.5);
-    this.starText.x = PANEL_X + PANEL_W / 2;
-    this.starText.y = PANEL_Y + 120;
-    this.addChild(this.starText);
+    // 3 颗星精灵（代替 "★☆" 文字）
+    this.starRow = new PIXI.Container();
+    this.starRow.x = PANEL_X + PANEL_W / 2 - TOTAL_STAR_W / 2;
+    this.starRow.y = PANEL_Y + 84;
+    for (let i = 0; i < 3; i++) {
+      const s    = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
+      s.width    = STAR_SIZE;
+      s.height   = STAR_SIZE;
+      s.x        = i * (STAR_SIZE + STAR_GAP);
+      s.y        = 0;
+      this.starRow.addChild(s);
+      this.starSprites.push(s);
+    }
+    this.addChild(this.starRow);
   }
 
   public show(win: boolean, stars = 0): void {
@@ -75,10 +85,19 @@ export class GameResultOverlay extends PIXI.Container {
     this.retryBtn.visible = !win;
     this.nextBtn.visible  = win;
     this.lobbyBtn.visible = true;
-    this.starText.visible = win;
+    this.starRow.visible  = win;
+
     if (win) {
-      this.starText.text  = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-      this.starText.style.fill = stars === 3 ? 0xEAB830 : C.icon;
+      for (let i = 0; i < 3; i++) {
+        const sp = this.starSprites[i]!;
+        if (i < stars) {
+          sp.tint  = 0xEAB830;  // 实心星——金色
+          sp.alpha = 1.0;
+        } else {
+          sp.tint  = 0x888888;  // 空星——灰色半透明
+          sp.alpha = 0.35;
+        }
+      }
     }
   }
 

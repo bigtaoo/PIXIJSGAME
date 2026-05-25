@@ -16,6 +16,14 @@ A sprite sheet of digits 0-9 in **bold rounded sans-serif font** (similar to Not
 - **Alignment**: Each digit is **visually centered** in its 120x160 cell.
 --ar 129:16 --v 6 --style raw
 
+星星
+A hand-drawn 5-pointed cartoon star icon, perfect pentagram shape with slightly rounded points, gold (#FFD700) fill, with a 1px dark brown (#6D4C41) outline and a soft golden glow effect (radius 8px, #FFD700, 50% opacity). Flat solid color, no gradient, no shadow on the star itself, transparent background. Sketchy pencil style with playful, bouncy edges, thick lines. The star should look cheerful and exaggerated, like a child's drawing. Centered on 256x256 canvas.
+
+奖杯
+A hand-drawn simplified trophy cup icon, gold (#FFD700) fill, with a 1px dark brown (#6D4C41) outline. The trophy has a wide base and a tall cup body, NO HANDLES. Flat solid color, no gradient, no shadow, transparent background. Sketchy pencil style with subtle imperfect edges, simple and clean. Centered on 256x256 canvas.
+
+火焰
+A hand-drawn symmetric flame icon, warm amber (#E67E22) fill, with a 1px dark brown (#6D4C41) outline. The flame has a thick base and tapers to a wobbly top, perfectly symmetrical. Flat solid color, no gradient, no shadow, transparent background. Sketchy pencil style with subtle imperfect edges, playful and childlike. Centered on 256x256 canvas.
 
 爱心
 A single hand-drawn heart icon, SOLID coral red fill (#FF6B6B), DARK RED OUTLINE (#C0392B, 3-4px thick),

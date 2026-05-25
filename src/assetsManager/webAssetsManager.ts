@@ -6,6 +6,9 @@ import explosionJsonUrl from '../assets/explosion.json';
 import explosionPngUrl  from '../assets/explosion.png';
 import bgPngUrl      from '../assets/lobby_bg.png';
 import dailyPngUrl   from '../assets/daily_challenge_icon.png';
+import starPngUrl    from '../assets/star.png';
+import trophyPngUrl  from '../assets/trophy.png';
+import firePngUrl    from '../assets/fire.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -13,6 +16,7 @@ import {
   drawClockFace, drawClockHand,
   drawPlus, drawEquals,
   drawRetryIcon, drawNextIcon, drawSettingsIcon, drawLobbyIcon,
+  drawLetterS,
 } from '../game/graphicsFactory';
 
 const DIGIT_W   = 120;
@@ -39,6 +43,9 @@ export class WebAssetsManager implements IAssetsManager {
       this.loadExplosionAtlas(),
       this.loadBg(),
       this.loadDailyIcon(),
+      this.loadStar(),
+      this.loadTrophy(),
+      this.loadFire(),
     ]);
   }
 
@@ -49,6 +56,19 @@ export class WebAssetsManager implements IAssetsManager {
   private async loadDailyIcon(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(dailyPngUrl));
     this.textures['daily_challenge_icon.png'] = new PIXI.Texture(base);
+  }
+
+  private async loadStar(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(starPngUrl));
+    this.textures['star.png'] = new PIXI.Texture(base);
+  }
+  private async loadTrophy(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(trophyPngUrl));
+    this.textures['trophy.png'] = new PIXI.Texture(base);
+  }
+  private async loadFire(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(firePngUrl));
+    this.textures['fire.png'] = new PIXI.Texture(base);
   }
 
   private async loadDigits(): Promise<void> {
@@ -117,6 +137,10 @@ export class WebAssetsManager implements IAssetsManager {
     this.textures['next.png']     = makeTexture(renderer, g => drawNextIcon(g,      BTN_SIZE),     BTN_SIZE);
     this.textures['lobby.png']    = makeTexture(renderer, g => drawLobbyIcon(g,     BTN_SIZE),     BTN_SIZE);
     this.textures['settings.png'] = makeTexture(renderer, g => drawSettingsIcon(g, SETTINGS_SIZE), SETTINGS_SIZE);
+
+    // 字母 "s"（用于飞行加时动画），白色描边，调用方用 tint 着色
+    const S_W = 50, S_H = 70;
+    this.textures['s.png'] = makeTexture(renderer, g => drawLetterS(g, S_W, S_H), S_W, S_H);
   }
 
   public GetTexture(key: string): PIXI.Texture {

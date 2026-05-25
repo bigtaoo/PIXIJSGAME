@@ -47,7 +47,7 @@ export class EffectManager extends PIXI.Container {
     isCombo: boolean,
     onReached: () => void,
   ): void {
-    const fb = new FlyingBonus(startX, startY, endX, endY, bonusSeconds, isCombo, onReached);
+    const fb = new FlyingBonus(startX, startY, endX, endY, bonusSeconds, isCombo, onReached, this.ctx);
     this.flyingBonuses.push(fb);
     this.flyingLayer.addChild(fb);
   }

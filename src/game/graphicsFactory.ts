@@ -293,6 +293,50 @@ export function drawHeaderBar(g: PIXI.Graphics, w: number, h: number): void {
   g.endFill();
 }
 
+// ─── 文字替代符号 ──────────────────────────────────────────────────────────────
+
+/**
+ * 问号，用于 tip 槽未填入数值时。
+ * 绘制于以 (cx, cy) 为中心、高度约为 h 的区域内。
+ * 颜色固定为浅灰 0xBBBBBB，与原文本样式一致。
+ */
+export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: number): void {
+  const sw = Math.round(h * 0.13);
+  const r  = h * 0.19;
+
+  g.lineStyle(sw, 0xBBBBBB, 1);
+  // 上弧：半圆（从左到右）
+  g.arc(cx, cy - h * 0.14, r, Math.PI, 0, false);
+  // 向下弯折到茎
+  g.bezierCurveTo(
+    cx + r,  cy - h * 0.14 + r,
+    cx,      cy + h * 0.02,
+    cx,      cy + h * 0.10,
+  );
+
+  // 下方圆点
+  g.lineStyle(0);
+  g.beginFill(0xBBBBBB);
+  g.drawCircle(cx, cy + h * 0.30, sw * 0.75);
+  g.endFill();
+}
+
+/**
+ * 字母 "s"，绘制区域 (0, 0, w, h)。
+ * 用白色（0xFFFFFF）描边，调用方通过 sprite.tint 着色为金色或绿色。
+ */
+export function drawLetterS(g: PIXI.Graphics, w: number, h: number): void {
+  const sw = Math.round(Math.min(w, h) * 0.17);
+  g.lineStyle(sw, 0xFFFFFF, 1);
+
+  // 上半 C 弧（向左开口）
+  g.moveTo(w * 0.78, h * 0.18);
+  g.bezierCurveTo(w * 0.78, h * 0.01, w * 0.08, h * 0.01, w * 0.08, h * 0.30);
+  g.bezierCurveTo(w * 0.08, h * 0.48, w * 0.92, h * 0.52, w * 0.92, h * 0.70);
+  // 下半 C 弧（向右开口）
+  g.bezierCurveTo(w * 0.92, h * 0.99, w * 0.22, h * 0.99, w * 0.22, h * 0.82);
+}
+
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
 
 /**

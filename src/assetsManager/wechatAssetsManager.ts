@@ -49,6 +49,16 @@ export class WechatAssetsManager implements IAssetsManager {
     const dailyImg = await this.loadImageWX('assets/daily_challenge_icon.png');
     this.textures['daily_challenge_icon.png'] = new PIXI.Texture(this.imageToBaseTexture(dailyImg));
 
+    // 图标：星星 / 奖杯 / 火焰
+    const [starImg, trophyImg, fireImg] = await Promise.all([
+      this.loadImageWX('assets/star.png'),
+      this.loadImageWX('assets/trophy.png'),
+      this.loadImageWX('assets/fire.png'),
+    ]);
+    this.textures['star.png']   = new PIXI.Texture(this.imageToBaseTexture(starImg));
+    this.textures['trophy.png'] = new PIXI.Texture(this.imageToBaseTexture(trophyImg));
+    this.textures['fire.png']   = new PIXI.Texture(this.imageToBaseTexture(fireImg));
+
     // 爆炸粒子图集（加载失败不影响游戏）
     await this.loadExplosionAtlasWX().catch(() => {/* 忽略 */});
   }

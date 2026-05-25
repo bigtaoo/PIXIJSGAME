@@ -29,7 +29,8 @@ import { NumberLayer } from './numbers';
 import { EffectManager } from './effectManager';
 import { DailyChallengeLogic } from './dailyChallengeLogic';
 import { DailyChallengeResult } from './dailyChallengeResult';
-import { drawBackground, drawHeaderBar, C } from './graphicsFactory';
+import { drawBackground, drawHeaderBar, drawQuestionMark, C } from './graphicsFactory';
+import { DigitDisplay } from './digitDisplay';
 import { GAME_WIDTH, OFFSET_Y } from './consts';
 import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
 import { saveDailyScore, getDailyBestScore, recordDailyPlay } from './dailyChallengeStore';
@@ -51,10 +52,10 @@ export class DailyChallengeScene extends PIXI.Container {
   private effectLayer!:  EffectManager;
   private resultOverlay!: DailyChallengeResult;
 
-  // ── Header row 1: mode title / score / timer ──────────────────────────────
-  private headerBar!:   PIXI.Graphics;
-  private timerText!:   PIXI.Text;
-  private scoreLabel!:  PIXI.Text;
+  // ── Header row 1: mode icon / score / timer ───────────────────────────────
+  private headerBar!:    PIXI.Graphics;
+  private scoreDisplay!: DigitDisplay;   // 得分（数字精灵）
+  private timerDisplay!: DigitDisplay;   // 倒计时（数字精灵）
 
   // ── Header row 2: sprite-based tip formula ────────────────────────────────
   private tipContainer!: PIXI.Container;
@@ -197,7 +198,7 @@ export class DailyChallengeScene extends PIXI.Container {
   /**
    * Header layout (portrait, GAME_WIDTH = 1080):
    *
-   * Row 1 (y ≈ 18–90):  [← 每日挑战 (left)]  [SCORE (centre)]  [TIMER (right)]
+   * Row 1 (y ≈ 18–90):  [← daily icon (left)]  [SCORE (centre)]  [TIMER (right)]
    * Row 2 (y ≈ 95–185): [□ + □ = Target  (left, sprite-based)]
    */
   private buildHeader(): void {
@@ -210,33 +211,31 @@ export class DailyChallengeScene extends PIXI.Container {
     this.headerBar.y = 10;
     this.addChild(this.headerBar);
 
-    // "每日挑战" mode label (row 1, left)
-    const modeLabel = new PIXI.Text('每日挑战', {
-      fontFamily: 'Arial', fontSize: 36, fontWeight: 'bold', fill: C.icon,
-    });
-    modeLabel.x = 50;
-    modeLabel.y = 18;
-    this.addChild(modeLabel);
+    // Daily challenge icon（代替文字标签，row 1, left）
+    const ICON_H = 70;
+    const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
+    const iconScale = ICON_H / Math.max(icon.texture.width, icon.texture.height);
+    icon.width  = icon.texture.width  * iconScale;
+    icon.height = icon.texture.height * iconScale;
+    icon.x = 50;
+    icon.y = 15;
+    this.addChild(icon);
 
-    // Score (row 1, centre)
-    this.scoreLabel = new PIXI.Text('0', {
-      fontFamily: 'Arial', fontSize: 72, fontWeight: 'bold', fill: 0x2c6e49,
-    });
-    this.scoreLabel.anchor.set(0.5, 0);
-    this.scoreLabel.x = GAME_WIDTH / 2;
-    this.scoreLabel.y = 18;
-    this.addChild(this.scoreLabel);
+    // Score（row 1, centre）— digit sprites，居中
+    const SCORE_DIGIT_H = 72;
+    const SCORE_DIGIT_W = Math.round(SCORE_DIGIT_H * 120 / 160);
+    this.scoreDisplay = new DigitDisplay(this.ctx, SCORE_DIGIT_W, SCORE_DIGIT_H);
+    this.scoreDisplay.y = 18;
+    this.addChild(this.scoreDisplay);
 
-    // Timer (row 1, right)
-    this.timerText = new PIXI.Text('90', {
-      fontFamily: 'Arial', fontSize: 72, fontWeight: 'bold', fill: C.clockBorder,
-    });
-    this.timerText.anchor.set(1, 0);
-    this.timerText.x = GAME_WIDTH - 50;
-    this.timerText.y = 18;
-    this.addChild(this.timerText);
+    // Timer（row 1, right）— digit sprites，右对齐
+    const TIMER_DIGIT_H = 72;
+    const TIMER_DIGIT_W = Math.round(TIMER_DIGIT_H * 120 / 160);
+    this.timerDisplay = new DigitDisplay(this.ctx, TIMER_DIGIT_W, TIMER_DIGIT_H);
+    this.timerDisplay.y = 18;
+    this.addChild(this.timerDisplay);
 
-    // Back-to-lobby tap zone (top-left, covers mode label)
+    // Back-to-lobby tap zone（覆盖图标区域）
     this.buildBackButton();
   }
 
@@ -313,15 +312,9 @@ export class DailyChallengeScene extends PIXI.Container {
       g.beginFill(0xF0F0F0, 1);
       g.drawRoundedRect(x, y, w, h, 10);
       g.endFill();
+      // 问号：程序绘制，替代原 PIXI.Text('?')
+      drawQuestionMark(g, x + w / 2, y + h / 2, h);
       container.addChild(g);
-
-      const q = new PIXI.Text('?', new PIXI.TextStyle({
-        fontFamily: 'Arial', fontSize: Math.round(h * 0.52), fontWeight: 'bold', fill: 0xBBBBBB,
-      }));
-      q.anchor.set(0.5);
-      q.x = x + w / 2;
-      q.y = y + h / 2;
-      container.addChild(q);
     } else {
       const digits = value.toString().split('');
       if (digits.length === 1) {
@@ -477,13 +470,18 @@ export class DailyChallengeScene extends PIXI.Container {
   // ── Display helpers ────────────────────────────────────────────────────────
 
   private updateScoreDisplay(): void {
-    this.scoreLabel.text = this.score.toString();
+    this.scoreDisplay.update(this.score);
+    // 居中
+    this.scoreDisplay.x = GAME_WIDTH / 2 - this.scoreDisplay.totalWidth / 2;
   }
 
   private updateTimerDisplay(): void {
     const secs = this.state.remainingSeconds;
-    this.timerText.text       = secs.toString();
-    this.timerText.style.fill = secs <= 10 ? 0xcc0000 : C.clockBorder;
+    this.timerDisplay.update(secs);
+    // 右对齐
+    this.timerDisplay.x = GAME_WIDTH - 50 - this.timerDisplay.totalWidth;
+    // 低时间警告：tint 变红（前提是 digits.png 为浅色）
+    this.timerDisplay.tint = secs <= 10 ? 0xff4444 : 0xFFFFFF;
   }
 
   // ── Time up ────────────────────────────────────────────────────────────────
