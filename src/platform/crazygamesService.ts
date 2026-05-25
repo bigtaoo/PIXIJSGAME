@@ -28,6 +28,7 @@
 export class CrazyGamesService {
   private sdk: CrazyGames.ISDK | null = null;
   private _initialized = false;
+  private _lastInterstitialMs = -Infinity;
 
   // ── Init ──────────────────────────────────────────────────────────
 
@@ -102,6 +103,22 @@ export class CrazyGamesService {
         },
       });
     });
+  }
+
+  /**
+   * Show an interstitial ad at most once per `minIntervalMs` milliseconds.
+   * Resolves immediately (without showing an ad) when called within the
+   * throttle window.  Always resolves — never rejects.
+   *
+   * @param minIntervalMs  Minimum gap between ads in ms (default: 10 minutes).
+   */
+  showInterstitialAdThrottled(minIntervalMs = 10 * 60 * 1000): Promise<void> {
+    const now = Date.now();
+    if (now - this._lastInterstitialMs < minIntervalMs) {
+      return Promise.resolve();
+    }
+    this._lastInterstitialMs = now;
+    return this.showInterstitialAd();
   }
 
   /**
@@ -220,6 +237,16 @@ export class CrazyGamesService {
   async getScores(levelId: string, maxCount = 10): Promise<CrazyGames.LeaderboardScore[]> {
     if (!this.sdk) return [];
     return this.sdk.leaderboard.getScores(levelId, maxCount);
+  }
+
+  // ── Page lifecycle ────────────────────────────────────────────────
+
+  /**
+   * Call this in a `beforeunload` handler so CrazyGames knows the page is
+   * intentionally reloading or navigating away (not crashing).
+   */
+  sdkGameLoadingStart(): void {
+    this.sdk?.game.sdkGameLoadingStart();
   }
 
   // ── Environment ───────────────────────────────────────────────────

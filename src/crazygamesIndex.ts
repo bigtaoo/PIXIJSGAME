@@ -48,7 +48,17 @@ window.onload = async () => {
   crazyGames.loadingStop();
 
   // ── 6. Build scene graph ──────────────────────────────────────────
-  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer };
+  const ctx: AppContext = {
+    assets,
+    input,
+    renderer: app.renderer as unknown as PIXI.Renderer,
+    platform: {
+      gameplayStart:        () => crazyGames.gameplayStart(),
+      gameplayStop:         () => crazyGames.gameplayStop(),
+      requestInterstitialAd: () => crazyGames.showInterstitialAdThrottled(10 * 60 * 1000),
+      requestExtraLife:     () => crazyGames.showRewardedAd(),
+    },
+  };
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);
 
@@ -60,20 +70,10 @@ window.onload = async () => {
   doResize();
   window.addEventListener('resize', doResize);
 
-  // ── 8. Gameplay events ────────────────────────────────────────────
-  // Signal that gameplay has started once the game is ready.
-  // The coordinator (or your scene/round logic) should call
-  //   crazyGames.gameplayStart() / crazyGames.gameplayStop()
-  // around actual interactive rounds.  For example in SceneCoordinator:
-  //
-  //   import { crazyGames } from '../platform/crazygamesService';
-  //   // When a round begins:   crazyGames.gameplayStart();
-  //   // When a round ends:     crazyGames.gameplayStop();
-  //   // Before an ad:          crazyGames.gameplayStop(); await crazyGames.showInterstitialAd(); crazyGames.gameplayStart();
-  //
-  // We do a global start here as a safe default so the SDK doesn't
-  // think the game is permanently in a non-interactive state.
-  crazyGames.gameplayStart();
+  // ── 8. Page lifecycle ─────────────────────────────────────────────
+  // Notify CrazyGames before the page reloads or navigates away so it
+  // doesn't count the session as a crash.
+  window.addEventListener('beforeunload', () => crazyGames.sdkGameLoadingStart());
 
   // ── 9. Auth state listener (optional) ────────────────────────────
   if (crazyGames.isUserAccountAvailable) {

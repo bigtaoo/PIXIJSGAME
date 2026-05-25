@@ -73,6 +73,7 @@ export class GameScene extends PIXI.Container {
     this.lives            = 3;
     this.currentTargetIdx = 0;
     this.livesEverLost    = false;
+    this._extraLifeUsed   = false;
     this.state.reset();
     this.gameTimeMs = 0;
 
@@ -216,15 +217,47 @@ export class GameScene extends PIXI.Container {
     if (this.lives > 0) {
       this.retryStage();
     } else {
+      // Freeze the game loop before triggering the rewarded-ad / game-over flow.
       this.state.isGameEnd = true;
       this.selectedIndex   = -1;
       this.gridLayer.hideSelection();
-      this.resultOverlay.show(false);
+      this.tryExtraLife();
     }
+  }
+
+  /**
+   * Attempt to grant one extra life via a rewarded ad.
+   * Limited to one attempt per stage load — once used the flag is never
+   * reset within the same attempt, preventing infinite chaining.
+   * If the platform doesn't support rewarded ads, or the player declines /
+   * the ad errors, the normal game-over overlay is shown instead.
+   */
+  private _extraLifeUsed = false;
+
+  private tryExtraLife(): void {
+    if (this._extraLifeUsed || !this.ctx.platform) {
+      this.resultOverlay.show(false);
+      return;
+    }
+    this._extraLifeUsed = true;
+
+    this.ctx.platform.requestExtraLife().then((watched) => {
+      if (watched) {
+        // Grant one extra life and resume.
+        // livesEverLost is already true, so the star penalty stays in effect.
+        this.lives = 1;
+        this.header.updateLives(this.lives);
+        this.state.isGameEnd = false;
+        this.retryStage();
+      } else {
+        this.resultOverlay.show(false);
+      }
+    });
   }
 
   private retryStageAfterGameOver(): void {
     this.lives = 3;
+    this._extraLifeUsed = false;
     this.header.updateLives(this.lives);
     this.resultOverlay.hide();
     this.retryStage();

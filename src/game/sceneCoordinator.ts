@@ -33,6 +33,8 @@ export class SceneCoordinator extends PIXI.Container {
   private windowWidth  = 0;
   private windowHeight = 0;
   private started = false;
+  /** Skip the interstitial on the very first showGame call (initial load). */
+  private firstGameShow = true;
 
   constructor(private readonly ctx: AppContext) {
     super();
@@ -95,6 +97,7 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the stage lobby. Refreshes button states to reflect current progress. */
   public showLobby(): void {
+    this.ctx.platform?.gameplayStop();
     this.gameScene.visible           = false;
     this.dailyChallengeScene.visible = false;
     this.lobbyScene.visible          = true;
@@ -105,34 +108,52 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the Daily Challenge scene. */
   public showDailyChallenge(): void {
+    this.ctx.platform?.gameplayStop();
     this.lobbyScene.visible          = false;
     this.gameScene.visible           = false;
     this.dailyChallengeScene.visible = true;
     this.activeScene                 = this.dailyChallengeScene;
     this.dailyChallengeScene.start();
     this.dailyChallengeScene.resize(this.windowWidth, this.windowHeight);
+    this.ctx.platform?.gameplayStart();
   }
 
-  /** Load and show the game scene for the given stage. */
-  public showGame(stage: StageData): void {
+  /**
+   * Load and show the game scene for the given stage.
+   *
+   * On all calls except the very first (initial load) an interstitial ad
+   * is requested before the scene becomes visible.  The ad is throttled to
+   * at most once every 10 minutes inside `requestInterstitialAd`, so
+   * rapid stage transitions are not penalised.
+   */
+  public async showGame(stage: StageData): Promise<void> {
+    this.ctx.platform?.gameplayStop();
+
+    if (this.firstGameShow) {
+      this.firstGameShow = false;
+    } else {
+      await this.ctx.platform?.requestInterstitialAd();
+    }
+
     this.lobbyScene.visible          = false;
     this.dailyChallengeScene.visible = false;
     this.gameScene.visible           = true;
     this.activeScene                 = this.gameScene;
     this.gameScene.loadStage(stage);
     this.gameScene.resize(this.windowWidth, this.windowHeight);
+    this.ctx.platform?.gameplayStart();
   }
 
   // ── Stage completion ──────────────────────────────────────────────
 
-  private onStageComplete(stage: StageData): void {
+  private async onStageComplete(stage: StageData): Promise<void> {
     StageManager.recordComplete(stage.stageIndex);
 
     // STAGES is 0-indexed; stageIndex is 1-based, so STAGES[stageIndex]
     // is exactly the next stage (or undefined when all stages are done).
     const nextStage = STAGES[stage.stageIndex];
     if (nextStage) {
-      this.showGame(nextStage);
+      await this.showGame(nextStage);
     } else {
       this.showLobby();
     }

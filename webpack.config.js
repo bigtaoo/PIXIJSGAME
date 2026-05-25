@@ -47,7 +47,7 @@ module.exports = (env, argv) => {
     output: {
       filename: 'index.js',
       path: platform.outputPath,
-      clean: false,
+      clean: true,
     },
     plugins: [
       new HtmlWebpackPlugin({ template: platform.htmlTemplate }),
