@@ -10,7 +10,7 @@
 import { dateStringToSeed, todayString } from './seededRng';
 
 export const DAILY_GRID_W     = 6;
-export const DAILY_GRID_H     = 8;
+export const DAILY_GRID_H     = 10;
 export const DAILY_DURATION_MS = 90_000;
 
 /** Compute today's target number (20–50, repeats every 31 days). */

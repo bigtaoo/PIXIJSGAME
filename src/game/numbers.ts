@@ -181,23 +181,30 @@ export class NumberLayer extends PIXI.Container {
     const cell = this.getOrCreateCell(idx, true);
 
     // Scale the pair to 80% of the cell; each digit gets half the total width
-    const scale  = 0.80;
+    const scale  = 1.0;
     const totalW = gs * scale;
     const dw     = totalW / 2;              // width per digit
     const dh     = gs * scale;              // height per digit
     const marginX = (gs - totalW) / 2;      // horizontal centering offset
-    const marginY = (gs - dh) / 2;          // vertical centering offset
+    const marginY = (gs - dh) / 2 - 8;          // vertical centering offset
 
     const digits = [tensChar, unitsChar];
-    for (let i = 0; i < 2; i++) {
-      const s = cell.slots[i as 0 | 1]!;
-      s.texture = this.ctx.assets.GetTexture(`${digits[i]}.png`);
-      s.width   = dw;
-      s.height  = dh;
-      s.x       = cellX + marginX + i * dw;
-      s.y       = cellY + marginY;
-      s.visible = true;
-    }
+
+    const s0 = cell.slots[0]!;
+    s0.texture = this.ctx.assets.GetTexture(`${digits[0]}.png`);
+    s0.width   = dw;
+    s0.height  = dh;
+    s0.x       = cellX + marginX + 0 * dw;
+    s0.y       = cellY + marginY;
+    s0.visible = true;
+
+    const s1 = cell.slots[1]!;
+    s1.texture = this.ctx.assets.GetTexture(`${digits[1]}.png`);
+    s1.width   = dw;
+    s1.height  = dh;
+    s1.x       = cellX + marginX + 1 * dw - 15;
+    s1.y       = cellY + marginY;
+    s1.visible = true;
   }
 
   // ── Sprite cache management ───────────────────────────────────────────
