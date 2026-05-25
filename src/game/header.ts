@@ -60,10 +60,10 @@ function landscapeLayout(): HeaderLayout {
     tipY: 85, tipSlotW: 80, tipSlotH: 100,
     tipSlot1X: 50, tipPlusX: 140, tipSlot2X: 225, tipEquaX: 315,
     tipTargetX: 405, tipTargetStep: 85,
-    clockX: 580, clockY: 85, clockSize: 80,
-    timeStartX: 668, timeY: 98, timeDigitW: 50, timeDigitH: 65, timeDigitGap: 5,
+    clockX: 550, clockY: 70, clockSize: 110,
+    timeStartX: 668, timeY: 70, timeDigitW: 80, timeDigitH: 110, timeDigitGap: -20,
     livesStartX: 860, livesY: 95, heartSize: 60, heartGap: 10,
-    settingsX: 1090, settingsY: 20, settingsSize: 60,
+    settingsX: 1130, settingsY: 70, settingsSize: 100,
   };
 }
 
@@ -341,7 +341,7 @@ export class Header extends PIXI.Container {
     const r = L.clockSize / 2;
     this.clockHandSprite           = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
     this.clockHandSprite.width     = 6;
-    this.clockHandSprite.height    = 26;
+    this.clockHandSprite.height    = 33;
     this.clockHandSprite.pivot.set(3, 0);
     this.clockHandSprite.x        = r;
     this.clockHandSprite.y        = r;
