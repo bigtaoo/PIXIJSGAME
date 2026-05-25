@@ -14,8 +14,8 @@ export class SettingsOverlay extends PIXI.Container {
 
     const PANEL_W = 700;
     const PANEL_H = 400;
-    const PANEL_X = 190;
-    const PANEL_Y = 760;
+    const PANEL_X = 490;
+    const PANEL_Y = 360;
 
     const bg = new PIXI.Graphics();
     drawPanel(bg, PANEL_W, PANEL_H);

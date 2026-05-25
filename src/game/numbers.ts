@@ -132,8 +132,8 @@ export class NumberLayer extends PIXI.Container {
    */
   private updateCell(idx: number, col: number, row: number, n: number): void {
     const { gridSize, offsetX, offsetY } = this.screen;
-    const cellX = col * gridSize + offsetX;
-    const cellY = row * gridSize + offsetY;
+    const cellX = col * gridSize + offsetX + gridSize * 0.05;
+    const cellY = row * gridSize + offsetY + gridSize * 0.05;
 
     const str = n.toString();          // e.g. 15 -> "15", 7 -> "7"
     const isTwoDigit = str.length >= 2;
@@ -158,8 +158,8 @@ export class NumberLayer extends PIXI.Container {
     const s = cell.slots[0];
 
     s.texture = this.ctx.assets.GetTexture(`${digit}.png`);
-    s.width   = gs;
-    s.height  = gs;
+    s.width   = gs * 0.9;
+    s.height  = gs * 0.9;
     s.x       = cellX;
     s.y       = cellY;
     s.visible = true;
@@ -180,8 +180,8 @@ export class NumberLayer extends PIXI.Container {
   ): void {
     const cell = this.getOrCreateCell(idx, true);
 
-    // Scale the pair to 70% of the cell; each digit gets half the total width
-    const scale  = 0.70;
+    // Scale the pair to 80% of the cell; each digit gets half the total width
+    const scale  = 0.80;
     const totalW = gs * scale;
     const dw     = totalW / 2;              // width per digit
     const dh     = gs * scale;              // height per digit
