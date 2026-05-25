@@ -148,7 +148,7 @@ export class LobbyScene extends PIXI.Container {
   }
 
   private buildBackground(): void {
-    this.bg = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
+    this.bg        = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
     this.bg.x      = 0;
     this.bg.y      = 0;
     this.bg.width  = GAME_WIDTH;
@@ -320,8 +320,8 @@ export class LobbyScene extends PIXI.Container {
   private updateBgSize(): void {
     if (!this.bg) return;
     if (this.screen.orientation === Orientation.Landscape) {
-      this.bg.width  = this.screen.width;
-      this.bg.height = this.screen.width;
+      this.bg.width  = GAME_HEIGHT;
+      this.bg.height = GAME_WIDTH;
     } else {
       this.bg.width  = GAME_WIDTH;
       this.bg.height = GAME_HEIGHT;

@@ -5,11 +5,6 @@
  * Targets increment from 6 through 99.
  *
  * Grid expansion rules (determined by the first target of the stage):
- *   >= 71 -> 6 x 10 = 60 cells
- *   >= 51 -> 6 x 8  = 48 cells
- *   >= 31 -> 6 x 6  = 36 cells
- *   >= 21 -> 4 x 8  = 32 cells
- *   >= 11 -> 4 x 6  = 24 cells
  *   default -> 3 x 6 = 18 cells
  *
  * All cell counts are even numbers to guarantee valid pairing.
@@ -24,9 +19,9 @@ export interface StageData {
 function getGridDims(startTarget: number): [number, number] {
   if (startTarget >= 71) return [6, 10];
   if (startTarget >= 51) return [6, 8];
-  if (startTarget >= 31) return [6, 6];
-  if (startTarget >= 21) return [4, 8];
-  if (startTarget >= 11) return [4, 6];
+  if (startTarget >= 31) return [6, 8];
+  if (startTarget >= 21) return [5, 8];
+  if (startTarget >= 11) return [4, 7];
   return [3, 6];
 }
 
