@@ -7,6 +7,9 @@ Warm brown, olive green, and earthy yellow palette. Watercolor pencil style, sof
 Square composition (1:1 aspect ratio), seamless at edges for 90-degree rotation.
 --ar 1:1 --v 6 --style raw --chaos 15
 
+icon
+A clean square app icon with rounded corners (radius 20%) for a number elimination puzzle game, warm beige background (#F5EDD6). Three-line vertical layout: Top line: bold rounded numbers "3" (gold #FFD700) and "7" (sky blue #4FC3F7) with a small gold plus sign "+" (#FFD700, 1px) between them, all with dark brown outline (#333333, 2px). Middle line: thin horizontal divider line (#6D4C41, 1px). Bottom line: bold rounded number "10" (sky blue #4FC3F7) with dark brown outline (#333333, 2px). All elements centered horizontally, hand-drawn sketch style, flat design, no gradient, minimalist, high contrast for small sizes, transparent background, centered on 1024x1024 canvas. --ar 1:1 --v 6 --style raw
+
 音符
 A single music note icon, gold fill color (#FFD700), dark brown outline (#333333, 2px width), bold rounded thick lines, minimalist hand-drawn sketch style, flat design, no gradient, no shadow, transparent background, clean game UI asset, centered on 512x512 canvas, simple and readable. --ar 1:1 --v 6 --style raw
 
