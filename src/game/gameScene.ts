@@ -20,12 +20,17 @@ export class GameScene extends PIXI.Container {
   private readonly logic: Logic;
 
   private bg!: PIXI.Graphics;
+  /** Wraps gridLayer / numberLayer / effectLayer. Scaled uniformly after layout lock. */
+  private gameContainer!: PIXI.Container;
   private gridLayer!: Grid;
   private numberLayer!: NumberLayer;
   private effectLayer!: EffectManager;
   private header!: Header;
   private resultOverlay!: GameResultOverlay;
   private settingsOverlay!: SettingsOverlay;
+
+  /** Scale factor applied to gameContainer on the last updateGameContainerTransform(). */
+  private gameContainerScale = 1;
 
   private stage!: StageData;
   private currentTargetIdx = 0;
@@ -92,8 +97,16 @@ export class GameScene extends PIXI.Container {
       this.initialized = true;
     } else {
       drawBackground(this.bg, this.screen.width, this.screen.height);
-      this.gridLayer.reconfigure();
-      this.numberLayer.reconfigure(this.logic);
+
+      if (this.screen.isLocked) {
+        // Layout is locked (game in progress) — do NOT reconfigure the grid.
+        // Instead, scale gameContainer to fit the available area proportionally.
+        this.updateGameContainerTransform();
+      } else {
+        this.gridLayer.reconfigure();
+        this.numberLayer.reconfigure(this.logic);
+      }
+
       this.header.resize(this.screen);
       this.resultOverlay.resize(this.screen);
       this.settingsOverlay.resize(this.screen);
@@ -162,9 +175,14 @@ export class GameScene extends PIXI.Container {
       () => { audio.playClick(); this.onGoLobby(); },
     );
 
-    this.addChild(this.gridLayer);
-    this.addChild(this.numberLayer);
-    this.addChild(this.effectLayer);
+    // gameContainer holds the three game-content layers so they can be
+    // scaled as a unit when the screen rotates mid-game.
+    this.gameContainer = new PIXI.Container();
+    this.gameContainer.addChild(this.gridLayer);
+    this.gameContainer.addChild(this.numberLayer);
+    this.gameContainer.addChild(this.effectLayer);
+
+    this.addChild(this.gameContainer);
     this.addChild(this.header);
     // flyingLayer must sit ABOVE the header so bonus labels are never obscured
     this.addChild(this.effectLayer.flyingLayer);
@@ -182,12 +200,17 @@ export class GameScene extends PIXI.Container {
     this.state.isGameEnd = false;
     this.state.addTime(30_000);
 
+    // Unlock so logic.initialize() and reconfigure() use the live screen dims,
+    // then lock again once numbers are assigned to freeze the layout.
+    this.screen.unlockLayout();
     this.logic.initialize(this.screen, target);
     this.header.updateTarget(target);
     this.header.updateLives(this.lives);
 
     this.gridLayer.reconfigure();
     this.numberLayer.reconfigure(this.logic);
+    this.screen.lockLayout();
+    this.updateGameContainerTransform();
 
     this.selectedIndex = -1;
     this.gridLayer.hideSelection();
@@ -358,11 +381,13 @@ export class GameScene extends PIXI.Container {
     this.state.addTime(bonusSec * 1000);
     this.ctx.audio.playAddTime();
 
-    // Flying bonus animation — bursts from the centre of the last-tapped cell (idxB)
+    // Flying bonus animation — bursts from the centre of the last-tapped cell (idxB).
+    // indexToPos() returns coordinates in gameContainer local space; transform to
+    // scene space so the label travels correctly to the clock (which is in scene space).
     const half  = this.screen.gridSize / 2;
     const posB  = this.screen.indexToPos(idxB);
-    const startX = posB.x + half;
-    const startY = posB.y + half;
+    const startX = this.gameContainer.x + (posB.x + half) * this.gameContainerScale;
+    const startY = this.gameContainer.y + (posB.y + half) * this.gameContainerScale;
 
     const clockPos = this.header.getClockCenter();
 
@@ -401,6 +426,51 @@ export class GameScene extends PIXI.Container {
     if (pairIndices.length > 0) {
       this.numberLayer.flashHint(pairIndices);
     }
+  }
+
+  // ── gameContainer transform ────────────────────────────────────────────
+
+  /**
+   * Scale and position gameContainer so that the locked play area fits within
+   * the current screen while preserving its aspect ratio.
+   *
+   * When the layout is not locked (scene just built, game not yet started)
+   * the container sits at (0, 0) with scale 1 — the normal state.
+   *
+   * After lock the play area (everything below the header) is scaled to fill
+   * as much of screen.height − OFFSET_Y as possible.  The container is
+   * shifted horizontally to remain centered and vertically so that the cell
+   * rows (which have OFFSET_Y baked into their y-coordinates) still start
+   * immediately below the header.
+   *
+   *   s = min( screen.width  / lockedLogicalW,
+   *            (screen.height − OFFSET_Y) / (lockedLogicalH − OFFSET_Y) )
+   *
+   *   gameContainer.x = (screen.width − lockedLogicalW · s) / 2
+   *   gameContainer.y = OFFSET_Y · (1 − s)   // cancels the scaled offsetY
+   */
+  private updateGameContainerTransform(): void {
+    if (!this.screen.isLocked) {
+      this.gameContainerScale = 1;
+      this.gameContainer.scale.set(1);
+      this.gameContainer.x = 0;
+      this.gameContainer.y = 0;
+      return;
+    }
+
+    const { width, height, offsetY, lockedLogicalW, lockedLogicalH } = this.screen;
+    const availH     = height - offsetY;
+    const lockedPlayH = lockedLogicalH - offsetY;
+
+    const s = Math.min(width / lockedLogicalW, availH / lockedPlayH);
+
+    this.gameContainerScale = s;
+    this.gameContainer.scale.set(s);
+    this.gameContainer.x = (width - lockedLogicalW * s) / 2;
+    // Grid cells have offsetY baked into their y; after scaling that becomes
+    // offsetY * s.  Shift the container up by the difference so cells stay
+    // flush below the header.
+    this.gameContainer.y = offsetY * (1 - s);
   }
 
   // Settings / pause

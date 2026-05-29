@@ -312,6 +312,7 @@ export const STAGE_THRESHOLDS: Partial<Record<number, StarThresholds>> = {
 
 - [ ] UI 特效与过场动画
 - [ ] 终局彩蛋演出
+- [x] 横竖屏切换导致格子数据错位（游戏开始后锁定布局，resize 时对 gameContainer 等比缩放，不重新分配数字）
 - [ ] 大厅界面美术优化（关卡按钮素材替换）
 - [ ] 命数图标素材（当前使用占位图）
 - [ ] 星级阈值平衡性测试，按需填充 starThresholds.ts 中的 STAGE_THRESHOLDS

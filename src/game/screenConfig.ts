@@ -13,6 +13,50 @@ export class ScreenConfig {
   private _gridW: number | null = null;
   private _gridH: number | null = null;
 
+  // ── Layout lock ────────────────────────────────────────────────────────
+  // Once lockLayout() is called (after numbers are assigned), the grid-related
+  // getters return frozen values so that orientation changes mid-game do not
+  // alter the cell layout.  width/height/scale still update normally so the
+  // background, header and overlays can respond to resize events.
+  private _locked = false;
+  private _lockedGridCountW: number | null = null;
+  private _lockedGridCountH: number | null = null;
+  private _lockedGridSize:   number | null = null;
+  private _lockedOffsetX:    number | null = null;
+
+  /** Full logical canvas size captured at lock time. Used by GameScene to
+   *  compute the gameContainer scale factor on subsequent resize events. */
+  public lockedLogicalW = 0;
+  public lockedLogicalH = 0;
+
+  public get isLocked(): boolean { return this._locked; }
+
+  /**
+   * Freeze the grid layout.  Must be called after logic.initialize() and
+   * gridLayer.reconfigure() so that all grid-dependent getters return
+   * consistent values for the lifetime of the current target.
+   */
+  public lockLayout(): void {
+    this._lockedGridCountW = this.gridCountW;
+    this._lockedGridCountH = this.gridCountH;
+    this._lockedGridSize   = this.gridSize;
+    this._lockedOffsetX    = this.offsetX;
+    this.lockedLogicalW    = this.width;
+    this.lockedLogicalH    = this.height;
+    this._locked = true;
+  }
+
+  /** Release the layout lock so the next reconfigure() uses the real
+   *  (possibly rotated) screen dimensions. */
+  public unlockLayout(): void {
+    this._locked           = false;
+    this._lockedGridCountW = null;
+    this._lockedGridCountH = null;
+    this._lockedGridSize   = null;
+    this._lockedOffsetX    = null;
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
   /**
    * Set explicit grid dimensions (called by GameScene with StageData).
    * After calling this, gridCountW/H return the given values.
@@ -28,8 +72,11 @@ export class ScreenConfig {
    * In landscape we swap so the grid fills the wider canvas.
    *   Portrait  [3, 6] -> 3 cols × 6 rows
    *   Landscape [3, 6] -> 6 cols × 3 rows
+   * When the layout is locked the frozen value is returned regardless of
+   * orientation so mid-game rotation cannot reshape the grid.
    */
   public get gridCountW(): number {
+    if (this._locked && this._lockedGridCountW !== null) return this._lockedGridCountW;
     if (this._gridW !== null && this._gridH !== null) {
       return this.orientation === Orientation.Landscape ? this._gridH : this._gridW;
     }
@@ -37,6 +84,7 @@ export class ScreenConfig {
   }
 
   public get gridCountH(): number {
+    if (this._locked && this._lockedGridCountH !== null) return this._lockedGridCountH;
     if (this._gridW !== null && this._gridH !== null) {
       return this.orientation === Orientation.Landscape ? this._gridW : this._gridH;
     }
@@ -50,16 +98,20 @@ export class ScreenConfig {
    *
    * where playH = height - offsetY  (the area below the header).
    * This ensures the grid always fits both horizontally and vertically.
+   * Returns the frozen value when the layout is locked.
    */
   public get gridSize(): number {
+    if (this._locked && this._lockedGridSize !== null) return this._lockedGridSize;
     const playH = this.height - this.offsetY;
     return Math.floor(Math.min(this.width / this.gridCountW, playH / this.gridCountH));
   }
 
   /**
    * Horizontal offset: centers the grid within the full canvas width.
+   * Returns the frozen value when the layout is locked.
    */
   public get offsetX(): number {
+    if (this._locked && this._lockedOffsetX !== null) return this._lockedOffsetX;
     return (this.width - this.gridCountW * this.gridSize) / 2;
   }
 
