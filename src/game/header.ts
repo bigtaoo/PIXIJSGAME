@@ -121,8 +121,20 @@ export class Header extends PIXI.Container {
   private bounceElapsed                  = -1;
   private static readonly BOUNCE_DURATION = 200; // ms
 
+  /** 时间数字金色高亮进度，-1 = 空闲。 */
+  private highlightElapsed                  = -1;
+  private static readonly HIGHLIGHT_DURATION = 300; // ms
+
   /** 时间预警抖动累积时间（ms）。仅在 lastDisplayedSeconds < WARN_THRESHOLD 时推进。 */
   private warnShakeMs = 0;
+
+  /** 心形碎裂动画队列。 */
+  private heartAnims: Array<{
+    sprite:    PIXI.Sprite;
+    callback:  () => void;
+    elapsed:   number;
+    done:      boolean;
+  }> = [];
 
   private _target: number;
   private settingsSprite!: PIXI.Sprite;
@@ -181,11 +193,13 @@ export class Header extends PIXI.Container {
     this.resultElapsed = 0;
   }
 
-  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器 + 时间预警抖动。 */
+  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器 + 时间预警抖动 + 高亮 + 心形动画。 */
   public update(deltaMs: number): void {
     this.updateBounce(deltaMs);
     this.updateResultReset(deltaMs);
     this.updateWarnShake(deltaMs);
+    this.updateHighlight(deltaMs);
+    this.updateHeartAnims(deltaMs);
   }
 
   /** 更新时间显示 + 闹钟指针 + 预警变色。秒数未变时为空操作。 */
@@ -206,10 +220,13 @@ export class Header extends PIXI.Container {
     const ratio = Math.min(Math.max(seconds, 0) / CLOCK_REF_SECS, 1);
     this.clockHandSprite.rotation = Math.PI + (1 - ratio) * Math.PI * 2;
 
-    // 时间预警变色
+    // 时间预警变色（高亮动画进行中时跳过数字 tint，由 updateHighlight 管理）
     const warnColor = (seconds > 0 && seconds < WARN_THRESHOLD) ? 0xFF5252 : 0xFFFFFF;
-    this.clockFaceSprite.tint  = warnColor;
-    this.clockHandSprite.tint  = warnColor;
+    this.clockFaceSprite.tint = warnColor;
+    this.clockHandSprite.tint = warnColor;
+    if (this.highlightElapsed < 0) {
+      for (const s of this.timeSprites) s.tint = warnColor;
+    }
   }
 
   /** 更新命数显示：满心 / 空心贴图切换。 */
@@ -221,9 +238,30 @@ export class Header extends PIXI.Container {
     }
   }
 
-  /** 加时到达时触发弹跳动画。 */
+  /** 加时到达时触发弹跳动画 + 时间数字金色高亮。 */
   public triggerClockBounce(): void {
-    this.bounceElapsed = 0;
+    this.bounceElapsed   = 0;
+    this.highlightElapsed = 0;
+  }
+
+  /**
+   * 触发第 liveIndex 颗心（0-based）的碎裂动画。
+   * 动画结束后调用 callback（通常由 GameScene 传入，用于切换贴图）。
+   * 总时长约 230ms：scale 1→1.3 (80ms) + scale 1.3→0 (150ms)。
+   */
+  public triggerHeartLost(liveIndex: number, callback: () => void): void {
+    const sprite = this.livesSprites[liveIndex];
+    if (!sprite) { callback(); return; }
+    this.heartAnims.push({ sprite, callback, elapsed: 0, done: false });
+  }
+
+  /** 返回第 liveIndex 颗心（0-based）中心点在 Header 父容器中的坐标。 */
+  public getHeartCenter(liveIndex: number): { x: number; y: number } {
+    const L = this.layout;
+    return {
+      x: this.x + L.livesStartX + liveIndex * (L.heartSize + L.heartGap) + L.heartSize / 2,
+      y: this.y + L.livesY + L.heartSize / 2,
+    };
   }
 
   /**
@@ -544,5 +582,69 @@ export class Header extends PIXI.Container {
     // 正弦弹跳：0 → 1 → 0，峰值缩放 1.25
     const scale = 1 + 0.25 * Math.sin(t * Math.PI);
     this.clockContainer.scale.set(scale);
+  }
+
+  // ── 时间数字金色高亮 ──────────────────────────────────────────────
+
+  /**
+   * 加时到达后，将可见时间数字从金色渐变回正常色（白色或预警红色）。
+   * 采用 ease-in-out 曲线，总时长 HIGHLIGHT_DURATION。
+   */
+  private updateHighlight(deltaMs: number): void {
+    if (this.highlightElapsed < 0) return;
+    this.highlightElapsed += deltaMs;
+    const raw = Math.min(this.highlightElapsed / Header.HIGHLIGHT_DURATION, 1);
+    // ease-in-out
+    const eased = raw < 0.5 ? 2 * raw * raw : -1 + (4 - 2 * raw) * raw;
+
+    // 目标色：预警时红色，否则白色
+    const targetTint = (this.lastDisplayedSeconds > 0 && this.lastDisplayedSeconds < WARN_THRESHOLD)
+      ? 0xFF5252 : 0xFFFFFF;
+    const toR = (targetTint >> 16) & 0xFF;
+    const toG = (targetTint >>  8) & 0xFF;
+    const toB =  targetTint        & 0xFF;
+
+    // 金色 #FFD700 → targetTint
+    const r = Math.round(0xFF + (toR - 0xFF) * eased);
+    const g = Math.round(0xD7 + (toG - 0xD7) * eased);
+    const b = Math.round(0x00 + (toB - 0x00) * eased);
+    const tint = (r << 16) | (g << 8) | b;
+
+    for (const s of this.timeSprites) if (s.visible) s.tint = tint;
+
+    if (raw >= 1) {
+      this.highlightElapsed = -1;
+      for (const s of this.timeSprites) s.tint = targetTint;
+    }
+  }
+
+  // ── 心形碎裂动画 ──────────────────────────────────────────────────
+
+  /**
+   * 对正在播放碎裂动画的心形执行 scale pop：
+   *   Phase 1 (0–80ms):  scale 1 → 1.3
+   *   Phase 2 (80–230ms): scale 1.3 → 0
+   * 动画结束时调用 callback（由 GameScene 传入，切换为空心贴图）。
+   */
+  private updateHeartAnims(deltaMs: number): void {
+    for (const anim of this.heartAnims) {
+      if (anim.done) continue;
+      anim.elapsed += deltaMs;
+
+      if (anim.elapsed < 80) {
+        const t = anim.elapsed / 80;
+        anim.sprite.scale.set(1 + 0.3 * t);
+      } else {
+        const t = Math.min((anim.elapsed - 80) / 150, 1);
+        anim.sprite.scale.set(1.3 * (1 - t));
+        if (t >= 1) {
+          anim.sprite.scale.set(1);
+          anim.done = true;
+          anim.callback();
+        }
+      }
+    }
+    // 清理已完成的动画
+    this.heartAnims = this.heartAnims.filter(a => !a.done);
   }
 }

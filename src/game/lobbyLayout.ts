@@ -56,7 +56,7 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex: 19, x:  506, y:  200 },
 ];
 
-const PORTRAIT_DAILY_POS = { x: 110, y: 960 } as const;
+const PORTRAIT_DAILY_POS = { x: 90, y: 660 } as const;
 
 // ── Layout interface ──────────────────────────────────────────────────────────
 

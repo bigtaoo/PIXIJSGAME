@@ -241,8 +241,10 @@ export class GameScene extends PIXI.Container {
 
   private onTimeUp(): void {
     this.livesEverLost = true;
+    const lostIdx = this.lives - 1; // 0-based index of the heart being lost
     this.lives--;
-    this.header.updateLives(this.lives);
+    const livesSnapshot = this.lives;
+    this.header.triggerHeartLost(lostIdx, () => this.header.updateLives(livesSnapshot));
     if (this.lives > 0) {
       this.retryStage();
     } else {

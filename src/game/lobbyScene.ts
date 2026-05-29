@@ -17,6 +17,22 @@ const STAR_SIZE    = 18;
 const STAR_GAP     = 2;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
+// ── 探险小路 ──────────────────────────────────────────────────────────────────
+const PATH_COLOR_DONE   = 0x6D4C41; // 深棕，已通过段
+const PATH_COLOR_LOCKED = 0x9E9E9E; // 灰，未解锁段
+const PATH_WIDTH        = 6;        // 线宽（逻辑像素）
+const PATH_DASH         = 14;       // 虚线段长
+const PATH_GAP          = 8;        // 虚线间距
+const PATH_ALPHA_DONE   = 0.8;
+const PATH_ALPHA_LOCKED = 0.25;
+
+// ── 每日挑战动画 ──────────────────────────────────────────────────────────────
+const GLOW_RADIUS_MIN  = 68;  // 光晕最小半径（比圆形图标半径 65 稍大）
+const GLOW_RADIUS_RANGE = 8;  // 光晕振幅
+const GLOW_PERIOD_MS   = 1200;
+const PULSE_PERIOD_MS  = 800; // 节点脉冲周期
+const BOUNCE_DURATION  = 100; // 点击弹性动画时长（ms）
+
 // ── 每日挑战区图标 + 数字行尺寸 ───────────────────────────────────────────────
 const DC_ICON_H  = 20;
 const DC_ICON_W  = 20;
@@ -46,6 +62,8 @@ interface DailyChallengeEntry {
   streakRow:     PIXI.Container;
   streakDisplay: DigitDisplay;
   hit:           PIXI.Sprite;
+  /** 呼吸光晕 Graphics，在 circle 之下 */
+  glow:          PIXI.Graphics;
 }
 
 const MUSIC_BTN_SIZE = 56;
@@ -66,6 +84,16 @@ export class LobbyScene extends PIXI.Container {
   private stageCards:         PIXI.Sprite[]    = [];
   private nodeStarContainers: PIXI.Container[] = [];
   private nodeStarSprites:    PIXI.Sprite[][]  = [];
+
+  // ── 动画状态 ────────────────────────────────────────────────────────────────
+  private pulseMs        = 0;
+  private glowMs         = 0;
+  private bounceElapsed  = -1;
+  /** 当前关卡节点 Sprite（null 表示所有关卡均已通关）。 */
+  private currentCard: PIXI.Sprite | null = null;
+
+  // ── 路径 ──────────────────────────────────────────────────────────────────────
+  private pathGraphics!: PIXI.Graphics;
 
   private cardTexture!:         PIXI.Texture;
   private cardSelectedTexture!: PIXI.Texture;
@@ -94,6 +122,7 @@ export class LobbyScene extends PIXI.Container {
 
   public refresh(): void {
     const maxCompleted = StageManager.getMaxCompleted();
+    this.currentCard = null; // 重置，由下面循环重新赋值
 
     STAGES.forEach((stage, i) => {
       const card      = this.stageCards[i];
@@ -105,9 +134,10 @@ export class LobbyScene extends PIXI.Container {
       const isCurrent = stage.stageIndex === maxCompleted + 1;
 
       if (isCurrent) {
-        card.texture = this.cardSelectedTexture;
-        card.tint    = 0xFFFFFF;
-        card.alpha   = 1;
+        card.texture   = this.cardSelectedTexture;
+        card.tint      = 0xFFFFFF;
+        card.alpha     = 1;
+        this.currentCard = card;
       } else if (completed) {
         card.texture = this.cardTexture;
         card.tint    = 0xFFFFFF;
@@ -116,6 +146,7 @@ export class LobbyScene extends PIXI.Container {
         card.texture = this.cardTexture;
         card.tint    = 0x888888;
         card.alpha   = 0.5;
+        if (this.currentCard === card) this.currentCard = null;
       }
 
       if (completed || isCurrent) {
@@ -132,15 +163,27 @@ export class LobbyScene extends PIXI.Container {
     });
 
     this.refreshDailyRows();
+    this.refreshPath();
   }
 
   // ── Build helpers ───────────────────────────────────────────────────────────
 
   private buildUI(): void {
     this.buildBackground();
+    this.buildPath();          // 路径在节点之下
     this.buildAdventureMap();
     this.buildDailyChallenge();
     this.buildMusicButton();
+  }
+
+  // ── update（由 SceneCoordinator 每帧调用）────────────────────────────────────
+
+  public update(deltaMs: number): void {
+    this.pulseMs += deltaMs;
+    this.glowMs  += deltaMs;
+    this.updateCurrentNodePulse();
+    this.updateDailyGlow();
+    this.updateDailyBounce(deltaMs);
   }
 
   private buildBackground(): void {
@@ -192,6 +235,7 @@ export class LobbyScene extends PIXI.Container {
     });
 
     this.refresh();
+    this.refreshPath();
   }
 
   private buildStarRow(): { container: PIXI.Container; sprites: PIXI.Sprite[] } {
@@ -215,6 +259,12 @@ export class LobbyScene extends PIXI.Container {
     const { x, y } = layout.dailyChallengePos;
     const sz = LobbyScene.DAILY_SIZE;
     const r  = sz / 2;
+
+    // 呼吸光晕（在圆形图标之下）
+    const glow = new PIXI.Graphics();
+    glow.x = x;
+    glow.y = y;
+    this.addChild(glow);
 
     const circle = new PIXI.Graphics();
     circle.lineStyle(4, 0x6D4C41, 1);
@@ -248,11 +298,19 @@ export class LobbyScene extends PIXI.Container {
     hit.y      = y - r;
     this.addChild(hit);
     this.ctx.input.registerUI(
-      new UIElement({ zIndex: 5, sprite: hit, onTap: () => { this.ctx.audio.playClick(); this.onDailyChallenge(); } }),
+      new UIElement({
+        zIndex: 5,
+        sprite: hit,
+        onTap: () => {
+          this.ctx.audio.playClick();
+          this.bounceElapsed = 0;
+          this.onDailyChallenge();
+        },
+      }),
     );
 
     this.dailyEntry = {
-      circle, icon,
+      circle, icon, glow,
       bestRow:       best.container,   bestDisplay:   best.display,
       streakRow:     streak.container, streakDisplay: streak.display,
       hit,
@@ -348,6 +406,8 @@ export class LobbyScene extends PIXI.Container {
       const { x, y } = layout.dailyChallengePos;
       const dr = LobbyScene.DAILY_SIZE / 2;
 
+      this.dailyEntry.glow.x   = x;
+      this.dailyEntry.glow.y   = y;
       this.dailyEntry.circle.x = x;
       this.dailyEntry.circle.y = y;
       this.dailyEntry.icon.x   = x;
@@ -397,6 +457,99 @@ export class LobbyScene extends PIXI.Container {
 
   private applyMusicBtnTint(sprite: PIXI.Sprite): void {
     sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
+  }
+
+  // ── 探险小路 ────────────────────────────────────────────────────────────────
+
+  private buildPath(): void {
+    this.pathGraphics = new PIXI.Graphics();
+    this.addChild(this.pathGraphics);
+  }
+
+  /**
+   * 重绘探险小路。节点按 stageIndex 1→19 顺序连线。
+   * 已通过段（两端均 ≤ maxCompleted）用深棕实色；其余用灰色低透明度。
+   */
+  private refreshPath(): void {
+    if (!this.pathGraphics) return;
+    this.pathGraphics.clear();
+    const layout      = getLobbyLayout(this.screen);
+    const positions   = [...layout.nodePositions].sort((a, b) => a.stageIndex - b.stageIndex);
+    const maxCompleted = StageManager.getMaxCompleted();
+
+    for (let i = 0; i < positions.length - 1; i++) {
+      const a = positions[i]!;
+      const b = positions[i + 1]!;
+      const done  = a.stageIndex <= maxCompleted && b.stageIndex <= maxCompleted;
+      const color = done ? PATH_COLOR_DONE : PATH_COLOR_LOCKED;
+      const alpha = done ? PATH_ALPHA_DONE  : PATH_ALPHA_LOCKED;
+      this.pathGraphics.lineStyle(PATH_WIDTH, color, alpha);
+      this.drawDashedLine(this.pathGraphics, a.x, a.y, b.x, b.y);
+    }
+  }
+
+  /** 在 Graphics 上从 (x1,y1) 到 (x2,y2) 画虚线。 */
+  private drawDashedLine(
+    g: PIXI.Graphics,
+    x1: number, y1: number,
+    x2: number, y2: number,
+  ): void {
+    const dx  = x2 - x1;
+    const dy  = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+    const nx = dx / len;
+    const ny = dy / len;
+    let traveled = 0;
+    let drawing  = true;
+    while (traveled < len) {
+      const seg = Math.min(drawing ? PATH_DASH : PATH_GAP, len - traveled);
+      if (drawing) {
+        g.moveTo(x1 + nx * traveled,          y1 + ny * traveled);
+        g.lineTo(x1 + nx * (traveled + seg),   y1 + ny * (traveled + seg));
+      }
+      traveled += seg;
+      drawing   = !drawing;
+    }
+  }
+
+  // ── 动画更新 ─────────────────────────────────────────────────────────────────
+
+  /** 当前关节点脉冲（scale 1 → 1.03，800ms 循环）。 */
+  private updateCurrentNodePulse(): void {
+    if (!this.currentCard) return;
+    const t     = (Math.sin(this.pulseMs / PULSE_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
+    const scale = 1 + 0.03 * t;
+    this.currentCard.scale.set(scale);
+  }
+
+  /** 每日挑战呼吸光晕（sin 扩缩圆形）。 */
+  private updateDailyGlow(): void {
+    if (!this.dailyEntry) return;
+    const t      = (Math.sin(this.glowMs / GLOW_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
+    const radius = GLOW_RADIUS_MIN + GLOW_RADIUS_RANGE * t;
+    const alpha  = 0.25 + 0.2 * t;
+    const g      = this.dailyEntry.glow;
+    g.clear();
+    g.beginFill(0xFFD700, alpha);
+    g.drawCircle(0, 0, radius);
+    g.endFill();
+  }
+
+  /** 每日挑战点击弹性反馈（scale 1 → 0.92 → 1，100ms）。 */
+  private updateDailyBounce(deltaMs: number): void {
+    if (this.bounceElapsed < 0 || !this.dailyEntry) return;
+    this.bounceElapsed += deltaMs;
+    const t = Math.min(this.bounceElapsed / BOUNCE_DURATION, 1);
+    // sin 弧线：t=0 → 1 → 0，让 scale 在中间最小
+    const s = 1 - 0.08 * Math.sin(t * Math.PI);
+    this.dailyEntry.circle.scale.set(s);
+    this.dailyEntry.icon.scale.set(s);
+    if (t >= 1) {
+      this.dailyEntry.circle.scale.set(1);
+      this.dailyEntry.icon.scale.set(1);
+      this.bounceElapsed = -1;
+    }
   }
 
   // ── Internal builders ───────────────────────────────────────────────────────

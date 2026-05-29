@@ -172,9 +172,9 @@ startY = gameContainer.y + (posB.y + gridSize/2) * gameContainerScale
 
 飞行精灵到达闹钟后，触发：
 
-1. 飞行精灵淡出消失（alpha 1 → 0，50ms）
-2. 闹钟执行弹跳：scale 1 → 1.3 → 1，共 200ms，使用弹性缓动（spring ease）
-3. 时间数字短暂高亮：颜色从默认色变为金色，持续 300ms 后渐回原色
+1. 飞行精灵淡出消失（alpha 1 → 0，50ms）✅
+2. 闹钟执行弹跳：scale 1 → 1.3 → 1，共 200ms，使用弹性缓动（spring ease）✅
+3. 时间数字短暂高亮：颜色从默认色变为金色，持续 300ms 后渐回原色 ✅（`header.ts` `updateHighlight`）
 
 三个动作可略微错开（各差 30–50ms）形成连续节奏感。
 
@@ -210,15 +210,13 @@ startY = gameContainer.y + (posB.y + gridSize/2) * gameContainerScale
 
 大厅以**手绘藏宝地图**为视觉隐喻：一张铺开的米黄/牛皮纸上，用简笔画风格描绘出一片小世界，一条蜿蜒的探险小路将 19 个关卡节点依次串联。整体风格延续文具/便签本主题——地图本身就像是玩家在方格本上信手涂鸦的冒险路线图。
 
-画面支持**纵向滚动**：关卡 1 位于地图底部，关卡 19 位于顶部，玩家向上滑动探索更高处，象征不断前进。
-
-> ⚠️ **当前实现**：大厅暂无滚动，所有 19 个节点通过 `lobbyLayout.ts` 静态定位于同一屏幕内。滚动功能待后续实现。
+所有 19 个节点通过 `lobbyLayout.ts` 静态定位于同一屏幕内，**不需要滚动**。
 
 ---
 
 ### 8.2 背景图
 
-背景为一张静态大图（高度约为屏幕高度的 3–4 倍，宽度与屏幕等宽），作为 TilingSprite 或普通 Sprite 随滚动位移。
+背景为一张覆盖整个屏幕的静态图片（`lobby_bg.png`），宽高与游戏画布一致。
 
 **底色与纸张感**
 
@@ -251,9 +249,9 @@ surrounded by simple sketch-style decorations: small trees, bushes, rocks, hills
 and scattered math symbols (+, =, ?).
 Warm brown, olive green, and earthy yellow palette.
 Watercolor pencil style, soft edges, slight paper grain texture.
-Vertical composition, 3:1 aspect ratio.
+Vertical composition, 9:16 aspect ratio.
 No characters, no text labels. Transparent decorations, clean path line.
---ar 9:27 --v 6 --style raw
+--ar 9:16 --v 6 --style raw
 ```
 
 ---
@@ -269,7 +267,7 @@ No characters, no text labels. Transparent decorations, clean path line.
 | **已通过段**（节点 ≤ 当前最高进度） | 正常显示，深棕实线或虚线 |
 | **未解锁段** | 透明度降至 30%，颜色变灰，表示尚未踏足 |
 
-路径本身为静态图层（跟随背景图），不需要独立动画。
+路径本身为静态图层（跟随背景图），不需要独立动画。✅（`lobbyScene.ts` `refreshPath`，Graphics 虚线，lineWidth=6）
 
 ---
 
@@ -280,7 +278,7 @@ No characters, no text labels. Transparent decorations, clean path line.
 | 状态 | 视觉表现 |
 |------|----------|
 | **已通关** | 暖白底色 `#FAFAF8`，数字正常显示，无额外装饰 |
-| **当前关**（最高进度） | 金色描边 `#EAB830` + 轻度外发光，微弱脉冲动画（scale 1 → 1.03 循环，800ms） |
+| **当前关**（最高进度） | 金色描边 `#EAB830` + 轻度外发光，微弱脉冲动画（scale 1 → 1.03 循环，800ms）✅ |
 | **未解锁** | 灰色底色 `#BDBDBD`，透明度 50%，数字同步变灰，无图标 |
 
 节点沿小路路径排布，相邻节点间距约 180–220px（逻辑像素），确保路径曲线自然且节点不拥挤。
@@ -331,8 +329,8 @@ No characters, no text labels. Transparent decorations, clean path line.
 
 | 动画 | 参数 |
 |------|------|
-| 常态呼吸光晕 | 外发光 radius 8 → 14px，循环 1200ms，ease-in-out，颜色金色 `#FFD700` 透明度 50% |
-| 点击反馈 | scale 1 → 0.92 → 1，100ms，spring ease |
+| 常态呼吸光晕 | 外发光 radius 8 → 14px，循环 1200ms，ease-in-out，颜色金色 `#FFD700` 透明度 50% ✅ |
+| 点击反馈 | scale 1 → 0.92 → 1，100ms，spring ease ✅ |
 
 无锁定状态，无需灰色变体——进入大厅即表示已通关第 1 关，图标始终以激活态显示。
 
@@ -349,7 +347,7 @@ centered on 260x260 canvas. Hand-drawn adventure map aesthetic. --ar 1:1 --v 6 -
 
 ### 8.6 标题区域
 
-大厅顶部（地图最高处，关卡 19 上方）放置游戏 Logo 或横幅，风格可参考「用胶带贴在墙上的手写标题纸条」，延续便签本主题。
+大厅顶部（关卡 19 上方）放置游戏 Logo，使用 `logo.png`，居中显示，宽度约为画布宽的 60%。✅（`lobbyScene.ts` `buildLogo`）
 
 ---
 
@@ -399,7 +397,8 @@ z 层级（从底到顶）
 | `heart.png` | 命数图标·满（见下方规格） | 160 × 160 |
 | `heart_empty.png` | 命数图标·空（见下方规格） | 160 × 160 |
 | `explosion.png` + `explosion.json` | 消除粒子图集，用于数字消除时的碎裂特效 | 各帧不超过 64 × 64 |
-| `lobby_bg.png` | 大厅手绘地图背景（见第 8 节） | 宽适配屏幕，高约 3–4 倍屏高 |
+| `lobby_bg.png` | 大厅手绘地图背景（见第 8 节） | 与画布等宽等高（9:16） |
+| `logo.png` | 游戏 Logo（见 8.6 节） | — |
 | `daily_challenge_icon.png` | 每日挑战入口图标（见 8.5 节） | 260 × 260 |
 | `star.png` | 星星图标（关卡大厅星级显示） | — |
 | `trophy.png` | 奖杯图标 | — |
@@ -418,7 +417,7 @@ z 层级（从底到顶）
 | 风格 | 饱满圆润心形，无渐变，无阴影，透明背景 |
 | 变体 | 两张：`heart.png`（满）/ `heart_empty.png`（空，灰色 `#BDBDBD`） |
 
-失去命数时，对应心形执行与格子消除相同的碎裂动画（帧序列或 Graphics 粒子），动画结束后切换为 `heart_empty.png`。
+失去命数时，对应心形执行 scale pop 动画（1→1.3→0，230ms），动画结束后切换为 `heart_empty.png`。✅（`header.ts` `triggerHeartLost`）
 
 **AI 图片生成参考 Prompt（两张分别生成）**
 
@@ -486,14 +485,16 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 
 ## 11. 动画参数速查
 
-| 动画 | 时长 | 缓动 |
-|------|------|------|
-| 格子消除（冲击帧） | 50ms | linear |
-| 格子消除（碎裂） | 150ms | ease-out |
-| 粒子消散 | 150ms | ease-out |
-| 加时精灵飞行（总） | 300ms | 弹出 100ms + 停留 100ms + 贝塞尔弧线飞向时钟 100ms（quadratic ease-in） |
-| 闹钟弹跳 | 200ms | spring（过冲后回弹） |
-| 时间数字高亮 | 300ms | ease-in-out |
-| 命数图标碎裂 | 300ms | ease-out |
-| 当前关脉冲 | 800ms 循环 | ease-in-out |
-| 时间预警数字抖动 | 持续，100ms/帧 | linear |
+| 动画 | 时长 | 缓动 | 实现 |
+|------|------|------|------|
+| 格子消除（冲击帧） | 50ms | linear | ✅ |
+| 格子消除（碎裂） | 150ms | ease-out | ✅ |
+| 粒子消散 | 150ms | ease-out | ✅ |
+| 加时精灵飞行（总） | 300ms | 弹出 100ms + 停留 100ms + quadratic ease-in | ✅ |
+| 闹钟弹跳 | 200ms | sin 弧（峰值 ×1.25） | ✅ |
+| 时间数字高亮 | 300ms | ease-in-out | ✅ |
+| 命数图标 pop | 230ms | scale 1→1.3→0 | ✅ |
+| 当前关脉冲 | 800ms 循环 | sin | ✅ |
+| 每日挑战光晕呼吸 | 1200ms 循环 | sin | ✅ |
+| 每日挑战点击弹性 | 100ms | sin arc | ✅ |
+| 时间预警数字抖动 | 持续，sin 100ms/周期 | sin | ✅ |
