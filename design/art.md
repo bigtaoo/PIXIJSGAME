@@ -143,21 +143,30 @@ z层级（从底到顶）
 
 连消时颜色从金色变为亮绿，强化「连消激活」的视觉信号。
 
-### 6.3 飞行路径
+### 6.3 飞行路径（实现：flyingBonus.ts）
 
 ```
-起点：消除的两格中心点的中间位置
-终点：Header 区域闹钟图标中心
+起点：最后点击格子（idxB）的中心点，gameContainer 局部坐标转换为场景坐标
+终点：Header 区域闹钟图标中心（header.getClockCenter()，直接返回场景坐标）
 
-路径：二次贝塞尔曲线
-  控制点：起点正上方约 200–300px 处
-  （形成先向上弧起、再落向闹钟的自然弧线）
+动画分三阶段，总时长 300ms（FlyingBonus.DURATION）：
+  Phase 1（0–100ms）: 在起点弹出，scale 0 → 2.0（含轻微过冲，peak≈2.2）
+  Phase 2（100–200ms）: 停留在起点，scale 保持 2.0
+  Phase 3（200–300ms）: 沿弧线飞向时钟，scale 逐渐缩小，alpha 在 raw>0.4 后淡出
 
-时长：500–600ms
-缓动：ease-in（起步快）→ ease-out（接近终点减速）
+路径：二次贝塞尔弧线
+  控制点 = 起终点 x 取中，y 取 min(sy, ey) − 200px
+  （使精灵先向上弧起，再落向闹钟，形成自然弧线）
+  位移参数沿弧线做 quadratic ease-in（t = raw²）
 ```
 
-坐标系转换：起点坐标在 GameScene 局部坐标系内，需通过 `toGlobal()` 转换为屏幕坐标后才能与 Header 坐标做计算。飞行精灵挂载在 EffectManager 层。
+回调触发时机：动画开始后 250ms（CALLBACK_TIME），触发 `header.triggerClockBounce()`。
+
+坐标变换（gameContainer 已缩放时）：
+```typescript
+startX = gameContainer.x + (posB.x + gridSize/2) * gameContainerScale
+startY = gameContainer.y + (posB.y + gridSize/2) * gameContainerScale
+```
 
 ### 6.4 闹钟接收动画
 
@@ -363,17 +372,19 @@ z 层级（从底到顶）
 | 元素 | 实现方式 | 说明 |
 |------|----------|------|
 | 游戏背景 | **程序绘制** | Graphics 画矩形 + 网格线 |
-| 格子（普通/选中） | **程序绘制** | Graphics 圆角矩形，选中时加描边 |
-| 闹钟表盘 | **程序绘制** → generateTexture | 圆形 + 刻度，静态 |
-| 闹钟指针 | **程序绘制** → Sprite | 独立旋转，每帧更新 rotation |
-| 加号 / 等号 | **程序绘制** | Graphics 矩形组合 |
-| 重试 / 下一关按钮 | **程序绘制** | Graphics 箭头图形 |
-| 结果面板底板 | **程序绘制** | Graphics 圆角矩形 + 投影 |
-| Header 背景条 | **程序绘制** | Graphics 矩形 |
-| 数字 0–9 | **图片（脚本预生成）** | Node.js 脚本输出，见 tools/ |
-| 心形图标 | **图片** | 满 / 空两张，见下方规格 |
-| 消除序列帧 | **图片** | 帧动画，见下方规格 |
-| 大厅地图背景 | **图片** | 手绘地图插画，见第 8 节 |
+| 格子（普通/选中） | **程序绘制** → `generateTexture` | `cell.png` / `cell_selected.png` |
+| 闹钟表盘 | **程序绘制** → `generateTexture` | `clock_face.png`，圆形 + 刻度 |
+| 闹钟指针 | **程序绘制** → `generateTexture` | `clock_hand.png`，独立旋转 |
+| 加号 | **程序绘制** → `generateTexture` | `plus.png`，用于飞行加时动画 |
+| 等号 | **程序绘制** → `generateTexture` | `equa.png` |
+| 字母 s | **程序绘制** → `generateTexture` | `s.png`，用于飞行加时动画（"+2s" 中的 "s"） |
+| 按钮图标 | **程序绘制** → `generateTexture` | `retry.png` / `next.png` / `lobby.png` / `settings.png` |
+| 数字 0–9 | **图片（脚本预生成）** | `digits.png` 精灵图，运行时切片为 `0.png`–`9.png`（120×160px/帧） |
+| 心形图标 | **图片** | `heart.png` / `heart_empty.png`，见下方规格 |
+| 消除序列帧 | **图片** | `explosion.png` + `explosion.json` 图集 |
+| 大厅地图背景 | **图片** | `lobby_bg.png` |
+| 每日挑战图标 | **图片** | `daily_challenge_icon.png` |
+| 星星 / 奖杯 / 火焰 / 音乐 | **图片** | `star.png` / `trophy.png` / `fire.png` / `music.png` |
 | 大厅节点锁/勾 | **无需图片** | 仅用颜色区分状态，见 8.4 节 |
 
 ---
@@ -382,12 +393,16 @@ z 层级（从底到顶）
 
 | 素材 | 说明 | 尺寸（@2x） |
 |------|------|------------|
-| `digits.png` | 数字 0–9 横向精灵图（脚本生成） | 1290 × 160 |
+| `digits.png` | 数字 0–9 横向精灵图（脚本生成），运行时按帧宽 120px 切片 | 1290 × 160 |
 | `heart.png` | 命数图标·满（见下方规格） | 160 × 160 |
 | `heart_empty.png` | 命数图标·空（见下方规格） | 160 × 160 |
-| `explosion.png` + `explosion.json` | 消除粒子图集（图集格式，包含 large / medium / small / dust 等粒子帧），用于数字消除时的碎裂特效 | 图集内各帧不超过 64 × 64 |
+| `explosion.png` + `explosion.json` | 消除粒子图集，用于数字消除时的碎裂特效 | 各帧不超过 64 × 64 |
 | `lobby_bg.png` | 大厅手绘地图背景（见第 8 节） | 宽适配屏幕，高约 3–4 倍屏高 |
-| `daily_challenge_icon.png` | 每日挑战入口图标（深琥珀金底 + 排行榜柱图，见 8.5 节） | 260 × 260（@2x） |
+| `daily_challenge_icon.png` | 每日挑战入口图标（见 8.5 节） | 260 × 260 |
+| `star.png` | 星星图标（关卡大厅星级显示） | — |
+| `trophy.png` | 奖杯图标 | — |
+| `fire.png` | 火焰图标 | — |
+| `music.png` | 音乐图标 | — |
 
 ### 9.1.1 心形图标规格
 
@@ -434,7 +449,7 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 | 格子消除（冲击帧） | 50ms | linear |
 | 格子消除（碎裂） | 150ms | ease-out |
 | 粒子消散 | 150ms | ease-out |
-| 加时精灵飞行 | 500–600ms | ease-in → ease-out |
+| 加时精灵飞行（总） | 300ms | 弹出 100ms + 停留 100ms + 贝塞尔弧线飞向时钟 100ms（quadratic ease-in） |
 | 闹钟弹跳 | 200ms | spring（过冲后回弹） |
 | 时间数字高亮 | 300ms | ease-in-out |
 | 命数图标碎裂 | 300ms | ease-out |

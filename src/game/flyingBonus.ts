@@ -127,9 +127,15 @@ export class FlyingBonus extends PIXI.Container {
       this.alpha = 1;
     } else if (this.elapsed < GROW + HOLD + FLY) {
       const raw = (this.elapsed - GROW - HOLD) / FLY;
-      const t   = raw * raw;
-      this.x = this.sx + (this.ex - this.sx) * t;
-      this.y = this.sy + (this.ey - this.sy) * t;
+      // Quadratic Bézier arc: control point is above the start point so the
+      // label rises before curving down to the clock.
+      const t  = raw * raw;           // ease-in along the arc
+      const mt = 1 - t;
+      // Control point: midpoint between start and end, shifted upward by 200px
+      const cx = (this.sx + this.ex) / 2;
+      const cy = Math.min(this.sy, this.ey) - 200;
+      this.x = mt * mt * this.sx + 2 * mt * t * cx + t * t * this.ex;
+      this.y = mt * mt * this.sy + 2 * mt * t * cy + t * t * this.ey;
       this.scale.set(2 * (1 - raw * 0.9));
       this.alpha = (raw < 0.4) ? 1 : (1 - raw) / 0.6;
     } else {
