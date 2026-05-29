@@ -255,11 +255,6 @@ export class DailyChallengeScene extends PIXI.Container {
     this.gridLayer.hideCell(idxB);
     this.numberLayer.hideNumber(idxA);
     this.numberLayer.hideNumber(idxB);
-    this.effectLayer.playEffect(idxA);
-    this.effectLayer.playEffect(idxB);
-    this.logic.removeNumber(idxA);
-    this.logic.removeNumber(idxB);
-    this.selectedIndex = -1;
 
     // ── Combo & scoring ─────────────────────────────────────────────────────
     const elapsed = this.gameTimeMs - this.lastElimGameTime;
@@ -269,6 +264,13 @@ export class DailyChallengeScene extends PIXI.Container {
       this.comboCount = 1;
     }
     this.lastElimGameTime = this.gameTimeMs;
+
+    const isCombo = this.comboCount > 1;
+    this.effectLayer.playEffect(idxA, isCombo, this.comboCount);
+    this.effectLayer.playEffect(idxB, isCombo, this.comboCount);
+    this.logic.removeNumber(idxA);
+    this.logic.removeNumber(idxB);
+    this.selectedIndex = -1;
 
     // +2 / +3 / +4 / +5 (capped at 4th combo)
     const points = this.comboCount === 1 ? 2

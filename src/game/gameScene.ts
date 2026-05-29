@@ -366,8 +366,8 @@ export class GameScene extends PIXI.Container {
     this.lastEliminationGameTime = this.gameTimeMs;
 
     const isCombo = this.comboCount > 1;
-    this.effectLayer.playEffect(idxA, isCombo);
-    this.effectLayer.playEffect(idxB, isCombo);
+    this.effectLayer.playEffect(idxA, isCombo, this.comboCount);
+    this.effectLayer.playEffect(idxB, isCombo, this.comboCount);
 
     this.logic.removeNumber(idxA);
     this.logic.removeNumber(idxB);

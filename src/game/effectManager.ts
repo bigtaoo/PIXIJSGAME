@@ -4,9 +4,30 @@ import { FlyingBonus } from './flyingBonus';
 import { AppContext } from './appContext';
 import { ScreenConfig } from './screenConfig';
 
+// ── ComboRipple ────────────────────────────────────────────────────────────
+
+const RIPPLE_DURATION = 200; // ms
+const RIPPLE_COLOR_2  = 0xFFD700; // combo ×2 — gold
+const RIPPLE_COLOR_3  = 0x76FF03; // combo ×3+ — bright green
+const RIPPLE_LINE_WIDTH = 3;
+
+interface Ripple {
+  gfx:      PIXI.Graphics;
+  cx:       number;
+  cy:       number;
+  color:    number;
+  elapsed:  number;
+  active:   boolean;
+}
+
+// ── EffectManager ──────────────────────────────────────────────────────────
+
 export class EffectManager extends PIXI.Container {
   private readonly explosion: ExplosionSystem;
   private flyingBonuses: FlyingBonus[] = [];
+
+  /** Object pool for combo ripple rings. */
+  private readonly ripples: Ripple[] = [];
 
   /**
    * Separate container for flying-bonus labels.
@@ -25,13 +46,60 @@ export class EffectManager extends PIXI.Container {
   /**
    * Trigger an explosion at the given cell index.
    *
-   * @param index   Cell index (used to look up screen position)
-   * @param isCombo Whether this elimination is part of a combo
+   * @param index      Cell index (used to look up screen position)
+   * @param isCombo    Whether this elimination is part of a combo
+   * @param comboCount Current combo count (used to pick ripple colour)
    */
-  public playEffect(index: number, isCombo = false): void {
+  public playEffect(index: number, isCombo = false, comboCount = 1): void {
     const { x, y } = this.screen.indexToPos(index);
     const half = this.screen.gridSize / 2;
-    this.explosion.play(x + half, y + half, isCombo, this.screen.gridSize);
+    const cx = x + half;
+    const cy = y + half;
+    this.explosion.play(cx, cy, isCombo, this.screen.gridSize);
+    if (isCombo) {
+      this.spawnRipple(cx, cy, comboCount >= 3 ? RIPPLE_COLOR_3 : RIPPLE_COLOR_2);
+    }
+  }
+
+  // ── Ripple helpers ───────────────────────────────────────────────────────
+
+  private spawnRipple(cx: number, cy: number, color: number): void {
+    // Reuse an inactive ripple from the pool, or create a new one.
+    let r = this.ripples.find(p => !p.active);
+    if (!r) {
+      const gfx = new PIXI.Graphics();
+      this.addChild(gfx);
+      r = { gfx, cx, cy, color, elapsed: 0, active: false };
+      this.ripples.push(r);
+    }
+    r.cx      = cx;
+    r.cy      = cy;
+    r.color   = color;
+    r.elapsed = 0;
+    r.active  = true;
+  }
+
+  private updateRipples(deltaMs: number): void {
+    const gs = this.screen.gridSize;
+    const rMin = gs * 0.5;
+    const rMax = gs * 1.0;
+
+    for (const r of this.ripples) {
+      if (!r.active) continue;
+      r.elapsed += deltaMs;
+      const t = Math.min(r.elapsed / RIPPLE_DURATION, 1);
+      const radius = rMin + (rMax - rMin) * t;
+      const alpha  = 1 - t;
+
+      r.gfx.clear();
+      r.gfx.lineStyle(RIPPLE_LINE_WIDTH, r.color, alpha);
+      r.gfx.drawCircle(r.cx, r.cy, radius);
+
+      if (t >= 1) {
+        r.gfx.clear();
+        r.active = false;
+      }
+    }
   }
 
   /**
@@ -71,6 +139,7 @@ export class EffectManager extends PIXI.Container {
 
   public update(deltaMs: number): void {
     this.explosion.update(deltaMs);
+    this.updateRipples(deltaMs);
 
     this.flyingBonuses = this.flyingBonuses.filter((fb) => {
       fb.update(deltaMs);
