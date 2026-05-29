@@ -1,17 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <!--
-      CrazyGames SDK v3 — must be loaded BEFORE the game bundle.
-      The SDK attaches itself to window.CrazyGames.
-      https://docs.crazygames.com/sdk/html5/
-    -->
-    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
-    <title>Game</title>
-    <style>
-      html, body {
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/><script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script><title>Game</title><style>html, body {
         margin: 0;
         padding: 0;
         overflow: hidden;
@@ -40,16 +27,7 @@
           height: 90px;
           z-index: 100;
         }
-      */
-    </style>
-  </head>
-  <body>
-    <!--
-      Uncomment if you want a banner slot:
-      <div id="cg-banner"></div>
-    -->
-    <script>
-      // CrazyGames recommended common fixes (https://docs.crazygames.com/resources/html5/common-fixes/)
+      */</style><script defer="defer" src="index.js"></script></head><body><script>// CrazyGames recommended common fixes (https://docs.crazygames.com/resources/html5/common-fixes/)
 
       // Prevent unwanted page scroll via mouse wheel
       window.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });
@@ -60,7 +38,4 @@
       });
 
       // Prevent right-click context menu
-      document.addEventListener("contextmenu", (e) => e.preventDefault());
-    </script>
-  </body>
-</html>
+      document.addEventListener("contextmenu", (e) => e.preventDefault());</script></body></html>
