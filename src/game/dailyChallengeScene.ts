@@ -26,7 +26,6 @@ import { DailyChallengeResult } from './dailyChallengeResult';
 import { DailyChallengeHeader } from './dailyChallengeHeader';
 import { drawBackground } from './graphicsFactory';
 import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
-import { Orientation } from './enums';
 import { saveDailyScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 
@@ -56,6 +55,10 @@ export class DailyChallengeScene extends PIXI.Container {
   private hintTimerMs = -1;
   private hintFired   = false;
 
+  /** Stored so resize() can re-initialize the grid with the correct orientation dims. */
+  private pendingTarget = 0;
+  private pendingSeed   = 0;
+
   constructor(
     private readonly ctx: AppContext,
     private readonly onGoLobby: () => void,
@@ -80,30 +83,28 @@ export class DailyChallengeScene extends PIXI.Container {
     this.state.reset();
     this.state.addTime(DAILY_DURATION_MS);
 
-    const rng = makeRng(getDailySeed());
-    this.logic.initializeSeeded(getDailyTarget(), rng);
+    this.pendingTarget = getDailyTarget();
+    this.pendingSeed   = getDailySeed();
 
     if (this.initialized) {
+      // Screen orientation already known — initialize with correct dims immediately.
+      this.logic.initializeSeeded(this.pendingTarget, makeRng(this.pendingSeed), this.screen.gridCountW, this.screen.gridCountH);
       this.resultOverlay.hide();
       this.header.setScore(0);
       this.header.setTimer(this.state.remainingSeconds);
       this.header.rebuildTip(null, null);
       this.syncGrid();
     }
+    // If !initialized, resize() → buildScene() will call initializeSeeded with correct dims.
   }
 
   /**
-   * Daily challenge always uses a fixed 6-col × 10-row grid in portrait
-   * coordinate space.  ScreenConfig swaps W/H in landscape, so we pass the
-   * transposed values to ensure gridCountW=6, gridCountH=10 in both
-   * orientations.
+   * Daily challenge uses a fixed 6-col × 10-row grid in portrait orientation.
+   * ScreenConfig automatically swaps W/H in landscape, so always pass portrait
+   * dims here (6, 10) and let ScreenConfig produce 10-col × 6-row in landscape.
    */
   private applyGridDims(): void {
-    const landscape = this.screen.orientation === Orientation.Landscape;
-    this.screen.setGridDims(
-      landscape ? DAILY_GRID_H : DAILY_GRID_W,
-      landscape ? DAILY_GRID_W : DAILY_GRID_H,
-    );
+    this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
   }
 
   public resize(windowWidth: number, windowHeight: number): void {
@@ -111,6 +112,10 @@ export class DailyChallengeScene extends PIXI.Container {
     this.applyGridDims();
 
     if (!this.initialized) {
+      // Now that screen orientation is set, initialize the grid with correct dims.
+      if (this.pendingTarget > 0) {
+        this.logic.initializeSeeded(this.pendingTarget, makeRng(this.pendingSeed), this.screen.gridCountW, this.screen.gridCountH);
+      }
       this.buildScene();
       this.initialized = true;
     } else {
@@ -195,11 +200,12 @@ export class DailyChallengeScene extends PIXI.Container {
     this.gridLayer.reconfigure();
     this.numberLayer.reconfigure(this.logic);
 
-    for (let col = 0; col < DAILY_GRID_W; col++) {
-      for (let row = 0; row < DAILY_GRID_H; row++) {
+    for (let col = 0; col < this.screen.gridCountW; col++) {
+      for (let row = 0; row < this.screen.gridCountH; row++) {
         const idx = this.screen.cellIndex(col, row);
         if (this.logic.getNumberByIndex(idx) === 0) {
           this.gridLayer.hideCell(idx);
+          this.numberLayer.hideNumber(idx);
         }
       }
     }

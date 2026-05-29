@@ -11,7 +11,6 @@ import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 import { GAME_WIDTH } from './consts';
 import { DigitDisplay } from './digitDisplay';
 import { ScreenConfig } from './screenConfig';
-import { Orientation } from './enums';
 
 // ── CrazyGames leaderboard (optional) ─────────────────────────────────────────
 const ENCRYPTION_KEY = '';   // TODO: set before going live
@@ -52,27 +51,10 @@ interface DailyChallengeResultLayout {
   btnSize: number; btnGap: number; btnY: number;
 }
 
-function portraitLayout(): DailyChallengeResultLayout {
+function buildLayout(screenW: number, screenH: number): DailyChallengeResultLayout {
   const panelW = 720, panelH = 520;
-  const panelX = 750;
-  const panelY = 250;
-  const scoreDigitH = 110;
-  const btnSize = 160;
-  return {
-    panelW, panelH, panelX, panelY,
-    scoreDigitW: Math.round(scoreDigitH * 120 / 160), scoreDigitH,
-    scoreY: panelY + 60,
-    rowIconW: 36, rowIconH: 36,
-    rowDigitW: Math.round(36 * 120 / 160), rowDigitH: 36, rowGap: 8,
-    bestRowY: panelY + 220, streakRowY: panelY + 270,
-    btnSize, btnGap: 80, btnY: panelY + panelH - btnSize - 40,
-  };
-}
-
-function landscapeLayout(): DailyChallengeResultLayout {
-  const panelW = 720, panelH = 520;
-  const panelX = 1250;
-  const panelY = 250;
+  const panelX = Math.round((screenW - panelW) / 2);
+  const panelY = Math.round((screenH - panelH) / 2);
   const scoreDigitH = 110;
   const btnSize = 160;
   return {
@@ -87,9 +69,7 @@ function landscapeLayout(): DailyChallengeResultLayout {
 }
 
 function getLayout(screen: ScreenConfig): DailyChallengeResultLayout {
-  return screen.orientation === Orientation.Landscape
-    ? landscapeLayout()
-    : portraitLayout();
+  return buildLayout(screen.width, screen.height);
 }
 
 // ── DailyChallengeResult ───────────────────────────────────────────────────────
@@ -118,7 +98,7 @@ export class DailyChallengeResult extends PIXI.Container {
     super();
     this.visible = false;
 
-    const L = portraitLayout();
+    const L = buildLayout(GAME_WIDTH, Math.round(GAME_WIDTH * 16 / 9));
     this.layout = L;
 
     this.bg = new PIXI.Graphics();

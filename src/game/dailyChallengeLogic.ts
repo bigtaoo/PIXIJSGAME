@@ -21,21 +21,25 @@ import { DAILY_GRID_W, DAILY_GRID_H } from './dailyChallengeConfig';
 
 export class DailyChallengeLogic extends Logic {
   private target = 20;
+  /** Actual grid dims for the current orientation (set by initializeSeeded). */
+  private gridW = DAILY_GRID_W;
+  private gridH = DAILY_GRID_H;
 
   // ── Seeded initialisation ──────────────────────────────────────────────────
 
   /**
-   * Fill the 6×8 board using the provided seeded RNG so the layout is
-   * identical for all players on the same day.
+   * Fill the board using the provided seeded RNG so the layout is identical
+   * for all players on the same day.  Pass the actual gridCountW/H so that
+   * portrait (6×10) and landscape (10×6) both produce correctly-keyed cells.
    */
-  public initializeSeeded(target: number, rng: RngFn): void {
+  public initializeSeeded(target: number, rng: RngFn, w = DAILY_GRID_W, h = DAILY_GRID_H): void {
     this.target = target;
+    this.gridW  = w;
+    this.gridH  = h;
     this.numbers.clear();
 
-    const w = DAILY_GRID_W;
-    const h = DAILY_GRID_H;
     const pairs: number[] = [];
-    const count = (w * h) / 2; // 24 pairs
+    const count = (w * h) / 2;
 
     for (let i = 0; i < count; i++) {
       // first ∈ [1, target-1], second = target - first
@@ -71,8 +75,8 @@ export class DailyChallengeLogic extends Logic {
    * Only collapses one row per call — invoke in a loop if needed.
    */
   public checkAndCollapse(): boolean {
-    const w = DAILY_GRID_W;
-    const h = DAILY_GRID_H;
+    const w = this.gridW;
+    const h = this.gridH;
 
     // Search from the bottom up; collapse the lowest empty row first.
     let emptyRow = -1;
@@ -98,7 +102,7 @@ export class DailyChallengeLogic extends Logic {
 
   /** True when every cell in the given row is 0 (eliminated). */
   private isRowEmpty(row: number): boolean {
-    for (let col = 0; col < DAILY_GRID_W; col++) {
+    for (let col = 0; col < this.gridW; col++) {
       if ((this.numbers.get(DailyChallengeLogic.idx(col, row)) ?? 0) !== 0) return false;
     }
     return true;
@@ -110,7 +114,7 @@ export class DailyChallengeLogic extends Logic {
    * because they are the result of player skill, not the starting state.
    */
   private fillRow(row: number): void {
-    const w = DAILY_GRID_W; // 6
+    const w = this.gridW;
     const pairs: number[] = [];
 
     for (let i = 0; i < w / 2; i++) {
