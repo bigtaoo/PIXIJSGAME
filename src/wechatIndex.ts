@@ -5,7 +5,7 @@ import { setupWeChatInput } from './inputSystem/wechatAdapter';
 import { AppContext } from './game/appContext';
 import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
-import { AudioManager } from './game/audioManager';
+import { WechatAudioManager } from './game/wechatAudioManager';
 import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
 
 async function Init() {
@@ -37,8 +37,12 @@ async function Init() {
 
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
 
-  const audio = new AudioManager(prefs);
+  const audio = new WechatAudioManager(prefs);
   const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
+
+  // WeChat requires a user-gesture before audio can play.
+  // Register a one-shot touchstart on the main canvas to unlock music.
+  canvas.addEventListener('touchstart', () => { audio.playBgMusic(); }, { once: true } as any);
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);

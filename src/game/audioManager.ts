@@ -16,6 +16,7 @@
  */
 
 import { IPlayerPrefs } from '../playerPrefs/IPlayerPrefs';
+import { IAudioManager } from './IAudioManager';
 
 import musicBgUrl   from '../assets/music_bg_web.ogg';
 import clickUrl     from '../assets/click.ogg';
@@ -25,7 +26,7 @@ import gameoverUrl  from '../assets/gameover.ogg';
 
 const PREF_KEY = 'music_enabled';
 
-export class AudioManager {
+export class AudioManager implements IAudioManager {
   // ── Background music ────────────────────────────────────────────────────────
   private bgAudio: HTMLAudioElement | null = null;
   private musicEnabled: boolean;

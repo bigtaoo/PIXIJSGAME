@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { IAssetsManager } from '../assetsManager/IAssetsManager';
 import { InputManager } from '../inputSystem/inputManager';
-import { AudioManager } from './audioManager';
+import { IAudioManager } from './IAudioManager';
 
 /**
  * Optional platform-specific hooks injected by the platform entry point
@@ -29,7 +29,7 @@ export interface AppContext {
   assets: IAssetsManager;
   input: InputManager;
   renderer: PIXI.Renderer;
-  audio: AudioManager;
+  audio: IAudioManager;
   /** Present only on platforms that support ad / lifecycle callbacks. */
   platform?: PlatformCallbacks;
 }
