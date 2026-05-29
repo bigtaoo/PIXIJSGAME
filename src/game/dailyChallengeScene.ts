@@ -26,6 +26,7 @@ import { DailyChallengeResult } from './dailyChallengeResult';
 import { DailyChallengeHeader } from './dailyChallengeHeader';
 import { drawBackground } from './graphicsFactory';
 import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
+import { Orientation } from './enums';
 import { saveDailyScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 
@@ -91,9 +92,23 @@ export class DailyChallengeScene extends PIXI.Container {
     }
   }
 
+  /**
+   * Daily challenge always uses a fixed 6-col × 10-row grid in portrait
+   * coordinate space.  ScreenConfig swaps W/H in landscape, so we pass the
+   * transposed values to ensure gridCountW=6, gridCountH=10 in both
+   * orientations.
+   */
+  private applyGridDims(): void {
+    const landscape = this.screen.orientation === Orientation.Landscape;
+    this.screen.setGridDims(
+      landscape ? DAILY_GRID_H : DAILY_GRID_W,
+      landscape ? DAILY_GRID_W : DAILY_GRID_H,
+    );
+  }
+
   public resize(windowWidth: number, windowHeight: number): void {
     this.screen.update(windowWidth, windowHeight);
-    this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
+    this.applyGridDims();
 
     if (!this.initialized) {
       this.buildScene();
@@ -142,7 +157,7 @@ export class DailyChallengeScene extends PIXI.Container {
   // ── Scene construction ─────────────────────────────────────────────────────
 
   private buildScene(): void {
-    this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
+    this.applyGridDims();
 
     this.bg = new PIXI.Graphics();
     drawBackground(this.bg, this.screen.width, this.screen.height);
@@ -164,6 +179,8 @@ export class DailyChallengeScene extends PIXI.Container {
     this.addChild(this.numberLayer);
     this.addChild(this.effectLayer);
     this.addChild(this.header);
+    // flyingLayer must be above the header so score labels are never obscured
+    this.addChild(this.effectLayer.flyingLayer);
     this.addChild(this.resultOverlay);
 
     this.syncGrid();
@@ -259,6 +276,17 @@ export class DailyChallengeScene extends PIXI.Container {
                  :                         5;
     this.score += points;
     this.header.setScore(this.score);
+
+    // Flying score animation: "+N" pops from the last-tapped cell and flies
+    // to the score display area in the header.
+    const half     = this.screen.gridSize / 2;
+    const posB     = this.screen.indexToPos(idxB);
+    const scorePos = this.header.getScoreCenterPos();
+    this.effectLayer.playFlyingScore(
+      posB.x + half, posB.y + half,
+      scorePos.x, scorePos.y,
+      points, this.comboCount > 1,
+    );
 
     // ── Row collapse ────────────────────────────────────────────────────────
     let collapsed = this.logic.checkAndCollapse();

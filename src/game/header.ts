@@ -121,6 +121,9 @@ export class Header extends PIXI.Container {
   private bounceElapsed                  = -1;
   private static readonly BOUNCE_DURATION = 200; // ms
 
+  /** 时间预警抖动累积时间（ms）。仅在 lastDisplayedSeconds < WARN_THRESHOLD 时推进。 */
+  private warnShakeMs = 0;
+
   private _target: number;
   private settingsSprite!: PIXI.Sprite;
   private musicSprite!:    PIXI.Sprite;
@@ -178,10 +181,11 @@ export class Header extends PIXI.Container {
     this.resultElapsed = 0;
   }
 
-  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器。 */
+  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器 + 时间预警抖动。 */
   public update(deltaMs: number): void {
     this.updateBounce(deltaMs);
     this.updateResultReset(deltaMs);
+    this.updateWarnShake(deltaMs);
   }
 
   /** 更新时间显示 + 闹钟指针 + 预警变色。秒数未变时为空操作。 */
@@ -497,6 +501,29 @@ export class Header extends PIXI.Container {
     if (this.resultElapsed >= Header.RESULT_DISPLAY_MS) {
       this.resultElapsed = -1;
       this.rebuildTip(null, null);
+    }
+  }
+
+  // ── 时间预警抖动 ───────────────────────────────────────────────────
+
+  /**
+   * 当剩余时间 > 0 且 < WARN_THRESHOLD 时，对闹钟容器和时间数字施加
+   * 左右正弦抖动（振幅 3px，周期约 100ms）。
+   */
+  private updateWarnShake(deltaMs: number): void {
+    const warn = this.lastDisplayedSeconds > 0 && this.lastDisplayedSeconds < WARN_THRESHOLD;
+    if (warn) {
+      this.warnShakeMs += deltaMs;
+    } else {
+      this.warnShakeMs = 0;
+    }
+    const offset = warn ? Math.round(Math.sin(this.warnShakeMs / 50) * 3) : 0;
+    const L = this.layout;
+
+    this.clockContainer.x = L.clockX + offset;
+    for (let i = 0; i < this.timeSprites.length; i++) {
+      this.timeSprites[i].x =
+        L.timeStartX + i * (L.timeDigitW + L.timeDigitGap) + offset;
     }
   }
 

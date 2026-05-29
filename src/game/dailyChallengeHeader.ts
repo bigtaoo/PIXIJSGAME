@@ -241,6 +241,17 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.addChild(this.tipContainer);
   }
 
+  /**
+   * 返回得分显示区的中心坐标（场景坐标），
+   * 供飞行得分动画定位终点。
+   */
+  public getScoreCenterPos(): { x: number; y: number } {
+    return {
+      x: this.layout.scoreCenterX,
+      y: this.layout.scoreY + this.layout.scoreDigitH / 2,
+    };
+  }
+
   /** 消除成功后调用，启动 500 ms 自动复位倒计时。 */
   public startTipResultTimer(): void {
     this.tipResultElapsed = 0;

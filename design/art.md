@@ -212,6 +212,8 @@ startY = gameContainer.y + (posB.y + gridSize/2) * gameContainerScale
 
 画面支持**纵向滚动**：关卡 1 位于地图底部，关卡 19 位于顶部，玩家向上滑动探索更高处，象征不断前进。
 
+> ⚠️ **当前实现**：大厅暂无滚动，所有 19 个节点通过 `lobbyLayout.ts` 静态定位于同一屏幕内。滚动功能待后续实现。
+
 ---
 
 ### 8.2 背景图
@@ -442,7 +444,17 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 
 ---
 
-## 10. 动画参数速查
+## 10. 待讨论：连消视觉反馈
+
+当前连消（combo）时与普通消除使用相同的粒子特效，`isCombo` 参数已传递给 `EffectManager.playEffect()` 但 `ExplosionSystem` 内部的连消差异化处理（如额外粒子数量）需要确认 `explosion.json` 图集中是否有足够帧。建议后续在以下方向之一选择：
+
+- **方案 A**：连消时叠加一个短暂的全屏光晕或屏幕边缘泛光（Graphics 程序绘制）
+- **方案 B**：连消时格子碎裂粒子数量翻倍（需调整 `effect.ts` 参数）
+- **方案 C**：连消时在格子外圈额外出现一圈扩散光圈（scale 1→2，alpha 1→0，100ms）
+
+---
+
+## 11. 动画参数速查
 
 | 动画 | 时长 | 缓动 |
 |------|------|------|

@@ -52,6 +52,23 @@ export class EffectManager extends PIXI.Container {
     this.flyingLayer.addChild(fb);
   }
 
+  /**
+   * Spawn a "+N" score label (no unit suffix) that flies from (startX, startY)
+   * to (endX, endY).  Used by DailyChallengeScene.
+   */
+  public playFlyingScore(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    points: number,
+    isCombo: boolean,
+  ): void {
+    const fb = new FlyingBonus(startX, startY, endX, endY, points, isCombo, () => {}, this.ctx, false);
+    this.flyingBonuses.push(fb);
+    this.flyingLayer.addChild(fb);
+  }
+
   public update(deltaMs: number): void {
     this.explosion.update(deltaMs);
 

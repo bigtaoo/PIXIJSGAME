@@ -74,6 +74,7 @@ export class GameResultOverlay extends PIXI.Container {
   private readonly starSprites: PIXI.Sprite[] = [];
   private lastPanelW = 0;
   private lastPanelH = 0;
+  private _lastLayout: GameResultLayout = portraitLayout();
 
   constructor(
     private readonly ctx: AppContext,
@@ -102,10 +103,12 @@ export class GameResultOverlay extends PIXI.Container {
     // Build star row (3 stars, repositioned in applyLayout)
     this.starRow = new PIXI.Container();
     for (let i = 0; i < 3; i++) {
-      const s = new PIXI.Sprite(ctx.assets.GetTexture('star_empty.png'));
+      const s = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
       s.width  = STAR_SIZE;
       s.height = STAR_SIZE;
       s.x = i * (STAR_SIZE + STAR_GAP);
+      s.tint  = 0x888888;
+      s.alpha = 0.35;
       this.starRow.addChild(s);
       this.starSprites.push(s);
     }
@@ -124,10 +127,26 @@ export class GameResultOverlay extends PIXI.Container {
     this.retryBtn.visible = !success;
     this.nextBtn.visible  = success;
 
+    // On success:  [lobby | next]  (left | right)
+    // On failure:  [retry | lobby] (left | right)
+    const L = this._lastLayout;
+    if (success) {
+      this.lobbyBtn.x = L.btnLeftX;
+      this.nextBtn.x  = L.btnRightX;
+    } else {
+      this.retryBtn.x = L.btnLeftX;
+      this.lobbyBtn.x = L.btnRightX;
+    }
+
     const filled = success ? (stars ?? 0) : 0;
     for (let i = 0; i < 3; i++) {
-      this.starSprites[i].texture =
-        this.ctx.assets.GetTexture(i < filled ? 'star_filled.png' : 'star_empty.png');
+      if (i < filled) {
+        this.starSprites[i].tint  = 0xEAB830;
+        this.starSprites[i].alpha = 1.0;
+      } else {
+        this.starSprites[i].tint  = 0x888888;
+        this.starSprites[i].alpha = 0.35;
+      }
     }
 
     this.visible = true;
@@ -138,6 +157,7 @@ export class GameResultOverlay extends PIXI.Container {
   // ── Private ────────────────────────────────────────────────────────────────
 
   private applyLayout(L: GameResultLayout): void {
+    this._lastLayout = L;
     if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
       this.bg.clear();
       drawPanel(this.bg, L.panelW, L.panelH);

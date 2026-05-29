@@ -4,7 +4,7 @@
  * Static configuration and date-derived values for Daily Challenge mode.
  *
  * Target formula: (dayOfYear % 31) + 20  →  range [20, 50]
- * Board:          6 cols × 8 rows = 48 cells
+ * Board:          6 cols × 10 rows = 60 cells
  * Duration:       90 seconds
  */
 import { dateStringToSeed, todayString } from './seededRng';

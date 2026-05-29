@@ -41,6 +41,8 @@ export class FlyingBonus extends PIXI.Container {
     isCombo: boolean,
     private readonly onReached: () => void,
     ctx: AppContext,
+    /** Set to false to omit the trailing "s" unit (e.g. for score displays). */
+    showUnit = true,
   ) {
     super();
 
@@ -82,14 +84,16 @@ export class FlyingBonus extends PIXI.Container {
     }
     curX += GAP;
 
-    // 字母 s
-    const s = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
-    s.width  = SW;
-    s.height = SH;
-    s.x      = curX;
-    s.y      = -(SH / 2) + 7;
-    s.tint   = color;
-    this.addChild(s);
+    // 字母 s（可选）
+    if (showUnit) {
+      const s = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
+      s.width  = SW;
+      s.height = SH;
+      s.x      = curX;
+      s.y      = -(SH / 2) + 7;
+      s.tint   = color;
+      this.addChild(s);
+    }
 
     this.x = sx;
     this.y = sy;
