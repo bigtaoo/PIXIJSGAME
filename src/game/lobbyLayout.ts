@@ -5,14 +5,16 @@
  *
  * 坐标系：游戏逻辑像素，原点在左上角。
  *   竖屏：宽度 GAME_WIDTH = 1080，高度 GAME_HEIGHT = 1920
- *   横屏：高度 GAME_WIDTH = 1080，宽度 = screenConfig.width（设备相关）
+ *   横屏：宽度 GAME_HEIGHT = 1920，高度 GAME_WIDTH = 1080
+ *       （背景图始终拉伸为 1920×1080，节点坐标与之对齐）
  *
- * 横屏坐标的默认生成方式：
- *   x_landscape = portraitX * (screenW / GAME_WIDTH)
- *   y_landscape = portraitY * (GAME_WIDTH / GAME_HEIGHT)  // = portraitY * 0.5625
+ * 两套坐标独立维护：
+ *   PORTRAIT_NODE_POSITIONS  — 竖屏
+ *   LANDSCAPE_NODE_POSITIONS — 横屏（基于 16:9 精确比例预算，可手动微调）
  *
- * 如需手动精调某个节点的横屏位置，在 landscapeLobbyLayout() 中对应条目
- * 直接替换 x / y 即可，其余保持自动计算。
+ * 横屏坐标基准公式（仅首次生成时使用）：
+ *   x = round(portraitX * GAME_HEIGHT / GAME_WIDTH)   // × 16/9
+ *   y = round(portraitY * GAME_WIDTH  / GAME_HEIGHT)  // × 9/16
  */
 
 import { ScreenConfig } from './screenConfig';
@@ -58,6 +60,34 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
 
 const PORTRAIT_DAILY_POS = { x: 90, y: 660 } as const;
 
+// ── 横屏节点坐标（背景 1920×1080，与背景拉伸严格对齐）────────────────────────
+// 基准公式：x = round(portraitX * 16/9)，y = round(portraitY * 9/16)
+// 如需微调，直接改这里的数值即可，不影响竖屏。
+
+const LANDSCAPE_NODE_POSITIONS: readonly LobbyNodePos[] = [
+  { stageIndex:  1, x:  960, y: 1024 },
+  { stageIndex:  2, x:  539, y:  973 },
+  { stageIndex:  3, x: 1560, y:  923 },
+  { stageIndex:  4, x: 1019, y:  872 },
+  { stageIndex:  5, x: 1259, y:  821 },
+  { stageIndex:  6, x:  779, y:  771 },
+  { stageIndex:  7, x: 1259, y:  720 },
+  { stageIndex:  8, x:  539, y:  669 },
+  { stageIndex:  9, x: 1380, y:  619 },
+  { stageIndex: 10, x:  960, y:  568 },
+  { stageIndex: 11, x: 1140, y:  518 },
+  { stageIndex: 12, x: 1499, y:  467 },
+  { stageIndex: 13, x:  900, y:  416 },
+  { stageIndex: 14, x: 1499, y:  366 },
+  { stageIndex: 15, x: 1019, y:  315 },
+  { stageIndex: 16, x: 1259, y:  264 },
+  { stageIndex: 17, x: 1499, y:  214 },
+  { stageIndex: 18, x: 1259, y:  163 },
+  { stageIndex: 19, x:  900, y:  113 },
+];
+
+const LANDSCAPE_DAILY_POS = { x: 260, y: 390 } as const;
+
 // ── Layout interface ──────────────────────────────────────────────────────────
 
 export interface LobbyLayout {
@@ -74,36 +104,17 @@ export function portraitLobbyLayout(): LobbyLayout {
   };
 }
 
-/**
- * 根据横屏 canvas 宽度，将竖屏坐标按比例映射到横屏空间。
- *
- * 比例因子：
- *   scaleX = screenW / GAME_WIDTH    （水平拉伸）
- *   scaleY = GAME_WIDTH / GAME_HEIGHT （垂直压缩，约 0.5625）
- *
- * 如需精调某节点，在此函数内对特定 stageIndex 手动覆盖 x / y。
- */
-export function landscapeLobbyLayout(screenW: number): LobbyLayout {
-  const scaleX = screenW / GAME_WIDTH;
-  const scaleY = GAME_WIDTH / GAME_HEIGHT;   // 1080 / 1920 ≈ 0.5625
-
-  const nodePositions: LobbyNodePos[] = PORTRAIT_NODE_POSITIONS.map(p => ({
-    stageIndex: p.stageIndex,
-    x: Math.round(p.x * scaleX),
-    y: Math.round(p.y * scaleY),
-  }));
-
-  const dailyChallengePos = {
-    x: Math.round(PORTRAIT_DAILY_POS.x * scaleX),
-    y: Math.round(PORTRAIT_DAILY_POS.y * scaleY),
+/** 横屏布局：直接返回预算坐标，与 1920×1080 背景严格对齐。 */
+export function landscapeLobbyLayout(): LobbyLayout {
+  return {
+    nodePositions:    LANDSCAPE_NODE_POSITIONS,
+    dailyChallengePos: LANDSCAPE_DAILY_POS,
   };
-
-  return { nodePositions, dailyChallengePos };
 }
 
 /** 根据当前 ScreenConfig 返回对应方向的布局。 */
 export function getLobbyLayout(screen: ScreenConfig): LobbyLayout {
   return screen.orientation === Orientation.Landscape
-    ? landscapeLobbyLayout(screen.width)
+    ? landscapeLobbyLayout()
     : portraitLobbyLayout();
 }

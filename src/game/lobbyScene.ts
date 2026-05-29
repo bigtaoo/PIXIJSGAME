@@ -34,11 +34,11 @@ const PULSE_PERIOD_MS  = 800; // 节点脉冲周期
 const BOUNCE_DURATION  = 100; // 点击弹性动画时长（ms）
 
 // ── 每日挑战区图标 + 数字行尺寸 ───────────────────────────────────────────────
-const DC_ICON_H  = 20;
-const DC_ICON_W  = 20;
-const DC_DIGIT_H = 20;
-const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~15
-const DC_GAP     = 4;
+const DC_ICON_H  = 30;
+const DC_ICON_W  = 30;
+const DC_DIGIT_H = 30;
+const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~23
+const DC_GAP     = 6;
 
 // ── 节点关卡数字尺寸 ──────────────────────────────────────────────────────────
 const NODE_DIGIT_H = 40;
@@ -92,8 +92,9 @@ export class LobbyScene extends PIXI.Container {
   /** 当前关卡节点 Sprite（null 表示所有关卡均已通关）。 */
   private currentCard: PIXI.Sprite | null = null;
 
-  // ── 路径 ──────────────────────────────────────────────────────────────────────
+  // ── 路径 / 面板 ───────────────────────────────────────────────────────────────
   private pathGraphics!: PIXI.Graphics;
+  private panelGraphics!: PIXI.Graphics;
 
   private cardTexture!:         PIXI.Texture;
   private cardSelectedTexture!: PIXI.Texture;
@@ -172,6 +173,7 @@ export class LobbyScene extends PIXI.Container {
     this.buildBackground();
     this.buildPath();          // 路径在节点之下
     this.buildAdventureMap();
+    this.buildPanel();         // 背景板在每日挑战 / 音乐按钮之下
     this.buildDailyChallenge();
     this.buildMusicButton();
   }
@@ -328,7 +330,7 @@ export class LobbyScene extends PIXI.Container {
     iconSprite.y      = (DC_DIGIT_H - DC_ICON_H) / 2;
     container.addChild(iconSprite);
 
-    const display = new DigitDisplay(this.ctx, DC_DIGIT_W, DC_DIGIT_H, 0x5D4037);
+    const display = new DigitDisplay(this.ctx, DC_DIGIT_W, DC_DIGIT_H, 0xF5E6C8);
     display.x = DC_ICON_W + DC_GAP;
     display.y = 0;
     container.addChild(display);
@@ -424,6 +426,46 @@ export class LobbyScene extends PIXI.Container {
       this.musicBtn.x = x - MUSIC_BTN_SIZE / 2;
       this.musicBtn.y = y - dr - MUSIC_BTN_SIZE - 10;
     }
+
+    const { x: pcx, y: pcy } = layout.dailyChallengePos;
+    this.redrawPanel(pcx, pcy);
+  }
+
+  // ── 每日挑战 + 音乐按钮背景板 ──────────────────────────────────────────────────
+
+  /**
+   * 计算背景板边界，覆盖音乐按钮（上方）+ 每日挑战圆形 + 统计数字行（下方）。
+   * cx/cy 为每日挑战圆心坐标。
+   */
+  private getPanelBounds(cx: number, cy: number): { x: number; y: number; w: number; h: number } {
+    const dr  = LobbyScene.DAILY_SIZE / 2;      // 65
+    const pad = 18;
+    const top    = cy - dr - MUSIC_BTN_SIZE - 10 - pad;
+    const bottom = cy + dr + 8 + DC_DIGIT_H + 24 + DC_DIGIT_H + pad;
+    const left   = cx - dr - pad;
+    const right  = cx + dr + pad;
+    return { x: left, y: top, w: right - left, h: bottom - top };
+  }
+
+  private buildPanel(): void {
+    const layout = getLobbyLayout(this.screen);
+    const { x: cx, y: cy } = layout.dailyChallengePos;
+    const { x, y, w, h } = this.getPanelBounds(cx, cy);
+
+    this.panelGraphics = new PIXI.Graphics();
+    this.panelGraphics.beginFill(0x1A0F00, 0.55);
+    this.panelGraphics.drawRoundedRect(x, y, w, h, 24);
+    this.panelGraphics.endFill();
+    this.addChild(this.panelGraphics);
+  }
+
+  private redrawPanel(cx: number, cy: number): void {
+    if (!this.panelGraphics) return;
+    const { x, y, w, h } = this.getPanelBounds(cx, cy);
+    this.panelGraphics.clear();
+    this.panelGraphics.beginFill(0x1A0F00, 0.55);
+    this.panelGraphics.drawRoundedRect(x, y, w, h, 24);
+    this.panelGraphics.endFill();
   }
 
   // ── Music button ────────────────────────────────────────────────────────────
