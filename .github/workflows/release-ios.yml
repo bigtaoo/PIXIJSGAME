@@ -1,0 +1,87 @@
+name: Release iOS
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      destination:
+        description: 'Upload destination'
+        required: true
+        default: 'testflight'
+        type: choice
+        options:
+          - testflight
+          - appstore
+
+jobs:
+  build-and-publish:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build:crazygames
+
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Import signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_P12_PASSWORD }}
+
+      - name: Download provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: ${{ secrets.IOS_BUNDLE_ID }}
+          issuer-id: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+
+      - name: Build IPA (xcodebuild)
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}"
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: App.ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+
+      - name: Upload to App Store Connect
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ runner.temp }}/ipa/App.ipa
+          issuer-id: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}

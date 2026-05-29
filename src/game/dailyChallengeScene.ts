@@ -115,8 +115,9 @@ export class DailyChallengeScene extends PIXI.Container {
       this.initialized = true;
     } else {
       drawBackground(this.bg, this.screen.width, this.screen.height);
-      this.gridLayer.reconfigure();
-      this.numberLayer.reconfigure(this.logic);
+      // Use syncGrid() instead of bare reconfigure() so that already-eliminated
+      // cells (value == 0) are hidden again after the grid is rebuilt.
+      this.syncGrid();
       this.header.resize(this.screen);
       this.header.setScore(this.score);
       this.header.setTimer(this.state.remainingSeconds);
