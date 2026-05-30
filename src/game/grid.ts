@@ -62,13 +62,17 @@ export class Grid extends PIXI.Container {
   }
 
   public showSelection(index: number): void {
-    const { gridSize, offsetX, offsetY } = this.screen;
+    const { gridSize } = this.screen;
 
     if (!this.selectionHighlight) {
       this.selectionHighlight = new PIXI.Sprite(this.ctx.assets.GetTexture('cell_selected.png'));
       this.selectionHighlight.width  = gridSize;
       this.selectionHighlight.height = gridSize;
       this.addChild(this.selectionHighlight);
+    } else {
+      // Always keep the highlight on top so it is not obscured by cell sprites
+      // that were added during a later reconfigure() call (e.g. grid expansion).
+      this.setChildIndex(this.selectionHighlight, this.children.length - 1);
     }
 
     const { x, y } = this.screen.indexToPos(index);

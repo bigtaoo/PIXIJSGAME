@@ -1,5 +1,9 @@
 import { Orientation } from './enums';
-import { GAME_WIDTH, OFFSET_Y } from './consts';
+import {
+  GAME_WIDTH, OFFSET_Y,
+  HEADER_X_PORTRAIT, HEADER_BAR_W_PORTRAIT,
+  HEADER_X_LANDSCAPE, HEADER_BAR_W_LANDSCAPE,
+} from './consts';
 
 export class ScreenConfig {
   public width: number = GAME_WIDTH;
@@ -94,25 +98,33 @@ export class ScreenConfig {
   /**
    * Cell size: compare width/cols vs available-height/rows and take the smaller.
    *
-   *   gridSize = floor( min(width / gridCountW, playH / gridCountH) )
+   *   gridSize = floor( min(headerBarW / gridCountW, playH / gridCountH) )
    *
-   * where playH = height - offsetY  (the area below the header).
-   * This ensures the grid always fits both horizontally and vertically.
+   * where playH = height - offsetY  (the area below the header) and
+   * headerBarW is the inner width of the header bar for the current orientation.
+   * This ensures the grid never overflows the header bar horizontally.
    * Returns the frozen value when the layout is locked.
    */
   public get gridSize(): number {
     if (this._locked && this._lockedGridSize !== null) return this._lockedGridSize;
+    const barW  = this.orientation === Orientation.Landscape
+      ? HEADER_BAR_W_LANDSCAPE : HEADER_BAR_W_PORTRAIT;
     const playH = this.height - this.offsetY;
-    return Math.floor(Math.min(this.width / this.gridCountW, playH / this.gridCountH));
+    return Math.floor(Math.min(barW / this.gridCountW, playH / this.gridCountH));
   }
 
   /**
-   * Horizontal offset: centers the grid within the full canvas width.
+   * Horizontal offset: centers the grid within the header bar so its left/right
+   * edges align with the header bar edges.
    * Returns the frozen value when the layout is locked.
    */
   public get offsetX(): number {
     if (this._locked && this._lockedOffsetX !== null) return this._lockedOffsetX;
-    return (this.width - this.gridCountW * this.gridSize) / 2;
+    const headerX = this.orientation === Orientation.Landscape
+      ? HEADER_X_LANDSCAPE : HEADER_X_PORTRAIT;
+    const barW = this.orientation === Orientation.Landscape
+      ? HEADER_BAR_W_LANDSCAPE : HEADER_BAR_W_PORTRAIT;
+    return Math.floor(headerX + (barW - this.gridCountW * this.gridSize) / 2);
   }
 
   /** Encode (col, row) to a unique cell index */

@@ -44,12 +44,14 @@ export class GameScene extends PIXI.Container {
 
   /** How many ms have elapsed since the player selected the first tile. −1 = inactive. */
   private hintTimerMs = -1;
-  /** True once the hint has fired for the current selection (prevents repeat). */
-  private hintFired = false;
+  /** Threshold for the next hint fire: HINT_DELAY_MS on first fire, HINT_REPEAT_MS afterwards. */
+  private hintThreshold = 0;
 
-  private static readonly COMBO_WINDOW_MS = 3000;
-  /** Delay before the hint flash fires after the player selects the first tile. */
-  private static readonly HINT_DELAY_MS = 3000;
+  private static readonly COMBO_WINDOW_MS  = 3000;
+  /** Initial delay before the first hint flash after a cell is selected. */
+  private static readonly HINT_DELAY_MS   = 3000;
+  /** Repeat interval for subsequent hint flashes if the player still hasn't acted. */
+  private static readonly HINT_REPEAT_MS  = 2000;
 
   /**
    * True if at least one life was lost during the current stage attempt.
@@ -137,10 +139,13 @@ export class GameScene extends PIXI.Container {
     }
 
     // ── Hint timer ──────────────────────────────────────────────────────
-    if (this.hintTimerMs >= 0 && !this.hintFired) {
+    if (this.hintTimerMs >= 0) {
       this.hintTimerMs += deltaMs;
-      if (this.hintTimerMs >= GameScene.HINT_DELAY_MS) {
+      if (this.hintTimerMs >= this.hintThreshold) {
         this.triggerHint();
+        // Reset timer for the next repeat cycle (2 s) without clearing the hint state.
+        this.hintTimerMs = 0;
+        this.hintThreshold = GameScene.HINT_REPEAT_MS;
       }
     }
   }
@@ -188,6 +193,12 @@ export class GameScene extends PIXI.Container {
     this.addChild(this.effectLayer.flyingLayer);
     this.addChild(this.resultOverlay);
     this.addChild(this.settingsOverlay);
+
+    // Apply the real screen dimensions now that the scene is fully built.
+    // Without this, overlays would use the hardcoded constructor defaults until
+    // the next external resize() call (which only hits the else-branch).
+    this.resultOverlay.resize(this.screen);
+    this.settingsOverlay.resize(this.screen);
 
     this.startCurrentTarget();
   }
@@ -408,18 +419,17 @@ export class GameScene extends PIXI.Container {
   // ── Hint system ────────────────────────────────────────────────────────
 
   private resetHintTimer(): void {
-    this.hintTimerMs = -1;
-    this.hintFired   = false;
+    this.hintTimerMs  = -1;
+    this.hintThreshold = GameScene.HINT_DELAY_MS;
   }
 
   private startHintTimer(): void {
-    this.hintTimerMs = 0;
-    this.hintFired   = false;
+    this.hintTimerMs  = 0;
+    this.hintThreshold = GameScene.HINT_DELAY_MS;
   }
 
   private triggerHint(): void {
-    if (this.selectedIndex === -1 || this.hintFired) return;
-    this.hintFired = true;
+    if (this.selectedIndex === -1) return;
 
     const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
     const target        = this.stage.targets[this.currentTargetIdx];

@@ -27,10 +27,10 @@ interface GameResultLayout {
   starRowY:  number;
 }
 
-function portraitLayout(): GameResultLayout {
+function portraitLayout(screenH: number): GameResultLayout {
   const panelW = 700, panelH = 500;
-  const panelX = (GAME_WIDTH - panelW) / 2;   // 190
-  const panelY = 710;
+  const panelX = (GAME_WIDTH - panelW) / 2;
+  const panelY = Math.round((screenH - panelH) / 2);
   const btnSize = 200;
   const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
   return {
@@ -42,10 +42,10 @@ function portraitLayout(): GameResultLayout {
   };
 }
 
-function landscapeLayout(screenW: number): GameResultLayout {
+function landscapeLayout(screenW: number, screenH: number): GameResultLayout {
   const panelW = 700, panelH = 500;
   const panelX = Math.round((screenW - panelW) / 2);
-  const panelY = 290;
+  const panelY = Math.round((screenH - panelH) / 2);
   const btnSize = 200;
   const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
   return {
@@ -59,8 +59,8 @@ function landscapeLayout(screenW: number): GameResultLayout {
 
 function getLayout(screen: ScreenConfig): GameResultLayout {
   return screen.orientation === Orientation.Landscape
-    ? landscapeLayout(screen.width)
-    : portraitLayout();
+    ? landscapeLayout(screen.width, screen.height)
+    : portraitLayout(screen.height);
 }
 
 // ── GameResultOverlay ─────────────────────────────────────────────────────────
@@ -114,7 +114,8 @@ export class GameResultOverlay extends PIXI.Container {
     }
     this.addChild(this.starRow);
 
-    this.applyLayout(portraitLayout());
+    // Placeholder layout; resize() must be called with the real ScreenConfig before show().
+    this.applyLayout(portraitLayout(1920));
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────

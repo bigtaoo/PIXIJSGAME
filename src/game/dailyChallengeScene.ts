@@ -29,8 +29,9 @@ import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATIO
 import { saveDailyScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 
-const COMBO_WINDOW_MS = 3_000;
-const HINT_DELAY_MS   = 3_000;
+const COMBO_WINDOW_MS  = 3_000;
+const HINT_DELAY_MS    = 3_000;
+const HINT_REPEAT_MS   = 2_000;
 
 export class DailyChallengeScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
@@ -52,8 +53,8 @@ export class DailyChallengeScene extends PIXI.Container {
   private initialized      = false;
   private playRecorded     = false;
 
-  private hintTimerMs = -1;
-  private hintFired   = false;
+  private hintTimerMs   = -1;
+  private hintThreshold = HINT_DELAY_MS;
 
   /** Stored so resize() can re-initialize the grid with the correct orientation dims. */
   private pendingTarget = 0;
@@ -152,10 +153,12 @@ export class DailyChallengeScene extends PIXI.Container {
       return;
     }
 
-    if (this.hintTimerMs >= 0 && !this.hintFired) {
+    if (this.hintTimerMs >= 0) {
       this.hintTimerMs += deltaMs;
-      if (this.hintTimerMs >= HINT_DELAY_MS) {
+      if (this.hintTimerMs >= this.hintThreshold) {
         this.triggerHint();
+        this.hintTimerMs  = 0;
+        this.hintThreshold = HINT_REPEAT_MS;
       }
     }
   }
@@ -308,18 +311,17 @@ export class DailyChallengeScene extends PIXI.Container {
   // ── Hint system ────────────────────────────────────────────────────────────
 
   private resetHintTimer(): void {
-    this.hintTimerMs = -1;
-    this.hintFired   = false;
+    this.hintTimerMs   = -1;
+    this.hintThreshold = HINT_DELAY_MS;
   }
 
   private startHintTimer(): void {
-    this.hintTimerMs = 0;
-    this.hintFired   = false;
+    this.hintTimerMs   = 0;
+    this.hintThreshold = HINT_DELAY_MS;
   }
 
   private triggerHint(): void {
-    if (this.selectedIndex === -1 || this.hintFired) return;
-    this.hintFired = true;
+    if (this.selectedIndex === -1) return;
 
     const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
     const pairIndices   = this.logic.findPairIndices(selectedValue, getDailyTarget());
