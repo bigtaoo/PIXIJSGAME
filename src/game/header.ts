@@ -130,10 +130,13 @@ export class Header extends PIXI.Container {
 
   /** Queue of heart-breaking animations. */
   private heartAnims: Array<{
-    sprite:    PIXI.Sprite;
-    callback:  () => void;
-    elapsed:   number;
-    done:      boolean;
+    sprite:     PIXI.Sprite;
+    callback:   () => void;
+    elapsed:    number;
+    done:       boolean;
+    /** Layout scale captured at animation start; all scale factors are relative to this. */
+    baseScaleX: number;
+    baseScaleY: number;
   }> = [];
 
   private _target: number;
@@ -252,7 +255,11 @@ export class Header extends PIXI.Container {
   public triggerHeartLost(liveIndex: number, callback: () => void): void {
     const sprite = this.livesSprites[liveIndex];
     if (!sprite) { callback(); return; }
-    this.heartAnims.push({ sprite, callback, elapsed: 0, done: false });
+    this.heartAnims.push({
+      sprite, callback, elapsed: 0, done: false,
+      baseScaleX: sprite.scale.x,
+      baseScaleY: sprite.scale.y,
+    });
   }
 
   /** Return the centre position of heart at liveIndex (0-based) in the Header's parent coordinate space. */
@@ -636,12 +643,18 @@ export class Header extends PIXI.Container {
 
       if (anim.elapsed < 80) {
         const t = anim.elapsed / 80;
-        anim.sprite.scale.set(1 + 0.3 * t);
+        const f = 1 + 0.3 * t;
+        anim.sprite.scale.x = anim.baseScaleX * f;
+        anim.sprite.scale.y = anim.baseScaleY * f;
       } else {
         const t = Math.min((anim.elapsed - 80) / 150, 1);
-        anim.sprite.scale.set(1.3 * (1 - t));
+        const f = 1.3 * (1 - t);
+        anim.sprite.scale.x = anim.baseScaleX * f;
+        anim.sprite.scale.y = anim.baseScaleY * f;
         if (t >= 1) {
-          anim.sprite.scale.set(1);
+          // Restore to layout size before firing the callback (which swaps the texture).
+          anim.sprite.scale.x = anim.baseScaleX;
+          anim.sprite.scale.y = anim.baseScaleY;
           anim.done = true;
           anim.callback();
         }
