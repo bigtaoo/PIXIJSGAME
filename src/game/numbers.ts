@@ -50,6 +50,13 @@ export class NumberLayer extends PIXI.Container {
    * larger stage).
    */
   public reconfigure(logic: Logic): void {
+    // Cancel any in-flight hint animations and reset all sprite alphas so
+    // sprites reused from a previous target never carry over a reduced alpha.
+    this.hintAnimations = [];
+    for (const [, cell] of this.cells) {
+      cell.slots.forEach((s) => (s.alpha = 1));
+    }
+
     const { gridCountW: w, gridCountH: h } = this.screen;
     const activeIndices = new Set<number>();
 
@@ -162,6 +169,7 @@ export class NumberLayer extends PIXI.Container {
     s.height  = gs * 1.0;
     s.x       = cellX + 5;
     s.y       = cellY - 8;
+    s.alpha   = 1;
     s.visible = true;
 
     // Hide the tens slot if it exists
@@ -196,6 +204,7 @@ export class NumberLayer extends PIXI.Container {
     s0.height  = dh;
     s0.x       = cellX + marginX + 0 * dw;
     s0.y       = cellY + marginY;
+    s0.alpha   = 1;
     s0.visible = true;
 
     const s1 = cell.slots[1]!;
@@ -204,6 +213,7 @@ export class NumberLayer extends PIXI.Container {
     s1.height  = dh;
     s1.x       = cellX + marginX + 1 * dw - 15;
     s1.y       = cellY + marginY;
+    s1.alpha   = 1;
     s1.visible = true;
   }
 
