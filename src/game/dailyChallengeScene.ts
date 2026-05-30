@@ -26,6 +26,10 @@ import { DailyChallengeResult } from './dailyChallengeResult';
 import { DailyChallengeHeader } from './dailyChallengeHeader';
 import { drawBackground } from './graphicsFactory';
 import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
+import {
+  DC_HEADER_X_PORTRAIT, DC_HEADER_BAR_W_PORTRAIT,
+  DC_HEADER_X_LANDSCAPE, DC_HEADER_BAR_W_LANDSCAPE,
+} from './dailyChallengeHeader';
 import { saveDailyScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 
@@ -106,6 +110,12 @@ export class DailyChallengeScene extends PIXI.Container {
    */
   private applyGridDims(): void {
     this.screen.setGridDims(DAILY_GRID_W, DAILY_GRID_H);
+    // Align the grid to the DC header bar (which is wider/positioned differently
+    // from the standard game header tracked by the HEADER_X/BAR_W consts).
+    this.screen.setGridBounds(
+      DC_HEADER_X_PORTRAIT,   DC_HEADER_BAR_W_PORTRAIT,
+      DC_HEADER_X_LANDSCAPE,  DC_HEADER_BAR_W_LANDSCAPE,
+    );
   }
 
   public resize(windowWidth: number, windowHeight: number): void {

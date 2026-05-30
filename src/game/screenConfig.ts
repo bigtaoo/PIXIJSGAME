@@ -13,6 +13,33 @@ export class ScreenConfig {
 
   public readonly offsetY = OFFSET_Y;
 
+  // Per-scene header bounds override (null = use consts defaults).
+  // Set by each scene via setGridBounds() to align the grid with its own header bar.
+  private _headerXPortrait:    number | null = null;
+  private _headerBarWPortrait: number | null = null;
+  private _headerXLandscape:   number | null = null;
+  private _headerBarWLandscape: number | null = null;
+
+  /**
+   * Override the header bar bounds used for grid sizing and centering.
+   * Call this when the scene's header bar dimensions differ from the defaults
+   * defined in consts.ts (e.g. DailyChallengeScene has a wider header bar).
+   *
+   * @param portraitX      Header bar left x in portrait (logical px)
+   * @param portraitBarW   Header bar width in portrait (logical px)
+   * @param landscapeX     Header bar left x in landscape (logical px)
+   * @param landscapeBarW  Header bar width in landscape (logical px)
+   */
+  public setGridBounds(
+    portraitX: number, portraitBarW: number,
+    landscapeX: number, landscapeBarW: number,
+  ): void {
+    this._headerXPortrait     = portraitX;
+    this._headerBarWPortrait  = portraitBarW;
+    this._headerXLandscape    = landscapeX;
+    this._headerBarWLandscape = landscapeBarW;
+  }
+
   // Explicit grid dimensions driven by stage data; null = auto from orientation
   private _gridW: number | null = null;
   private _gridH: number | null = null;
@@ -108,7 +135,8 @@ export class ScreenConfig {
   public get gridSize(): number {
     if (this._locked && this._lockedGridSize !== null) return this._lockedGridSize;
     const barW  = this.orientation === Orientation.Landscape
-      ? HEADER_BAR_W_LANDSCAPE : HEADER_BAR_W_PORTRAIT;
+      ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
+      : (this._headerBarWPortrait  ?? HEADER_BAR_W_PORTRAIT);
     const playH = this.height - this.offsetY;
     return Math.floor(Math.min(barW / this.gridCountW, playH / this.gridCountH));
   }
@@ -121,9 +149,11 @@ export class ScreenConfig {
   public get offsetX(): number {
     if (this._locked && this._lockedOffsetX !== null) return this._lockedOffsetX;
     const headerX = this.orientation === Orientation.Landscape
-      ? HEADER_X_LANDSCAPE : HEADER_X_PORTRAIT;
+      ? (this._headerXLandscape ?? HEADER_X_LANDSCAPE)
+      : (this._headerXPortrait  ?? HEADER_X_PORTRAIT);
     const barW = this.orientation === Orientation.Landscape
-      ? HEADER_BAR_W_LANDSCAPE : HEADER_BAR_W_PORTRAIT;
+      ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
+      : (this._headerBarWPortrait  ?? HEADER_BAR_W_PORTRAIT);
     return Math.floor(headerX + (barW - this.gridCountW * this.gridSize) / 2);
   }
 

@@ -51,10 +51,16 @@ export interface DCHeaderLayout {
 
 // ── Layout functions ──────────────────────────────────────────────────────────
 
+// Exported so DailyChallengeScene can pass these to ScreenConfig.setGridBounds().
+export const DC_HEADER_X_PORTRAIT    = 20;
+export const DC_HEADER_BAR_W_PORTRAIT = GAME_WIDTH - 40; // 1040
+export const DC_HEADER_X_LANDSCAPE   = 480;
+export const DC_HEADER_BAR_W_LANDSCAPE = 1300;
+
 /** Portrait layout (canvas width = GAME_WIDTH = 1080). */
 export function portraitDCLayout(): DCHeaderLayout {
   return {
-    barX: 20,  barY: 10, barW: GAME_WIDTH - 40, barH: OFFSET_Y - 20,
+    barX: DC_HEADER_X_PORTRAIT,  barY: 10, barW: DC_HEADER_BAR_W_PORTRAIT, barH: OFFSET_Y - 20,
     iconX: 50, iconY: 15, iconH: 70,
     hitX: 20,  hitY: 10, hitW: 260, hitH: 110,
     scoreCenterX: GAME_WIDTH / 2,
@@ -74,8 +80,8 @@ export function portraitDCLayout(): DCHeaderLayout {
  * Coordinates can be adjusted directly here.
  */
 export function landscapeDCLayout(): DCHeaderLayout {
-  const barX = 480;
-  const barW = 1300;
+  const barX = DC_HEADER_X_LANDSCAPE;
+  const barW = DC_HEADER_BAR_W_LANDSCAPE;
   const cx   = barX + barW / 2;
   return {
     barX, barY: 10, barW, barH: OFFSET_Y - 20,
