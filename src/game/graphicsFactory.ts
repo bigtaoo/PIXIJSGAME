@@ -1,48 +1,48 @@
 /**
  * graphicsFactory.ts
  *
- * 所有程序化绘制函数的集中模块。
- * 每个函数接受一个 PIXI.Graphics 并就地绘制，不持有任何状态。
+ * Central module for all programmatic drawing functions.
+ * Each function accepts a PIXI.Graphics and draws into it in-place; no state is held.
  *
- * makeTexture() 工具函数将绘制结果渲染为 RenderTexture，供需要 Sprite 的场合使用。
+ * makeTexture() is a utility that renders a drawing into a RenderTexture for use as a Sprite.
  */
 
 import * as PIXI from 'pixi.js-legacy';
 
-// ─── 调色板 ───────────────────────────────────────────────────────────────────
+// ─── Colour palette ───────────────────────────────────────────────────────────
 
 export const C = {
-  // 背景
+  // Background
   bgFill:        0xEDE8DC,
   bgLine:        0xCCCCCC,
   bgLineAlpha:   0.12,
 
-  // 格子 · 普通
+  // Cell · normal
   cellFill:      0xFAFAF8,
   cellBorder:    0xE0DAD0,
 
-  // 格子 · 选中
+  // Cell · selected
   cellSelFill:   0xFBF8EE,
   cellSelBorder: 0xEAB830,
 
-  // 面板（Header / 结果浮层 / 设置浮层）
+  // Panel (Header / result overlay / settings overlay)
   panelFill:     0xFAFAF8,
   panelBorder:   0xE0DAD0,
 
-  // 闹钟
+  // Clock
   clockFace:     0xFAFAF8,
   clockBorder:   0x5D4037,
   clockHand:     0x3E2723,
 
-  // 图标通用色
+  // Shared icon colour
   icon:          0x5D4037,
 };
 
-// ─── 背景 ─────────────────────────────────────────────────────────────────────
+// ─── Background ───────────────────────────────────────────────────────────────
 
 /**
- * 方格纸背景：米黄底色 + 浅灰网格线（20px 间距）。
- * 调用前无需 clear()。
+ * Grid-paper background: warm-beige fill + light-grey grid lines (20px spacing).
+ * No need to call clear() before this.
  */
 export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
   g.clear();
@@ -56,11 +56,11 @@ export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
   for (let y = sp; y < h; y += sp) { g.moveTo(0, y); g.lineTo(w, y); }
 }
 
-// ─── 格子 ─────────────────────────────────────────────────────────────────────
+// ─── Cell ─────────────────────────────────────────────────────────────────────
 
 /**
- * 普通格子：暖白圆角矩形 + 浅色描边。
- * 绘制区域 (0, 0, size, size)。
+ * Normal cell: warm-white rounded rectangle + light border.
+ * Drawing region (0, 0, size, size).
  */
 export function drawCell(g: PIXI.Graphics, size: number): void {
   const r = Math.round(size * 0.11);
@@ -71,23 +71,23 @@ export function drawCell(g: PIXI.Graphics, size: number): void {
 }
 
 /**
- * 选中格子：金色描边 + 略亮底色。
- * 绘制区域 (0, 0, size, size)，描边内缩以保持外轮廓一致。
+ * Selected cell: gold border + slightly brighter fill.
+ * Drawing region (0, 0, size, size); border is inset to keep the outer outline consistent.
  */
 export function drawCellSelected(g: PIXI.Graphics, size: number): void {
   const r   = Math.round(size * 0.11);
   const bw  = Math.max(5, Math.round(size * 0.042));
-  const ins = bw * 0.5; // 内缩量，保证描边不超出边界
+  const ins = bw * 0.5; // inset amount — ensures the border does not exceed the boundary
   g.lineStyle(bw, C.cellSelBorder, 1);
   g.beginFill(C.cellSelFill);
   g.drawRoundedRect(ins, ins, size - ins * 2, size - ins * 2, r);
   g.endFill();
 }
 
-// ─── 关卡大厅圆形节点 ─────────────────────────────────────────────────────────
+// ─── Stage lobby circular nodes ───────────────────────────────────────────────
 
 /**
- * 普通圆形格子：暖白填充 + 浅色描边，内切于 size×size 正方形。
+ * Normal circular cell: warm-white fill + light border, inscribed in a size×size square.
  */
 export function drawCircleCell(g: PIXI.Graphics, size: number): void {
   const cx = size / 2;
@@ -100,7 +100,7 @@ export function drawCircleCell(g: PIXI.Graphics, size: number): void {
 }
 
 /**
- * 选中圆形格子：金色描边 + 略亮底色，内切于 size×size 正方形。
+ * Selected circular cell: gold border + slightly brighter fill, inscribed in a size×size square.
  */
 export function drawCircleCellSelected(g: PIXI.Graphics, size: number): void {
   const cx = size / 2;
@@ -113,30 +113,30 @@ export function drawCircleCellSelected(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
-// ─── 闹钟 ─────────────────────────────────────────────────────────────────────
+// ─── Clock ────────────────────────────────────────────────────────────────────
 
 /**
- * 闹钟表盘：圆形 + 中心点 + 4个刻度。
- * 绘制区域 (0, 0, radius*2, radius*2)。
+ * Clock face: circle + centre dot + 4 tick marks.
+ * Drawing region (0, 0, radius*2, radius*2).
  */
 export function drawClockFace(g: PIXI.Graphics, radius: number): void {
   const cx = radius;
   const cy = radius;
   const r  = radius - 3;
 
-  // 表盘
+  // Clock face
   g.lineStyle(3, C.clockBorder, 1);
   g.beginFill(C.clockFace);
   g.drawCircle(cx, cy, r);
   g.endFill();
 
-  // 中心点
+  // Centre dot
   g.lineStyle(0);
   g.beginFill(C.clockBorder);
   g.drawCircle(cx, cy, 3);
   g.endFill();
 
-  // 4个刻度（12 / 3 / 6 / 9 点）
+  // 4 tick marks (12 / 3 / 6 / 9 o'clock positions)
   g.lineStyle(3, C.clockBorder, 0.7);
   for (let i = 0; i < 4; i++) {
     const a     = (i * Math.PI) / 2 - Math.PI / 2;
@@ -148,12 +148,12 @@ export function drawClockFace(g: PIXI.Graphics, radius: number): void {
 }
 
 /**
- * 闹钟指针：向下的圆角矩形，从 (0,0) 延伸到 (width, length)。
+ * Clock hand: a downward-pointing rounded rectangle from (0,0) to (width, length).
  *
- * 使用方式（Header 内）：
- *   sprite.pivot.set(width/2, 0)   // 旋转轴在顶部中心（连接表盘圆心处）
- *   sprite.position.set(cx, cy)    // 放置在表盘圆心
- *   sprite.rotation = Math.PI + (1 - ratio) * Math.PI * 2  // 12点钟=满时间
+ * Usage (inside Header):
+ *   sprite.pivot.set(width/2, 0)   // pivot at top-centre (connecting to the clock face centre)
+ *   sprite.position.set(cx, cy)    // place at the clock face centre
+ *   sprite.rotation = Math.PI + (1 - ratio) * Math.PI * 2  // 12 o'clock = full time
  */
 export function drawClockHand(g: PIXI.Graphics, length: number, width = 6): void {
   g.lineStyle(0);
@@ -162,19 +162,19 @@ export function drawClockHand(g: PIXI.Graphics, length: number, width = 6): void
   g.endFill();
 }
 
-// ─── 符号 ─────────────────────────────────────────────────────────────────────
+// ─── Symbols ──────────────────────────────────────────────────────────────────
 
-/** 加号，绘制区域 (0, 0, w, h)。 */
+/** Plus sign, drawing region (0, 0, w, h). */
 export function drawPlus(g: PIXI.Graphics, w: number, h: number): void {
   const t = Math.round(Math.min(w, h) * 0.22);
   g.lineStyle(0);
   g.beginFill(C.icon);
-  g.drawRoundedRect((w - t) / 2, 0,       t, h, t / 2); // 竖
-  g.drawRoundedRect(0,           (h - t) / 2, w, t, t / 2); // 横
+  g.drawRoundedRect((w - t) / 2, 0,       t, h, t / 2); // vertical bar
+  g.drawRoundedRect(0,           (h - t) / 2, w, t, t / 2); // horizontal bar
   g.endFill();
 }
 
-/** 等号，绘制区域 (0, 0, w, h)。 */
+/** Equals sign, drawing region (0, 0, w, h). */
 export function drawEquals(g: PIXI.Graphics, w: number, h: number): void {
   const barH = Math.round(h * 0.22);
   const gap  = Math.round(h * 0.20);
@@ -187,42 +187,42 @@ export function drawEquals(g: PIXI.Graphics, w: number, h: number): void {
   g.endFill();
 }
 
-// ─── 按钮图标 ─────────────────────────────────────────────────────────────────
+// ─── Button icons ─────────────────────────────────────────────────────────────
 
-/** 重试图标（圆弧箭头），绘制区域 (0, 0, size, size)。 */
+/** Retry icon (arc arrow), drawing region (0, 0, size, size). */
 export function drawRetryIcon(g: PIXI.Graphics, size: number): void {
   const cx = size / 2;
   const cy = size / 2;
   const r  = size * 0.33;
   const sw = Math.max(5, Math.round(size * 0.1));
 
-  // 圆弧：从约 -135° 顺时针到约 120°
+  // Arc: from approximately -135° clockwise to about 120°
   g.lineStyle(sw, C.icon, 1);
   g.arc(cx, cy, r, -Math.PI * 0.75, Math.PI * 0.67);
 
-  // 弧末端三角形箭头
+  // Triangular arrowhead at the arc end
   const endA  = Math.PI * 0.67;
   const ax    = cx + Math.cos(endA) * r;
   const ay    = cy + Math.sin(endA) * r;
-  const tA    = endA + Math.PI / 2; // 切线方向（弧行进方向）
-  const ah    = sw * 2.5;           // 箭头长度
-  const hw    = sw * 1.3;           // 箭头半宽
-  const backA = tA + Math.PI;       // 与切线反向（箭头底部方向）
-  const perpA = tA + Math.PI / 2;   // 垂直于切线
-  // 底边中心点（在尖端后方）
+  const tA    = endA + Math.PI / 2; // tangent direction (arc travel direction)
+  const ah    = sw * 2.5;           // arrowhead length
+  const hw    = sw * 1.3;           // arrowhead half-width
+  const backA = tA + Math.PI;       // opposite to tangent (towards arrowhead base)
+  const perpA = tA + Math.PI / 2;   // perpendicular to tangent
+  // Centre of the base edge (behind the tip)
   const bx = ax + Math.cos(backA) * ah;
   const by = ay + Math.sin(backA) * ah;
   g.lineStyle(0);
   g.beginFill(C.icon);
   g.drawPolygon([
-    ax, ay,                                                    // 箭头尖端
-    bx + Math.cos(perpA) * hw, by + Math.sin(perpA) * hw,    // 底角 1
-    bx - Math.cos(perpA) * hw, by - Math.sin(perpA) * hw,    // 底角 2
+    ax, ay,                                                    // arrowhead tip
+    bx + Math.cos(perpA) * hw, by + Math.sin(perpA) * hw,    // base corner 1
+    bx - Math.cos(perpA) * hw, by - Math.sin(perpA) * hw,    // base corner 2
   ]);
   g.endFill();
 }
 
-/** 向右实心三角（下一关），绘制区域 (0, 0, size, size)。 */
+/** Solid right-pointing triangle (next level), drawing region (0, 0, size, size). */
 export function drawNextIcon(g: PIXI.Graphics, size: number): void {
   const pad = size * 0.22;
   g.lineStyle(0);
@@ -235,7 +235,7 @@ export function drawNextIcon(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
-/** 汉堡菜单（设置），绘制区域 (0, 0, size, size)。 */
+/** Hamburger menu (settings), drawing region (0, 0, size, size). */
 export function drawSettingsIcon(g: PIXI.Graphics, size: number): void {
   const pad  = size * 0.2;
   const barH = Math.round(size * 0.13);
@@ -249,7 +249,7 @@ export function drawSettingsIcon(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
-/** 2×2 方格（返回大厅），绘制区域 (0, 0, size, size)。 */
+/** 2×2 grid (return to lobby), drawing region (0, 0, size, size). */
 export function drawLobbyIcon(g: PIXI.Graphics, size: number): void {
   const pad = size * 0.18;
   const gap = size * 0.1;
@@ -268,20 +268,20 @@ export function drawLobbyIcon(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
-// ─── 面板 ─────────────────────────────────────────────────────────────────────
+// ─── Panel ────────────────────────────────────────────────────────────────────
 
 /**
- * 弹出面板（结果 / 设置浮层）：暖白圆角矩形 + 轻微阴影。
- * 绘制区域 (0, 0, w+4, h+4)（阴影向右下偏移 4px）。
+ * Pop-up panel (result / settings overlay): warm-white rounded rectangle + subtle shadow.
+ * Drawing region (0, 0, w+4, h+4) (shadow offset 4px down-right).
  */
 export function drawPanel(g: PIXI.Graphics, w: number, h: number): void {
   const r = 20;
-  // 阴影层
+  // Shadow layer
   g.lineStyle(0);
   g.beginFill(0x000000, 0.15);
   g.drawRoundedRect(4, 4, w, h, r);
   g.endFill();
-  // 主面板
+  // Main panel
   g.lineStyle(1.5, C.panelBorder, 0.7);
   g.beginFill(C.panelFill);
   g.drawRoundedRect(0, 0, w, h, r);
@@ -289,8 +289,8 @@ export function drawPanel(g: PIXI.Graphics, w: number, h: number): void {
 }
 
 /**
- * Header 背景条：暖白圆角矩形，无阴影。
- * 绘制区域 (0, 0, w, h)。
+ * Header background bar: warm-white rounded rectangle, no shadow.
+ * Drawing region (0, 0, w, h).
  */
 export function drawHeaderBar(g: PIXI.Graphics, w: number, h: number): void {
   g.lineStyle(1, C.panelBorder, 0.6);
@@ -299,28 +299,28 @@ export function drawHeaderBar(g: PIXI.Graphics, w: number, h: number): void {
   g.endFill();
 }
 
-// ─── 文字替代符号 ──────────────────────────────────────────────────────────────
+// ─── Text-substitute symbols ───────────────────────────────────────────────────
 
 /**
- * 问号，用于 tip 槽未填入数值时。
- * 绘制于以 (cx, cy) 为中心、高度约为 h 的区域内。
- * 颜色固定为浅灰 0xBBBBBB，与原文本样式一致。
+ * Question mark, used when a tip slot has not been filled.
+ * Drawn centred at (cx, cy) within a region of height approximately h.
+ * Colour is fixed at light-grey 0xBBBBBB, matching the original text style.
  */
 export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: number): void {
   const sw = Math.round(h * 0.13);
   const r  = h * 0.19;
 
   g.lineStyle(sw, 0xBBBBBB, 1);
-  // 上弧：半圆（从左到右）
+  // Upper arc: semicircle (left to right)
   g.arc(cx, cy - h * 0.14, r, Math.PI, 0, false);
-  // 向下弯折到茎
+  // Curve down to the stem
   g.bezierCurveTo(
     cx + r,  cy - h * 0.14 + r,
     cx,      cy + h * 0.02,
     cx,      cy + h * 0.10,
   );
 
-  // 下方圆点
+  // Lower dot
   g.lineStyle(0);
   g.beginFill(0xBBBBBB);
   g.drawCircle(cx, cy + h * 0.30, sw * 0.75);
@@ -328,30 +328,30 @@ export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: nu
 }
 
 /**
- * 字母 "s"，绘制区域 (0, 0, w, h)。
- * 用白色（0xFFFFFF）描边，调用方通过 sprite.tint 着色为金色或绿色。
+ * Letter "s", drawing region (0, 0, w, h).
+ * Drawn with white (0xFFFFFF) outline; callers tint the sprite gold or green.
  */
 export function drawLetterS(g: PIXI.Graphics, w: number, h: number): void {
   const sw = Math.round(Math.min(w, h) * 0.37);
   g.lineStyle(sw, 0xFFFFFF, 1);
 
-  // 上半 C 弧（向左开口）
+  // Upper C-arc (opens to the left)
   g.moveTo(w * 0.78, h * 0.18);
   g.bezierCurveTo(w * 0.78, h * 0.01, w * 0.08, h * 0.01, w * 0.08, h * 0.30);
   g.bezierCurveTo(w * 0.08, h * 0.48, w * 0.92, h * 0.52, w * 0.92, h * 0.70);
-  // 下半 C 弧（向右开口）
+  // Lower C-arc (opens to the right)
   g.bezierCurveTo(w * 0.92, h * 0.99, w * 0.22, h * 0.99, w * 0.22, h * 0.82);
 }
 
-// ─── 工具函数 ─────────────────────────────────────────────────────────────────
+// ─── Utility functions ────────────────────────────────────────────────────────
 
 /**
- * 将绘制函数渲染为固定尺寸的 RenderTexture，并销毁临时 Graphics。
+ * Render a draw function into a fixed-size RenderTexture and destroy the temporary Graphics.
  *
- * @param renderer  PIXI.Renderer 实例（来自 AppContext）
- * @param drawFn    在 Graphics 上执行绘制的函数
- * @param w         纹理宽度（逻辑像素）
- * @param h         纹理高度（逻辑像素，默认等于 w）
+ * @param renderer  PIXI.Renderer instance (from AppContext)
+ * @param drawFn    Function that performs the drawing on the Graphics object
+ * @param w         Texture width (logical pixels)
+ * @param h         Texture height (logical pixels; defaults to w)
  */
 export function makeTexture(
   renderer: PIXI.Renderer,

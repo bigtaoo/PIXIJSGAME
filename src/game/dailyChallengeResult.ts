@@ -161,9 +161,9 @@ export class DailyChallengeResult extends PIXI.Container {
 
   // ── Private ────────────────────────────────────────────────────────────────
 
-  /** 构建奖杯行 + 火焰行，赋值到 bestRow / streakRow / bestDisplay / streakDisplay。 */
+  /** Build the trophy row + fire row and assign to bestRow / streakRow / bestDisplay / streakDisplay. */
   private buildIconRows(L: DailyChallengeResultLayout): void {
-    // 最佳分数行
+    // Best score row
     const bestCont  = new PIXI.Container();
     const bestIcon  = new PIXI.Sprite(this.ctx.assets.GetTexture('trophy.png'));
     bestIcon.width  = L.rowIconW; bestIcon.height = L.rowIconH;
@@ -175,7 +175,7 @@ export class DailyChallengeResult extends PIXI.Container {
     this.bestRow = bestCont;
     this.addChild(this.bestRow);
 
-    // 连续天数行
+    // Consecutive days (streak) row
     const streakCont  = new PIXI.Container();
     const streakIcon  = new PIXI.Sprite(this.ctx.assets.GetTexture('fire.png'));
     streakIcon.width  = L.rowIconW; streakIcon.height = L.rowIconH;

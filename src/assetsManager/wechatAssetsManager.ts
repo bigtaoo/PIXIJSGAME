@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { IAssetsManager } from './IAssetsManager';
 
-// ── digits.png 参数 ───────────────────────────────────────────────────────────
+// ── digits.png parameters ─────────────────────────────────────────────────────
 const DIGIT_W   = 120;
 const DIGIT_H   = 160;
 const DIGIT_GAP = 10;
@@ -24,7 +24,7 @@ export class WechatAssetsManager implements IAssetsManager {
   }
 
   public async loadAssets(): Promise<void> {
-    // 数字精灵图
+    // Digit sprite sheet
     const digitsImg  = await this.loadImageWX('assets/digits.png');
     const digitsBase = this.imageToBaseTexture(digitsImg);
     for (let i = 0; i <= 9; i++) {
@@ -34,22 +34,22 @@ export class WechatAssetsManager implements IAssetsManager {
       );
     }
 
-    // 心形图标
+    // Heart icon
     const heartImg = await this.loadImageWX('assets/heart.png');
     this.textures['heart.png'] = new PIXI.Texture(this.imageToBaseTexture(heartImg));
 
     const heartEmptyImg = await this.loadImageWX('assets/heart_empty.png');
     this.textures['heart_empty.png'] = new PIXI.Texture(this.imageToBaseTexture(heartEmptyImg));
 
-    // 大厅背景图
+    // Lobby background image
     const bgImg = await this.loadImageWX('assets/lobby_bg.png');
     this.textures['lobby_bg.png'] = new PIXI.Texture(this.imageToBaseTexture(bgImg));
 
-    // 每日挑战图标
+    // Daily challenge icon
     const dailyImg = await this.loadImageWX('assets/daily_challenge_icon.png');
     this.textures['daily_challenge_icon.png'] = new PIXI.Texture(this.imageToBaseTexture(dailyImg));
 
-    // 图标：星星 / 奖杯 / 火焰
+    // Icons: star / trophy / fire
     const [starImg, trophyImg, fireImg] = await Promise.all([
       this.loadImageWX('assets/star.png'),
       this.loadImageWX('assets/trophy.png'),
@@ -59,8 +59,8 @@ export class WechatAssetsManager implements IAssetsManager {
     this.textures['trophy.png'] = new PIXI.Texture(this.imageToBaseTexture(trophyImg));
     this.textures['fire.png']   = new PIXI.Texture(this.imageToBaseTexture(fireImg));
 
-    // 爆炸粒子图集（加载失败不影响游戏）
-    await this.loadExplosionAtlasWX().catch(() => {/* 忽略 */});
+    // Explosion particle atlas (load failure does not affect the game)
+    await this.loadExplosionAtlasWX().catch(() => {/* ignore */});
   }
 
   private async loadExplosionAtlasWX(): Promise<void> {
@@ -82,10 +82,11 @@ export class WechatAssetsManager implements IAssetsManager {
   }
 
   /**
-   * 微信小游戏不支持 renderer.generateTexture()，改用 wx.createCanvas() + 2D context
-   * 手动绘制每个程序化纹理，再包装成 PIXI.Texture。
+   * WeChat mini-games do not support renderer.generateTexture(); instead use
+   * wx.createCanvas() + a 2D context to manually draw each programmatic texture
+   * and then wrap it as a PIXI.Texture.
    *
-   * 尺寸与 WebAssetsManager.generateProgrammaticTextures() 保持一致。
+   * Sizes match those used in WebAssetsManager.generateProgrammaticTextures().
    */
   public generateProgrammaticTextures(_renderer: PIXI.Renderer): void {
     const CELL_BASE      = 120;
@@ -134,7 +135,7 @@ export class WechatAssetsManager implements IAssetsManager {
   }
 
   /**
-   * 创建一个临时的离屏 Canvas，执行绘制函数，然后包装为 PIXI.Texture。
+   * Create a temporary off-screen Canvas, execute the draw function, then wrap it as a PIXI.Texture.
    */
   private wxMakeTexture(
     w: number, h: number,
@@ -160,7 +161,7 @@ export class WechatAssetsManager implements IAssetsManager {
   }
 }
 
-// ── 颜色常量（与 graphicsFactory.ts 的 C 对象保持一致）────────────────────────
+// ── Color constants (must stay in sync with the C object in graphicsFactory.ts) ─
 const C_CELL_FILL       = '#FAFAF8';
 const C_CELL_BORDER     = '#E0DAD0';
 const C_SEL_FILL        = '#FBF8EE';
@@ -170,7 +171,7 @@ const C_CLOCK_BORDER    = '#5D4037';
 const C_CLOCK_HAND      = '#3E2723';
 const C_ICON            = '#5D4037';
 
-// ── 工具：Canvas 2D 圆角矩形（兼容不支持 roundRect 的环境）────────────────────
+// ── Utility: Canvas 2D rounded rectangle (compatible with environments that lack roundRect) ──
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ctx2D = any; // wx canvas 2D context — structurally identical to CanvasRenderingContext2D
 
@@ -188,7 +189,7 @@ function roundRect(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: nu
   ctx.closePath();
 }
 
-// ── 格子 ──────────────────────────────────────────────────────────────────────
+// ── Cell ──────────────────────────────────────────────────────────────────────
 
 function wxDrawCell(ctx: Ctx2D, size: number): void {
   const r = Math.round(size * 0.11);
@@ -212,14 +213,14 @@ function wxDrawCellSelected(ctx: Ctx2D, size: number): void {
   ctx.stroke();
 }
 
-// ── 闹钟 ──────────────────────────────────────────────────────────────────────
+// ── Clock ─────────────────────────────────────────────────────────────────────
 
 function wxDrawClockFace(ctx: Ctx2D, radius: number): void {
   const cx = radius;
   const cy = radius;
   const r  = radius - 3;
 
-  // 表盘
+  // Clock face
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle   = C_CLOCK_FACE;
@@ -228,13 +229,13 @@ function wxDrawClockFace(ctx: Ctx2D, radius: number): void {
   ctx.strokeStyle = C_CLOCK_BORDER;
   ctx.stroke();
 
-  // 中心点
+  // Centre dot
   ctx.beginPath();
   ctx.arc(cx, cy, 3, 0, Math.PI * 2);
   ctx.fillStyle = C_CLOCK_BORDER;
   ctx.fill();
 
-  // 4个刻度（12 / 3 / 6 / 9 点）
+  // 4 tick marks (12 / 3 / 6 / 9 o'clock positions)
   ctx.lineWidth   = 3;
   ctx.strokeStyle = C_CLOCK_BORDER;
   ctx.globalAlpha = 0.7;
@@ -257,16 +258,16 @@ function wxDrawClockHand(ctx: Ctx2D, length: number, width: number): void {
   ctx.fill();
 }
 
-// ── 符号 ──────────────────────────────────────────────────────────────────────
+// ── Symbols ───────────────────────────────────────────────────────────────────
 
 function wxDrawPlus(ctx: Ctx2D, w: number, h: number): void {
   const t = Math.round(Math.min(w, h) * 0.22);
   const r = t / 2;
   ctx.fillStyle = C_ICON;
-  // 竖
+  // Vertical bar
   roundRect(ctx, (w - t) / 2, 0, t, h, r);
   ctx.fill();
-  // 横
+  // Horizontal bar
   roundRect(ctx, 0, (h - t) / 2, w, t, r);
   ctx.fill();
 }
@@ -282,7 +283,7 @@ function wxDrawEquals(ctx: Ctx2D, w: number, h: number): void {
   roundRect(ctx, 0, y0 + barH + gap, w, barH, r); ctx.fill();
 }
 
-// ── 按钮图标 ──────────────────────────────────────────────────────────────────
+// ── Button icons ──────────────────────────────────────────────────────────────
 
 function wxDrawRetryIcon(ctx: Ctx2D, size: number): void {
   const cx = size / 2;
@@ -297,7 +298,7 @@ function wxDrawRetryIcon(ctx: Ctx2D, size: number): void {
   ctx.arc(cx, cy, r, -Math.PI * 0.75, Math.PI * 0.67);
   ctx.stroke();
 
-  // 弧末端三角形箭头
+  // Triangular arrowhead at the arc end
   const endA  = Math.PI * 0.67;
   const ax    = cx + Math.cos(endA) * r;
   const ay    = cy + Math.sin(endA) * r;

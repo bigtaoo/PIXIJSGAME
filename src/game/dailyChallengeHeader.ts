@@ -4,18 +4,18 @@
  * Header bar for the Daily Challenge scene.
  *
  * Contains:
- *   - DCHeaderLayout interface（竖/横屏坐标定义）
- *   - portraitDCLayout / landscapeDCLayout（两套布局函数，可在此文件内直接修改坐标）
- *   - DailyChallengeHeader class（PIXI.Container 子类，持有所有 header 元素）
+ *   - DCHeaderLayout interface (portrait/landscape coordinate definitions)
+ *   - portraitDCLayout / landscapeDCLayout (two layout functions; coordinates can be edited directly in this file)
+ *   - DailyChallengeHeader class (PIXI.Container subclass that owns all header elements)
  *
  * Public API:
  *   new DailyChallengeHeader(ctx, onGoLobby)
- *   header.resize(screen)          — 横竖屏切换时调用
- *   header.setScore(n)             — 更新得分显示
- *   header.setTimer(secs)          — 更新倒计时显示
- *   header.rebuildTip(first, second) — 重建提示公式
- *   header.tickTipReset(deltaMs)   — 每帧调用，驱动消除结果自动复位
- *   header.startTipResultTimer()   — 消除成功后调用，启动 500 ms 复位计时
+ *   header.resize(screen)          — call when the screen orientation changes
+ *   header.setScore(n)             — update the score display
+ *   header.setTimer(secs)          — update the countdown display
+ *   header.rebuildTip(first, second) — rebuild the hint formula
+ *   header.tickTipReset(deltaMs)   — call every frame to drive automatic tip reset
+ *   header.startTipResultTimer()   — call after a successful elimination to start the 500 ms reset timer
  */
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
@@ -30,28 +30,28 @@ import { getDailyTarget } from './dailyChallengeConfig';
 // ── Layout interface ──────────────────────────────────────────────────────────
 
 export interface DCHeaderLayout {
-  // 背景条
+  // Background bar
   barX: number; barY: number; barW: number; barH: number;
-  // 图标（daily_challenge_icon.png）
+  // Icon (daily_challenge_icon.png)
   iconX: number; iconY: number; iconH: number;
-  // 返回大厅 hit area
+  // Return-to-lobby hit area
   hitX: number; hitY: number; hitW: number; hitH: number;
-  // 得分：scoreCenterX = 数字区水平中心
+  // Score: scoreCenterX = horizontal centre of the digit region
   scoreCenterX: number; scoreY: number; scoreDigitH: number;
-  // 倒计时：timerRightX = 数字右对齐基准 x
+  // Countdown: timerRightX = right-align baseline x for the digits
   timerRightX: number; timerY: number; timerDigitH: number;
-  // 提示公式（□ + □ = Target）
+  // Hint formula (□ + □ = Target)
   tipY: number; tipSlotW: number; tipSlotH: number;
   tipSlot1X: number; tipPlusX: number;
   tipSlot2X: number; tipEquaX: number;
   tipTargetX: number; tipTargetStep: number;
-  // 音乐按钮
+  // Music button
   musicX: number; musicY: number; musicSize: number;
 }
 
 // ── Layout functions ──────────────────────────────────────────────────────────
 
-/** 竖屏布局（canvas 宽 = GAME_WIDTH = 1080）。 */
+/** Portrait layout (canvas width = GAME_WIDTH = 1080). */
 export function portraitDCLayout(): DCHeaderLayout {
   return {
     barX: 20,  barY: 10, barW: GAME_WIDTH - 40, barH: OFFSET_Y - 20,
@@ -69,9 +69,9 @@ export function portraitDCLayout(): DCHeaderLayout {
 }
 
 /**
- * 横屏布局。
- * barX / barW は scene 内の絶対座標（container の x オフセット不使用）。
- * 坐标可直接在此修改。
+ * Landscape layout.
+ * barX / barW are absolute coordinates within the scene (no container x offset).
+ * Coordinates can be adjusted directly here.
  */
 export function landscapeDCLayout(): DCHeaderLayout {
   const barX = 480;
@@ -125,28 +125,28 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.layout = getDCLayout(screen);
     const L = this.layout;
 
-    // 背景条
+    // Background bar
     this.bar = new PIXI.Graphics();
     drawHeaderBar(this.bar, L.barW, L.barH);
     this.bar.x = L.barX; this.bar.y = L.barY;
     this.addChild(this.bar);
 
-    // 图标
+    // Icon
     this.icon = new PIXI.Sprite(ctx.assets.GetTexture('daily_challenge_icon.png'));
     this.applyIconScale(L);
     this.addChild(this.icon);
 
-    // 得分
+    // Score
     this.scoreDisplay = new DigitDisplay(ctx, Math.round(L.scoreDigitH * 120 / 160), L.scoreDigitH);
     this.scoreDisplay.y = L.scoreY;
     this.addChild(this.scoreDisplay);
 
-    // 倒计时
+    // Countdown
     this.timerDisplay = new DigitDisplay(ctx, Math.round(L.timerDigitH * 120 / 160), L.timerDigitH);
     this.timerDisplay.y = L.timerY;
     this.addChild(this.timerDisplay);
 
-    // 返回 hit area
+    // Return hit area
     this.hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
     this.hit.width  = L.hitW; this.hit.height = L.hitH;
     this.hit.x = L.hitX;     this.hit.y = L.hitY;
@@ -155,16 +155,16 @@ export class DailyChallengeHeader extends PIXI.Container {
       new UIElement({ zIndex: 15, sprite: this.hit, onTap: () => this.onGoLobby() }),
     );
 
-    // 音乐按钮
+    // Music button
     this.buildMusicButton(L);
 
-    // 初始提示（双空槽）
+    // Initial tip (both slots empty)
     this.rebuildTip(null, null);
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /** 横竖屏切换时由 DailyChallengeScene 调用。 */
+  /** Called by DailyChallengeScene when the screen orientation changes. */
   public resize(screen: ScreenConfig): void {
     this.layout = getDCLayout(screen);
     const L = this.layout;
@@ -194,20 +194,20 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.rebuildTip(null, null);
   }
 
-  /** 更新得分数字。 */
+  /** Update the score digits. */
   public setScore(score: number): void {
     this.scoreDisplay.update(score);
     this.scoreDisplay.x = this.layout.scoreCenterX - this.scoreDisplay.totalWidth / 2;
   }
 
-  /** 更新倒计时数字，低于 10 秒变红。 */
+  /** Update the countdown digits; turns red when below 10 seconds. */
   public setTimer(secs: number): void {
     this.timerDisplay.update(secs);
     this.timerDisplay.x    = this.layout.timerRightX - this.timerDisplay.totalWidth;
     this.timerDisplay.tint = secs <= 10 ? 0xff4444 : 0xFFFFFF;
   }
 
-  /** 重建提示公式。first / second 为 null 时显示空槽。 */
+  /** Rebuild the hint formula. When first / second is null an empty slot is shown. */
   public rebuildTip(first: number | null, second: number | null): void {
     if (this.tipContainer) {
       this.removeChild(this.tipContainer);
@@ -242,8 +242,8 @@ export class DailyChallengeHeader extends PIXI.Container {
   }
 
   /**
-   * 返回得分显示区的中心坐标（场景坐标），
-   * 供飞行得分动画定位终点。
+   * Return the centre position of the score display area (in scene coordinates),
+   * used to anchor the flying score animation's end point.
    */
   public getScoreCenterPos(): { x: number; y: number } {
     return {
@@ -252,12 +252,12 @@ export class DailyChallengeHeader extends PIXI.Container {
     };
   }
 
-  /** 消除成功后调用，启动 500 ms 自动复位倒计时。 */
+  /** Call after a successful elimination to start the 500 ms auto-reset countdown. */
   public startTipResultTimer(): void {
     this.tipResultElapsed = 0;
   }
 
-  /** 每帧由 DailyChallengeScene.update() 调用。 */
+  /** Called every frame by DailyChallengeScene.update(). */
   public tickTipReset(deltaMs: number): void {
     if (this.tipResultElapsed < 0) return;
     this.tipResultElapsed += deltaMs;

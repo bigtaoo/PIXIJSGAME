@@ -144,7 +144,7 @@ export class WebAssetsManager implements IAssetsManager {
     this.textures['lobby.png']    = makeTexture(renderer, g => drawLobbyIcon(g,     BTN_SIZE),     BTN_SIZE);
     this.textures['settings.png'] = makeTexture(renderer, g => drawSettingsIcon(g, SETTINGS_SIZE), SETTINGS_SIZE);
 
-    // 字母 "s"（用于飞行加时动画），白色描边，调用方用 tint 着色
+    // Letter "s" (for the flying bonus animation), white outline; callers tint it
     const S_W = 50, S_H = 70;
     this.textures['s.png'] = makeTexture(renderer, g => drawLetterS(g, S_W, S_H), S_W, S_H);
   }

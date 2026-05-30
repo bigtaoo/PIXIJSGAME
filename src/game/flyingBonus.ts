@@ -9,7 +9,7 @@ import { AppContext } from './appContext';
  *   Phase 2 (100-200 ms): hold at click position at scale 2
  *   Phase 3 (200-300 ms): fly to clock, shrink and fade
  *
- * Visual: [plus.png] [digit sprite(s)] [s.png]，全部 tint 为金色（普通）或绿色（combo）。
+ * Visual: [plus.png] [digit sprite(s)] [s.png], all tinted gold (normal) or green (combo).
  */
 export class FlyingBonus extends PIXI.Container {
   private elapsed = 0;
@@ -23,9 +23,9 @@ export class FlyingBonus extends PIXI.Container {
   private static readonly PHASE_FLY  = 100;
   public  static readonly DURATION   = 300;
 
-  // 各精灵的尺寸（在 scale=1 时）
+  // Sprite dimensions at scale=1
   private static readonly SPRITE_H    = 80;
-  private static readonly SPRITE_W    = Math.round(80 * 120 / 160); // 60，digits 等比
+  private static readonly SPRITE_W    = Math.round(80 * 120 / 160); // 60, digits proportional
   private static readonly PLUS_W      = 40;
   private static readonly PLUS_H      = 40;
   private static readonly S_W         = 20;
@@ -57,11 +57,11 @@ export class FlyingBonus extends PIXI.Container {
 
     const digits = bonusSeconds.toString().split('');
     const totalW  = PW + GAP + digits.length * DW + GAP + SW;
-    const startX  = -totalW / 2;  // 居中于 (0, 0)
+    const startX  = -totalW / 2;  // centred at (0, 0)
 
     let curX = startX;
 
-    // 加号
+    // Plus sign
     const plus = new PIXI.Sprite(ctx.assets.GetTexture('plus.png'));
     plus.width  = PW;
     plus.height = PH;
@@ -71,7 +71,7 @@ export class FlyingBonus extends PIXI.Container {
     this.addChild(plus);
     curX += PW + GAP;
 
-    // 数字（可能为 1 位或 2 位）
+    // Digits (may be 1 or 2 digits)
     for (const ch of digits) {
       const d = new PIXI.Sprite(ctx.assets.GetTexture(`${ch}.png`));
       d.width  = DW;
@@ -84,7 +84,7 @@ export class FlyingBonus extends PIXI.Container {
     }
     curX += GAP;
 
-    // 字母 s（可选）
+    // Letter "s" (optional unit suffix)
     if (showUnit) {
       const s = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
       s.width  = SW;

@@ -1,18 +1,18 @@
 /**
  * lobbyLayout.ts
  *
- * 大厅场景（LobbyScene）的布局数据。
+ * Layout data for the lobby scene (LobbyScene).
  *
- * 坐标系：游戏逻辑像素，原点在左上角。
- *   竖屏：宽度 GAME_WIDTH = 1080，高度 GAME_HEIGHT = 1920
- *   横屏：宽度 GAME_HEIGHT = 1920，高度 GAME_WIDTH = 1080
- *       （背景图始终拉伸为 1920×1080，节点坐标与之对齐）
+ * Coordinate system: game logical pixels, origin at top-left.
+ *   Portrait:  width GAME_WIDTH = 1080, height GAME_HEIGHT = 1920
+ *   Landscape: width GAME_HEIGHT = 1920, height GAME_WIDTH = 1080
+ *              (background image is always stretched to 1920×1080; node coordinates align to it)
  *
- * 两套坐标独立维护：
- *   PORTRAIT_NODE_POSITIONS  — 竖屏
- *   LANDSCAPE_NODE_POSITIONS — 横屏（基于 16:9 精确比例预算，可手动微调）
+ * Two independent sets of coordinates:
+ *   PORTRAIT_NODE_POSITIONS  — portrait
+ *   LANDSCAPE_NODE_POSITIONS — landscape (computed from the 16:9 ratio; can be fine-tuned manually)
  *
- * 横屏坐标基准公式（仅首次生成时使用）：
+ * Baseline formula for landscape coordinates (used only when first generated):
  *   x = round(portraitX * GAME_HEIGHT / GAME_WIDTH)   // × 16/9
  *   y = round(portraitY * GAME_WIDTH  / GAME_HEIGHT)  // × 9/16
  */
@@ -21,20 +21,20 @@ import { ScreenConfig } from './screenConfig';
 import { Orientation } from './enums';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
 
-// ── 竖屏节点坐标 ──────────────────────────────────────────────────────────────
+// ── Portrait node coordinates ─────────────────────────────────────────────────
 
 export interface LobbyNodePos {
-  /** 1-based 关卡编号，与 StageData.stageIndex 对应 */
+  /** 1-based stage number, matching StageData.stageIndex */
   stageIndex: number;
-  /** 节点中心 x（逻辑像素） */
+  /** Node centre x (logical pixels) */
   x: number;
-  /** 节点中心 y（逻辑像素） */
+  /** Node centre y (logical pixels) */
   y: number;
 }
 
 /**
- * 19 个关卡节点的竖屏坐标。
- * stageIndex 1 = 地图底部；19 = 地图顶部。
+ * Portrait coordinates for the 19 stage nodes.
+ * stageIndex 1 = bottom of the map; 19 = top of the map.
  */
 const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex:  1, x:  540, y: 1820 },
@@ -60,9 +60,9 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
 
 const PORTRAIT_DAILY_POS = { x: 90, y: 660 } as const;
 
-// ── 横屏节点坐标（背景 1920×1080，与背景拉伸严格对齐）────────────────────────
-// 基准公式：x = round(portraitX * 16/9)，y = round(portraitY * 9/16)
-// 如需微调，直接改这里的数值即可，不影响竖屏。
+// ── Landscape node coordinates (background 1920×1080, strictly aligned to the stretched background) ──
+// Baseline formula: x = round(portraitX * 16/9), y = round(portraitY * 9/16)
+// To fine-tune, change the values here directly without affecting portrait.
 
 const LANDSCAPE_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex:  1, x:  960, y: 1024 },
@@ -104,7 +104,7 @@ export function portraitLobbyLayout(): LobbyLayout {
   };
 }
 
-/** 横屏布局：直接返回预算坐标，与 1920×1080 背景严格对齐。 */
+/** Landscape layout: returns the pre-computed coordinates, strictly aligned to the 1920×1080 background. */
 export function landscapeLobbyLayout(): LobbyLayout {
   return {
     nodePositions:    LANDSCAPE_NODE_POSITIONS,
@@ -112,7 +112,7 @@ export function landscapeLobbyLayout(): LobbyLayout {
   };
 }
 
-/** 根据当前 ScreenConfig 返回对应方向的布局。 */
+/** Return the layout for the current orientation from the given ScreenConfig. */
 export function getLobbyLayout(screen: ScreenConfig): LobbyLayout {
   return screen.orientation === Orientation.Landscape
     ? landscapeLobbyLayout()

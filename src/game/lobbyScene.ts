@@ -12,35 +12,35 @@ import { getLobbyLayout, LobbyLayout } from './lobbyLayout';
 import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
 
-// ── 节点星星尺寸 ──────────────────────────────────────────────────────────────
+// ── Node star dimensions ──────────────────────────────────────────────────────
 const STAR_SIZE    = 18;
 const STAR_GAP     = 2;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
-// ── 探险小路 ──────────────────────────────────────────────────────────────────
-const PATH_COLOR_DONE   = 0x6D4C41; // 深棕，已通过段
-const PATH_COLOR_LOCKED = 0x9E9E9E; // 灰，未解锁段
-const PATH_WIDTH        = 6;        // 线宽（逻辑像素）
-const PATH_DASH         = 14;       // 虚线段长
-const PATH_GAP          = 8;        // 虚线间距
+// ── Adventure path ────────────────────────────────────────────────────────────
+const PATH_COLOR_DONE   = 0x6D4C41; // dark brown, completed segment
+const PATH_COLOR_LOCKED = 0x9E9E9E; // grey, locked segment
+const PATH_WIDTH        = 6;        // line width (logical pixels)
+const PATH_DASH         = 14;       // dash length
+const PATH_GAP          = 8;        // gap between dashes
 const PATH_ALPHA_DONE   = 0.8;
 const PATH_ALPHA_LOCKED = 0.25;
 
-// ── 每日挑战动画 ──────────────────────────────────────────────────────────────
-const GLOW_RADIUS_MIN  = 68;  // 光晕最小半径（比圆形图标半径 65 稍大）
-const GLOW_RADIUS_RANGE = 8;  // 光晕振幅
+// ── Daily challenge animation ─────────────────────────────────────────────────
+const GLOW_RADIUS_MIN  = 68;  // minimum glow radius (slightly larger than the circle icon radius of 65)
+const GLOW_RADIUS_RANGE = 8;  // glow amplitude
 const GLOW_PERIOD_MS   = 1200;
-const PULSE_PERIOD_MS  = 800; // 节点脉冲周期
-const BOUNCE_DURATION  = 100; // 点击弹性动画时长（ms）
+const PULSE_PERIOD_MS  = 800; // node pulse period
+const BOUNCE_DURATION  = 100; // click bounce animation duration (ms)
 
-// ── 每日挑战区图标 + 数字行尺寸 ───────────────────────────────────────────────
+// ── Daily challenge area: icon + digit row dimensions ─────────────────────────
 const DC_ICON_H  = 30;
 const DC_ICON_W  = 30;
 const DC_DIGIT_H = 30;
 const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~23
 const DC_GAP     = 6;
 
-// ── 节点关卡数字尺寸 ──────────────────────────────────────────────────────────
+// ── Node stage number dimensions ─────────────────────────────────────────────
 const NODE_DIGIT_H = 40;
 const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // 30
 
@@ -62,7 +62,7 @@ interface DailyChallengeEntry {
   streakRow:     PIXI.Container;
   streakDisplay: DigitDisplay;
   hit:           PIXI.Sprite;
-  /** 呼吸光晕 Graphics，在 circle 之下 */
+  /** Breathing glow Graphics, rendered below the circle */
   glow:          PIXI.Graphics;
 }
 
@@ -85,14 +85,14 @@ export class LobbyScene extends PIXI.Container {
   private nodeStarContainers: PIXI.Container[] = [];
   private nodeStarSprites:    PIXI.Sprite[][]  = [];
 
-  // ── 动画状态 ────────────────────────────────────────────────────────────────
+  // ── Animation state ──────────────────────────────────────────────────────────
   private pulseMs        = 0;
   private glowMs         = 0;
   private bounceElapsed  = -1;
-  /** 当前关卡节点 Sprite（null 表示所有关卡均已通关）。 */
+  /** Current stage node Sprite (null means all stages are completed). */
   private currentCard: PIXI.Sprite | null = null;
 
-  // ── 路径 / 面板 ───────────────────────────────────────────────────────────────
+  // ── Path / panel ──────────────────────────────────────────────────────────────
   private pathGraphics!: PIXI.Graphics;
   private panelGraphics!: PIXI.Graphics;
 
@@ -123,7 +123,7 @@ export class LobbyScene extends PIXI.Container {
 
   public refresh(): void {
     const maxCompleted = StageManager.getMaxCompleted();
-    this.currentCard = null; // 重置，由下面循环重新赋值
+    this.currentCard = null; // reset; reassigned by the loop below
 
     STAGES.forEach((stage, i) => {
       const card      = this.stageCards[i];
@@ -171,14 +171,14 @@ export class LobbyScene extends PIXI.Container {
 
   private buildUI(): void {
     this.buildBackground();
-    this.buildPath();          // 路径在节点之下
+    this.buildPath();          // path renders below the nodes
     this.buildAdventureMap();
-    this.buildPanel();         // 背景板在每日挑战 / 音乐按钮之下
+    this.buildPanel();         // background panel renders below the daily challenge / music button
     this.buildDailyChallenge();
     this.buildMusicButton();
   }
 
-  // ── update（由 SceneCoordinator 每帧调用）────────────────────────────────────
+  // ── update (called every frame by SceneCoordinator) ──────────────────────────
 
   public update(deltaMs: number): void {
     this.pulseMs += deltaMs;
@@ -204,7 +204,7 @@ export class LobbyScene extends PIXI.Container {
     this.cardTexture         = makeTexture(this.ctx.renderer, g => drawCircleCell(g, sz), sz);
     this.cardSelectedTexture = makeTexture(this.ctx.renderer, g => drawCircleCellSelected(g, sz), sz);
 
-    // 用竖屏布局初始建立节点（resize() 会按当前方向重定位）
+    // Build nodes using the portrait layout initially (resize() repositions them for the current orientation)
     const layout = getLobbyLayout(this.screen);
 
     STAGES.forEach((stage, i) => {
@@ -262,7 +262,7 @@ export class LobbyScene extends PIXI.Container {
     const sz = LobbyScene.DAILY_SIZE;
     const r  = sz / 2;
 
-    // 呼吸光晕（在圆形图标之下）
+    // Breathing glow (rendered below the circular icon)
     const glow = new PIXI.Graphics();
     glow.x = x;
     glow.y = y;
@@ -339,8 +339,8 @@ export class LobbyScene extends PIXI.Container {
   }
 
   /**
-   * 用最新数值刷新每日挑战数字行，并按当前坐标重新居中。
-   * 由 refresh() 和 repositionAll() 共同调用。
+   * Refresh the daily challenge digit rows with the latest values and re-centre them
+   * at the current coordinates.  Called by both refresh() and repositionAll().
    */
   private refreshDailyRows(): void {
     if (!this.dailyEntry) return;
@@ -382,8 +382,9 @@ export class LobbyScene extends PIXI.Container {
   }
 
   /**
-   * 根据当前方向对应的 LobbyLayout 重定位所有节点和每日挑战元素。
-   * 取代原来的 toLogicalPos() 比例映射，使用明确的 layout 坐标。
+   * Reposition all nodes and the daily challenge elements using the LobbyLayout for
+   * the current orientation.  Replaces the old toLogicalPos() ratio mapping with
+   * explicit layout coordinates.
    */
   private repositionAll(): void {
     const layout = getLobbyLayout(this.screen);
@@ -431,11 +432,11 @@ export class LobbyScene extends PIXI.Container {
     this.redrawPanel(pcx, pcy);
   }
 
-  // ── 每日挑战 + 音乐按钮背景板 ──────────────────────────────────────────────────
+  // ── Daily challenge + music button background panel ───────────────────────────
 
   /**
-   * 计算背景板边界，覆盖音乐按钮（上方）+ 每日挑战圆形 + 统计数字行（下方）。
-   * cx/cy 为每日挑战圆心坐标。
+   * Compute the panel bounds covering the music button (above) + the daily challenge
+   * circle + the stats digit rows (below).  cx/cy is the daily challenge circle centre.
    */
   private getPanelBounds(cx: number, cy: number): { x: number; y: number; w: number; h: number } {
     const dr  = LobbyScene.DAILY_SIZE / 2;      // 65
@@ -501,7 +502,7 @@ export class LobbyScene extends PIXI.Container {
     sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
   }
 
-  // ── 探险小路 ────────────────────────────────────────────────────────────────
+  // ── Adventure path ────────────────────────────────────────────────────────────
 
   private buildPath(): void {
     this.pathGraphics = new PIXI.Graphics();
@@ -509,8 +510,8 @@ export class LobbyScene extends PIXI.Container {
   }
 
   /**
-   * 重绘探险小路。节点按 stageIndex 1→19 顺序连线。
-   * 已通过段（两端均 ≤ maxCompleted）用深棕实色；其余用灰色低透明度。
+   * Redraw the adventure path.  Nodes are connected in stageIndex 1→19 order.
+   * Completed segments (both endpoints ≤ maxCompleted) use dark-brown; others use grey at low opacity.
    */
   private refreshPath(): void {
     if (!this.pathGraphics) return;
@@ -530,7 +531,7 @@ export class LobbyScene extends PIXI.Container {
     }
   }
 
-  /** 在 Graphics 上从 (x1,y1) 到 (x2,y2) 画虚线。 */
+  /** Draw a dashed line on the Graphics from (x1,y1) to (x2,y2). */
   private drawDashedLine(
     g: PIXI.Graphics,
     x1: number, y1: number,
@@ -555,9 +556,9 @@ export class LobbyScene extends PIXI.Container {
     }
   }
 
-  // ── 动画更新 ─────────────────────────────────────────────────────────────────
+  // ── Animation updates ─────────────────────────────────────────────────────────
 
-  /** 当前关节点脉冲（scale 1 → 1.03，800ms 循环）。 */
+  /** Current stage node pulse (scale 1 → 1.03, 800 ms loop). */
   private updateCurrentNodePulse(): void {
     if (!this.currentCard) return;
     const t     = (Math.sin(this.pulseMs / PULSE_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
@@ -565,7 +566,7 @@ export class LobbyScene extends PIXI.Container {
     this.currentCard.scale.set(scale);
   }
 
-  /** 每日挑战呼吸光晕（sin 扩缩圆形）。 */
+  /** Daily challenge breathing glow (sin-based expanding/contracting circle). */
   private updateDailyGlow(): void {
     if (!this.dailyEntry) return;
     const t      = (Math.sin(this.glowMs / GLOW_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
@@ -578,12 +579,12 @@ export class LobbyScene extends PIXI.Container {
     g.endFill();
   }
 
-  /** 每日挑战点击弹性反馈（scale 1 → 0.92 → 1，100ms）。 */
+  /** Daily challenge click bounce feedback (scale 1 → 0.92 → 1, 100 ms). */
   private updateDailyBounce(deltaMs: number): void {
     if (this.bounceElapsed < 0 || !this.dailyEntry) return;
     this.bounceElapsed += deltaMs;
     const t = Math.min(this.bounceElapsed / BOUNCE_DURATION, 1);
-    // sin 弧线：t=0 → 1 → 0，让 scale 在中间最小
+    // sin arc: t=0 → 1 → 0, scale is smallest at the midpoint
     const s = 1 - 0.08 * Math.sin(t * Math.PI);
     this.dailyEntry.circle.scale.set(s);
     this.dailyEntry.icon.scale.set(s);

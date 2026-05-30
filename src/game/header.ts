@@ -5,60 +5,60 @@ import { UIElement } from '../inputSystem/uiElement';
 import { Orientation } from './enums';
 import { drawHeaderBar, drawQuestionMark } from './graphicsFactory';
 
-/** 时间警告阈值（秒）：低于此值时闹钟容器变红。 */
+/** Time warning threshold (seconds): below this value the clock container turns red. */
 const WARN_THRESHOLD = 10;
 
-/** 计算指针角度的参考时长（秒）：超过此值时指针停在 12 点。 */
+/** Reference duration (seconds) for computing the hand angle: above this value the hand rests at 12 o'clock. */
 const CLOCK_REF_SECS = 30;
 
-// ── 布局配置 ──────────────────────────────────────────────────────────────────
+// ── Layout configuration ──────────────────────────────────────────────────────
 
 interface HeaderLayout {
-  /** Header 背景条宽度（local 空间）*/
+  /** Header background bar width (local space) */
   barW: number;
   barH: number;
 
-  // ── 提示公式 ──────────────────────────────────────────────────────────────
+  // ── Hint formula ──────────────────────────────────────────────────────────
   tipY: number;
   tipSlotW: number;
   tipSlotH: number;
-  tipSlot1X: number;    // 左槽 x
-  tipPlusX: number;     // 加号 x
-  tipSlot2X: number;    // 右槽 x
-  tipEquaX: number;     // 等号 x
-  tipTargetX: number;   // 目标数字起始 x
-  tipTargetStep: number;// 每个数字字符的步进宽度
+  tipSlot1X: number;    // left slot x
+  tipPlusX: number;     // plus sign x
+  tipSlot2X: number;    // right slot x
+  tipEquaX: number;     // equals sign x
+  tipTargetX: number;   // target digit start x
+  tipTargetStep: number;// step width per digit character
 
-  // ── 闹钟 ──────────────────────────────────────────────────────────────────
+  // ── Clock ─────────────────────────────────────────────────────────────────
   clockX: number;
   clockY: number;
-  clockSize: number;   // 表盘直径（clockRadius = clockSize / 2）
+  clockSize: number;   // face diameter (clockRadius = clockSize / 2)
 
-  // ── 时间数字 ──────────────────────────────────────────────────────────────
+  // ── Time digits ───────────────────────────────────────────────────────────
   timeStartX: number;
   timeY: number;
   timeDigitW: number;
   timeDigitH: number;
   timeDigitGap: number;
 
-  // ── 命数心形 ──────────────────────────────────────────────────────────────
+  // ── Lives hearts ──────────────────────────────────────────────────────────
   livesStartX: number;
   livesY: number;
   heartSize: number;
   heartGap: number;
 
-  // ── 设置按钮 ──────────────────────────────────────────────────────────────
+  // ── Settings button ───────────────────────────────────────────────────────
   settingsX: number;
   settingsY: number;
   settingsSize: number;
 
-  // ── 音乐按钮（紧邻设置按钮左侧）─────────────────────────────────────────────
+  // ── Music button (immediately to the left of the settings button) ─────────
   musicX: number;
   musicY: number;
   musicSize: number;
 }
 
-/** 横屏布局（Header 居于画布右侧，left offset 350，bar 宽 1350）。 */
+/** Landscape layout (Header on the right side of the canvas, left offset 350, bar width 1350). */
 function landscapeLayout(): HeaderLayout {
   return {
     barW: 1350, barH: 250,
@@ -74,8 +74,8 @@ function landscapeLayout(): HeaderLayout {
 }
 
 /**
- * 竖屏布局（Header 居于画布顶部，left offset 30，bar 宽 1020）。
- * GAME_WIDTH=1080，pad=30 → bar width = 1020。
+ * Portrait layout (Header at the top of the canvas, left offset 30, bar width 1020).
+ * GAME_WIDTH=1080, pad=30 → bar width = 1020.
  */
 function portraitLayout(): HeaderLayout {
   return {
@@ -94,41 +94,41 @@ function portraitLayout(): HeaderLayout {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 export class Header extends PIXI.Container {
-  // ── 时间显示 ──────────────────────────────────────────────────────
+  // ── Time display ──────────────────────────────────────────────────
   private timeSprites: PIXI.Sprite[]  = [];
   private lastDisplayedSeconds        = -1;
 
-  // ── 提示公式 ──────────────────────────────────────────────────────
-  /** 整个提示区容器，每次重建时销毁旧的、重建新的。 */
+  // ── Hint formula ──────────────────────────────────────────────────
+  /** Container for the entire hint area; destroyed and rebuilt on each update. */
   private tipContainer!: PIXI.Container;
-  /** 消除成功后短暂展示完整等式的计时器，-1 = 空闲。 */
+  /** Timer for briefly showing the complete equation after a match; -1 = idle. */
   private resultElapsed = -1;
   private static readonly RESULT_DISPLAY_MS = 500;
 
-  // ── 命数心形 ──────────────────────────────────────────────────────
+  // ── Lives hearts ──────────────────────────────────────────────────
   private livesSprites: PIXI.Sprite[] = [];
 
-  // ── 背景条 ────────────────────────────────────────────────────────
+  // ── Background bar ────────────────────────────────────────────────
   private bgGraphics!: PIXI.Graphics;
 
-  // ── 闹钟 ──────────────────────────────────────────────────────────
-  /** 闹钟整体容器（表盘 + 指针），弹跳 / 变色在此容器上操作。 */
+  // ── Clock ─────────────────────────────────────────────────────────
+  /** Overall clock container (face + hand); bounce/colour change operate on this container. */
   private clockContainer!: PIXI.Container;
   private clockFaceSprite!: PIXI.Sprite;
   private clockHandSprite!: PIXI.Sprite;
 
-  /** 弹跳动画进度，-1 = 空闲。 */
+  /** Bounce animation progress; -1 = idle. */
   private bounceElapsed                  = -1;
   private static readonly BOUNCE_DURATION = 200; // ms
 
-  /** 时间数字金色高亮进度，-1 = 空闲。 */
+  /** Gold highlight progress for the time digits; -1 = idle. */
   private highlightElapsed                  = -1;
   private static readonly HIGHLIGHT_DURATION = 300; // ms
 
-  /** 时间预警抖动累积时间（ms）。仅在 lastDisplayedSeconds < WARN_THRESHOLD 时推进。 */
+  /** Accumulated time for the low-time warning shake (ms). Only advances when lastDisplayedSeconds < WARN_THRESHOLD. */
   private warnShakeMs = 0;
 
-  /** 心形碎裂动画队列。 */
+  /** Queue of heart-breaking animations. */
   private heartAnims: Array<{
     sprite:    PIXI.Sprite;
     callback:  () => void;
@@ -140,7 +140,7 @@ export class Header extends PIXI.Container {
   private settingsSprite!: PIXI.Sprite;
   private musicSprite!:    PIXI.Sprite;
 
-  /** 当前布局配置（由最近一次 resize 决定）。 */
+  /** Current layout configuration (determined by the most recent resize call). */
   private layout: HeaderLayout;
 
   constructor(
@@ -165,35 +165,35 @@ export class Header extends PIXI.Container {
 
   // ── Public API ────────────────────────────────────────────────────
 
-  /** 目标数变化时调用：销毁旧提示容器，重建新的（显示空槽）。 */
+  /** Called when the target number changes: destroys the old tip container and rebuilds it (showing empty slots). */
   public updateTarget(target: number): void {
     this._target = target;
     this.resultElapsed = -1;
     this.rebuildTip(null, null);
   }
 
-  /** 玩家选中第一个数字后调用，将其填入左槽。 */
+  /** Called when the player selects the first number; fills it into the left slot. */
   public setFirstSelected(value: number): void {
     this.resultElapsed = -1;
     this.rebuildTip(value, null);
   }
 
-  /** 取消选中 / 进入新 Target 时重置为双空槽。 */
+  /** Reset to two empty slots on deselect or when entering a new target. */
   public resetTip(): void {
     this.resultElapsed = -1;
     this.rebuildTip(null, null);
   }
 
   /**
-   * 消除成功后调用：短暂展示完整等式（a + b = Target），
-   * 约 500 ms 后自动重置为空槽。
+   * Called after a successful elimination: briefly shows the full equation (a + b = Target),
+   * then automatically resets to empty slots after approximately 500 ms.
    */
   public showMatchResult(a: number, b: number): void {
     this.rebuildTip(a, b);
     this.resultElapsed = 0;
   }
 
-  /** 每帧由 GameScene 调用，驱动弹跳动画 + 消除结果计时器 + 时间预警抖动 + 高亮 + 心形动画。 */
+  /** Called every frame by GameScene; drives bounce, elimination result timer, warning shake, highlight, and heart animations. */
   public update(deltaMs: number): void {
     this.updateBounce(deltaMs);
     this.updateResultReset(deltaMs);
@@ -202,12 +202,12 @@ export class Header extends PIXI.Container {
     this.updateHeartAnims(deltaMs);
   }
 
-  /** 更新时间显示 + 闹钟指针 + 预警变色。秒数未变时为空操作。 */
+  /** Update the time display, clock hand, and warning colour. No-op when the second count has not changed. */
   public updateTime(seconds: number): void {
     if (seconds === this.lastDisplayedSeconds) return;
     this.lastDisplayedSeconds = seconds;
 
-    // 数字显示（左对齐，紧靠闹钟右侧，不补零）
+    // Digit display (left-aligned, immediately to the right of the clock, no zero-padding)
     const s = Math.max(0, seconds).toString();
     for (const d of this.timeSprites) d.visible = false;
     for (let i = 0; i < s.length && i < this.timeSprites.length; i++) {
@@ -216,11 +216,11 @@ export class Header extends PIXI.Container {
       sprite.visible = true;
     }
 
-    // 指针旋转：ratio=1 → 12点（满时间），随时间减少顺时针旋转
+    // Hand rotation: ratio=1 → 12 o'clock (full time); rotates clockwise as time decreases
     const ratio = Math.min(Math.max(seconds, 0) / CLOCK_REF_SECS, 1);
     this.clockHandSprite.rotation = Math.PI + (1 - ratio) * Math.PI * 2;
 
-    // 时间预警变色（高亮动画进行中时跳过数字 tint，由 updateHighlight 管理）
+    // Warning colour change (skip digit tint while the highlight animation is running — managed by updateHighlight)
     const warnColor = (seconds > 0 && seconds < WARN_THRESHOLD) ? 0xFF5252 : 0xFFFFFF;
     this.clockFaceSprite.tint = warnColor;
     this.clockHandSprite.tint = warnColor;
@@ -229,7 +229,7 @@ export class Header extends PIXI.Container {
     }
   }
 
-  /** 更新命数显示：满心 / 空心贴图切换。 */
+  /** Update the lives display: switch between full-heart and empty-heart textures. */
   public updateLives(lives: number): void {
     for (let i = 0; i < this.livesSprites.length; i++) {
       this.livesSprites[i].texture = i < lives
@@ -238,16 +238,16 @@ export class Header extends PIXI.Container {
     }
   }
 
-  /** 加时到达时触发弹跳动画 + 时间数字金色高亮。 */
+  /** Trigger the bounce animation and the gold highlight on the time digits when bonus time arrives. */
   public triggerClockBounce(): void {
     this.bounceElapsed   = 0;
     this.highlightElapsed = 0;
   }
 
   /**
-   * 触发第 liveIndex 颗心（0-based）的碎裂动画。
-   * 动画结束后调用 callback（通常由 GameScene 传入，用于切换贴图）。
-   * 总时长约 230ms：scale 1→1.3 (80ms) + scale 1.3→0 (150ms)。
+   * Trigger the breaking animation for heart at liveIndex (0-based).
+   * Calls callback when the animation finishes (typically passed in by GameScene to swap the texture).
+   * Total duration approximately 230 ms: scale 1→1.3 (80 ms) + scale 1.3→0 (150 ms).
    */
   public triggerHeartLost(liveIndex: number, callback: () => void): void {
     const sprite = this.livesSprites[liveIndex];
@@ -255,7 +255,7 @@ export class Header extends PIXI.Container {
     this.heartAnims.push({ sprite, callback, elapsed: 0, done: false });
   }
 
-  /** 返回第 liveIndex 颗心（0-based）中心点在 Header 父容器中的坐标。 */
+  /** Return the centre position of heart at liveIndex (0-based) in the Header's parent coordinate space. */
   public getHeartCenter(liveIndex: number): { x: number; y: number } {
     const L = this.layout;
     return {
@@ -265,8 +265,9 @@ export class Header extends PIXI.Container {
   }
 
   /**
-   * 切换方向时由父场景调用，重新选择布局并重定位所有子元素。
-   * 同时重建提示区（rebuildTip）以匹配新的坐标体系。
+   * Called by the parent scene when the orientation changes; selects a new layout
+   * and repositions all child elements. Also rebuilds the tip area (rebuildTip)
+   * to match the new coordinate system.
    */
   public resize(screen: ScreenConfig): void {
     this.layout = screen.orientation === Orientation.Landscape
@@ -275,24 +276,24 @@ export class Header extends PIXI.Container {
 
     const L = this.layout;
 
-    // 自身偏移
+    // Self offset
     if (screen.orientation === Orientation.Landscape) {
       this.x = 350; this.y = 10;
     } else {
       this.x = 30;  this.y = 10;
     }
 
-    // 背景条
+    // Background bar
     this.bgGraphics.clear();
     drawHeaderBar(this.bgGraphics, L.barW, L.barH);
 
-    // 闹钟容器
+    // Clock container
     this.clockContainer.x = L.clockX;
     this.clockContainer.y = L.clockY;
     this.clockFaceSprite.width  = L.clockSize;
     this.clockFaceSprite.height = L.clockSize;
 
-    // 时间数字精灵
+    // Time digit sprites
     for (let i = 0; i < this.timeSprites.length; i++) {
       const s  = this.timeSprites[i];
       s.width  = L.timeDigitW;
@@ -300,9 +301,9 @@ export class Header extends PIXI.Container {
       s.x      = L.timeStartX + i * (L.timeDigitW + L.timeDigitGap);
       s.y      = L.timeY;
     }
-    this.lastDisplayedSeconds = -1; // 强制下一帧刷新
+    this.lastDisplayedSeconds = -1; // force refresh on the next frame
 
-    // 命数心形
+    // Lives hearts
     for (let i = 0; i < this.livesSprites.length; i++) {
       const s  = this.livesSprites[i];
       s.width  = L.heartSize;
@@ -311,26 +312,26 @@ export class Header extends PIXI.Container {
       s.y      = L.livesY;
     }
 
-    // 设置按钮
+    // Settings button
     this.settingsSprite.width  = L.settingsSize;
     this.settingsSprite.height = L.settingsSize;
     this.settingsSprite.x      = L.settingsX;
     this.settingsSprite.y      = L.settingsY;
 
-    // 音乐按钮
+    // Music button
     this.musicSprite.width  = L.musicSize;
     this.musicSprite.height = L.musicSize;
     this.musicSprite.x      = L.musicX;
     this.musicSprite.y      = L.musicY;
 
-    // 提示区：销毁旧容器，用新坐标重建
+    // Tip area: destroy the old container and rebuild with the new coordinates
     this.rebuildTip(null, null);
-    this._target = this._target; // no-op，保持 target 不变
+    this._target = this._target; // no-op; keeps target unchanged
   }
 
   /**
-   * 返回闹钟圆心在 Header 父容器（GameScene 本地坐标）中的位置，
-   * 供飞行加时动画定位终点。
+   * Return the position of the clock centre in the Header's parent coordinate space
+   * (GameScene local coordinates), used to anchor the flying bonus animation's end point.
    */
   public getClockCenter(): { x: number; y: number } {
     const r = this.layout.clockSize / 2;
@@ -340,7 +341,7 @@ export class Header extends PIXI.Container {
     };
   }
 
-  // ── 私有构建方法 ──────────────────────────────────────────────────
+  // ── Private build methods ─────────────────────────────────────────
 
   private buildBackground(): void {
     this.bgGraphics = new PIXI.Graphics();
@@ -358,9 +359,9 @@ export class Header extends PIXI.Container {
   }
 
   /**
-   * 提示区：□ + □ = Target，玩家选中数字后逐步填入空槽。
-   * @param first  左槽数值，null = 显示空槽
-   * @param second 右槽数值，null = 显示空槽
+   * Tip area: □ + □ = Target; slots are filled in as the player selects numbers.
+   * @param first  Left slot value; null = show empty slot
+   * @param second Right slot value; null = show empty slot
    */
   private rebuildTip(first: number | null, second: number | null): void {
     if (this.tipContainer) {
@@ -370,25 +371,25 @@ export class Header extends PIXI.Container {
     this.tipContainer = new PIXI.Container();
     const L = this.layout;
 
-    // 左槽
+    // Left slot
     this.addSlotOrValue(this.tipContainer, first,  L.tipSlot1X, L.tipY, L.tipSlotW, L.tipSlotH);
 
-    // 加号
+    // Plus sign
     const plus   = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
     plus.width   = L.tipSlotW; plus.height = L.tipSlotH;
     plus.x       = L.tipPlusX; plus.y      = L.tipY;
     this.tipContainer.addChild(plus);
 
-    // 右槽
+    // Right slot
     this.addSlotOrValue(this.tipContainer, second, L.tipSlot2X, L.tipY, L.tipSlotW, L.tipSlotH);
 
-    // 等号
+    // Equals sign
     const equa   = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
     equa.width   = L.tipSlotW; equa.height = L.tipSlotH;
     equa.x       = L.tipEquaX; equa.y      = L.tipY;
     this.tipContainer.addChild(equa);
 
-    // 目标数字（可能为 1–2 位）
+    // Target number (may be 1 or 2 digits)
     this._target.toString().split('').forEach((ch, i) => {
       const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
       s.width   = L.tipSlotW; s.height = L.tipSlotH;
@@ -401,9 +402,9 @@ export class Header extends PIXI.Container {
   }
 
   /**
-   * 在容器内的 (x, y) 位置绘制空槽或数字精灵。
-   * - value === null → 绘制圆角矩形空槽（灰色边框 + "?" 文字）
-   * - value !== null → 绘制对应数字精灵（两位数时并排缩放至槽宽）
+   * Draw an empty slot or a digit sprite at (x, y) inside the container.
+   * - value === null → draw a rounded-rectangle empty slot (grey border + "?" mark)
+   * - value !== null → draw the corresponding digit sprite (two-digit values are scaled side-by-side to fit the slot width)
    */
   private addSlotOrValue(
     container: PIXI.Container,
@@ -416,7 +417,7 @@ export class Header extends PIXI.Container {
       g.beginFill(0xF0F0F0, 1);
       g.drawRoundedRect(x, y, w, h, 10);
       g.endFill();
-      // 问号：程序绘制，替代原 PIXI.Text('?')
+      // Question mark: drawn programmatically, replacing the original PIXI.Text('?')
       drawQuestionMark(g, x + w / 2, y + h / 2, h);
       container.addChild(g);
     } else {
@@ -427,7 +428,7 @@ export class Header extends PIXI.Container {
         s.x       = x; s.y      = y;
         container.addChild(s);
       } else {
-        // 两位数：各占约 48% 宽度，中间留少量间距
+        // Two-digit number: each digit takes ~48% of the width with a small gap
         const dw = Math.floor((w - 4) / 2);
         digits.forEach((ch, i) => {
           const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
@@ -439,7 +440,7 @@ export class Header extends PIXI.Container {
     }
   }
 
-  /** 在构造时首次建立提示（双空槽）。 */
+  /** Build the initial tip (both slots empty) at construction time. */
   private buildTip(): void {
     this.rebuildTip(null, null);
   }
@@ -451,13 +452,13 @@ export class Header extends PIXI.Container {
     this.clockContainer.x = L.clockX;
     this.clockContainer.y = L.clockY;
 
-    // 表盘
+    // Clock face
     this.clockFaceSprite         = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_face.png'));
     this.clockFaceSprite.width   = L.clockSize;
     this.clockFaceSprite.height  = L.clockSize;
     this.clockContainer.addChild(this.clockFaceSprite);
 
-    // 指针：pivot 在顶部中心，放置于表盘圆心
+    // Hand: pivot at top-centre, placed at the clock face centre
     const r = L.clockSize / 2;
     this.clockHandSprite           = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
     this.clockHandSprite.width     = 6;
@@ -465,12 +466,12 @@ export class Header extends PIXI.Container {
     this.clockHandSprite.pivot.set(3, 0);
     this.clockHandSprite.x        = r;
     this.clockHandSprite.y        = r;
-    this.clockHandSprite.rotation = Math.PI; // 12 点位置
+    this.clockHandSprite.rotation = Math.PI; // 12 o'clock position
     this.clockContainer.addChild(this.clockHandSprite);
 
     this.addChild(this.clockContainer);
 
-    // 时间数字（最多 3 位，左对齐紧跟闹钟右侧）
+    // Time digits (up to 3 digits, left-aligned immediately to the right of the clock)
     for (let i = 0; i < 3; i++) {
       const s  = new PIXI.Sprite(this.ctx.assets.GetTexture('0.png'));
       s.width  = L.timeDigitW;
@@ -531,7 +532,7 @@ export class Header extends PIXI.Container {
     sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
   }
 
-  // ── 消除结果计时器 ────────────────────────────────────────────────
+  // ── Elimination result timer ──────────────────────────────────────
 
   private updateResultReset(deltaMs: number): void {
     if (this.resultElapsed < 0) return;
@@ -542,11 +543,12 @@ export class Header extends PIXI.Container {
     }
   }
 
-  // ── 时间预警抖动 ───────────────────────────────────────────────────
+  // ── Low-time warning shake ────────────────────────────────────────
 
   /**
-   * 当剩余时间 > 0 且 < WARN_THRESHOLD 时，对闹钟容器和时间数字施加
-   * 左右正弦抖动（振幅 3px，周期约 100ms）。
+   * When remaining time is > 0 and < WARN_THRESHOLD, apply a left/right
+   * sinusoidal shake to the clock container and time digits
+   * (amplitude 3px, period approximately 100 ms).
    */
   private updateWarnShake(deltaMs: number): void {
     const warn = this.lastDisplayedSeconds > 0 && this.lastDisplayedSeconds < WARN_THRESHOLD;
@@ -565,7 +567,7 @@ export class Header extends PIXI.Container {
     }
   }
 
-  // ── 弹跳动画 ─────────────────────────────────────────────────────
+  // ── Bounce animation ─────────────────────────────────────────────
 
   private updateBounce(deltaMs: number): void {
     if (this.bounceElapsed < 0) return;
@@ -579,16 +581,17 @@ export class Header extends PIXI.Container {
       return;
     }
 
-    // 正弦弹跳：0 → 1 → 0，峰值缩放 1.25
+    // Sinusoidal bounce: 0 → 1 → 0, peak scale 1.25
     const scale = 1 + 0.25 * Math.sin(t * Math.PI);
     this.clockContainer.scale.set(scale);
   }
 
-  // ── 时间数字金色高亮 ──────────────────────────────────────────────
+  // ── Time digit gold highlight ─────────────────────────────────────
 
   /**
-   * 加时到达后，将可见时间数字从金色渐变回正常色（白色或预警红色）。
-   * 采用 ease-in-out 曲线，总时长 HIGHLIGHT_DURATION。
+   * After bonus time arrives, fade the visible time digits from gold back to
+   * normal colour (white or warning red) using an ease-in-out curve.
+   * Total duration: HIGHLIGHT_DURATION.
    */
   private updateHighlight(deltaMs: number): void {
     if (this.highlightElapsed < 0) return;
@@ -597,14 +600,14 @@ export class Header extends PIXI.Container {
     // ease-in-out
     const eased = raw < 0.5 ? 2 * raw * raw : -1 + (4 - 2 * raw) * raw;
 
-    // 目标色：预警时红色，否则白色
+    // Target colour: red during warning, otherwise white
     const targetTint = (this.lastDisplayedSeconds > 0 && this.lastDisplayedSeconds < WARN_THRESHOLD)
       ? 0xFF5252 : 0xFFFFFF;
     const toR = (targetTint >> 16) & 0xFF;
     const toG = (targetTint >>  8) & 0xFF;
     const toB =  targetTint        & 0xFF;
 
-    // 金色 #FFD700 → targetTint
+    // Gold #FFD700 → targetTint
     const r = Math.round(0xFF + (toR - 0xFF) * eased);
     const g = Math.round(0xD7 + (toG - 0xD7) * eased);
     const b = Math.round(0x00 + (toB - 0x00) * eased);
@@ -618,13 +621,13 @@ export class Header extends PIXI.Container {
     }
   }
 
-  // ── 心形碎裂动画 ──────────────────────────────────────────────────
+  // ── Heart breaking animation ──────────────────────────────────────
 
   /**
-   * 对正在播放碎裂动画的心形执行 scale pop：
-   *   Phase 1 (0–80ms):  scale 1 → 1.3
-   *   Phase 2 (80–230ms): scale 1.3 → 0
-   * 动画结束时调用 callback（由 GameScene 传入，切换为空心贴图）。
+   * Apply a scale pop to a heart that is currently playing its breaking animation:
+   *   Phase 1 (0–80 ms):   scale 1 → 1.3
+   *   Phase 2 (80–230 ms): scale 1.3 → 0
+   * Calls callback when the animation finishes (passed in by GameScene to swap to the empty-heart texture).
    */
   private updateHeartAnims(deltaMs: number): void {
     for (const anim of this.heartAnims) {
@@ -644,7 +647,7 @@ export class Header extends PIXI.Container {
         }
       }
     }
-    // 清理已完成的动画
+    // Remove completed animations
     this.heartAnims = this.heartAnims.filter(a => !a.done);
   }
 }

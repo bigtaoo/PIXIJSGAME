@@ -252,7 +252,7 @@ export class DailyChallengeScene extends PIXI.Container {
   private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
     this.resetHintTimer();
 
-    // 显示完整等式，500 ms 后自动复位
+    // Show the complete equation; auto-reset after 500 ms
     this.header.rebuildTip(a, b);
     this.header.startTipResultTimer();
 

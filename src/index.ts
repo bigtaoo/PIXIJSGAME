@@ -72,8 +72,8 @@ window.onload = async () => {
   if (process.env.NODE_ENV !== 'production') {
     const isSwapped = localStorage.getItem(DEBUG_KEY) === '1';
     const btn = document.createElement('button');
-    btn.textContent = isSwapped ? '竖屏 →横屏' : '横屏 →竖屏';
-    btn.title = '调试：切换横/竖屏后刷新页面';
+    btn.textContent = isSwapped ? 'Portrait →Landscape' : 'Landscape →Portrait';
+    btn.title = 'Debug: reload after toggling landscape/portrait';
     btn.style.cssText = [
       'position:fixed', 'top:10px', 'right:10px', 'z-index:9999',
       'padding:6px 12px', 'font-size:13px', 'cursor:pointer',

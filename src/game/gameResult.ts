@@ -6,7 +6,7 @@ import { ScreenConfig } from './screenConfig';
 import { Orientation } from './enums';
 import { GAME_WIDTH } from './consts';
 
-// ── 星星行尺寸（固定，两种方向相同）────────────────────────────────────────────
+// ── Star row dimensions (fixed, identical in both orientations) ───────────────
 
 const STAR_SIZE    = 72;
 const STAR_GAP     = 8;

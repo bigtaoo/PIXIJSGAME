@@ -85,112 +85,112 @@ declare module wx {
   function getMenuButtonBoundingClientRect(): IRect;
 
   interface IInnerAudioContext {
-    /** 音频资源的地址，用于直接播放。2.2.3 开始支持云文件ID */
+    /** URL of the audio resource for direct playback. Cloud file IDs supported since 2.2.3 */
     src: string;
 
-    /** 开始播放的位置（单位：s），默认为 0 */
+    /** Playback start position (seconds); defaults to 0 */
     startTime: number;
 
-    /** 是否自动开始播放，默认为 false */
+    /** Whether to start playing automatically; defaults to false */
     autoplay: boolean;
 
-    /** 是否循环播放，默认为 false */
+    /** Whether to loop; defaults to false */
     loop: boolean;
 
-    /** 是否遵循系统静音开关，默认为 true。当此参数为 false 时，即使用户打开了静音开关，也能继续发出声音。从 2.3.0 版本开始此参数不生效，使用 wx.setInnerAudioOption 接口统一设置。 */
+    /** Whether to respect the system mute switch; defaults to true. When false the audio plays even if the user has muted. Deprecated since 2.3.0 — use wx.setInnerAudioOption instead. */
     obeyMuteSwitch: boolean;
 
-    /** 音量。范围 0~1。默认为 1 */
+    /** Volume in the range 0–1; defaults to 1 */
     volume: number;
 
-    /** 播放速度。范围 0.5-2.0，默认为 1。（Android 需要 6 及以上版本） */
+    /** Playback rate in the range 0.5–2.0; defaults to 1. (Android 6+ required) */
     playbackRate: number;
 
-    /** 当前音频的长度（单位 s）。只有在当前有合法的 src 时返回（只读） */
+    /** Total duration of the audio (seconds). Only returned when src is valid. (read-only) */
     readonly duration: number;
 
-    /** 当前音频的播放位置（单位 s）。只有在当前有合法的 src 时返回，时间保留小数点后 6 位（只读） */
+    /** Current playback position (seconds), retained to 6 decimal places. Only returned when src is valid. (read-only) */
     readonly currentTime: number;
 
-    /** 当前是是否暂停或停止状态（只读） */
+    /** Whether the audio is currently paused or stopped. (read-only) */
     readonly paused: boolean;
 
-    /** 音频缓冲的时间点，仅保证当前播放时间点到此时间点内容已缓冲（只读） */
+    /** Buffered time point; guarantees content is buffered from the current position up to this point. (read-only) */
     readonly buffered: number;
 
-    /** 播放 */
+    /** Start playback */
     play();
 
-    /** 暂停。暂停后的音频再播放会从暂停处开始播放 */
+    /** Pause. Resuming after a pause restarts from the paused position. */
     pause();
 
-    /** 停止。停止后的音频再播放会从头开始播放。 */
+    /** Stop. Resuming after a stop restarts from the beginning. */
     stop();
 
-    /** 跳转到指定位置 */
+    /** Seek to the specified position */
     seek(position: number);
 
-    /** 销毁当前实例 */
+    /** Destroy the current instance */
     destroy();
 
-    /** 监听音频进入可以播放状态的事件。但不保证后面可以流畅播放 */
+    /** Listen for the event when the audio enters a playable state (does not guarantee smooth playback) */
     onCanplay(cb: () => {});
 
-    /** 取消监听音频进入可以播放状态的事件 */
+    /** Remove listener for the canplay event */
     offCanplay(cb: () => {});
 
-    /** 监听音频播放事件 */
+    /** Listen for the audio play event */
     onPlay(cb: () => {});
 
-    /** 取消监听音频播放事件 */
+    /** Remove listener for the play event */
     offPlay(cb: () => {});
 
-    /** 监听音频暂停事件 */
+    /** Listen for the audio pause event */
     onPause(cb: () => {});
 
-    /** 取消监听音频暂停事件 */
+    /** Remove listener for the pause event */
     offPause(cb: () => {});
 
-    /** 监听音频停止事件 */
+    /** Listen for the audio stop event */
     onStop(cb: () => {});
 
-    /** 取消监听音频停止事件 */
+    /** Remove listener for the stop event */
     offStop(cb: () => {});
 
-    /** 监听音频自然播放至结束的事件 */
+    /** Listen for the event when audio playback reaches the end naturally */
     onEnded(cb: () => {});
 
-    /** 取消监听音频自然播放至结束的事件 */
+    /** Remove listener for the ended event */
     offEnded(cb: () => {});
 
-    /** 监听音频播放进度更新事件 */
+    /** Listen for audio playback progress update events */
     onTimeUpdate(cb: () => {});
 
-    /** 取消监听音频播放进度更新事件 */
+    /** Remove listener for timeupdate events */
     offTimeUpdate(cb: () => {});
 
-    /** 监听音频播放错误事件 */
+    /** Listen for the audio error event */
     onError(cb: () => {});
 
-    /** 取消监听音频播放错误事件 */
+    /** Remove listener for the error event */
     offError(cb: () => {});
 
-    /** 监听音频加载中事件。当音频因为数据不足，需要停下来加载时会触发 */
+    /** Listen for the audio buffering event (triggered when audio stops to buffer due to insufficient data) */
     onWaiting(cb: () => {});
 
-    /** 取消监听音频加载中事件 */
+    /** Remove listener for the waiting event */
     offWaiting(cb: () => {});
 
-    /** 监听音频进行跳转操作的事件 */
+    /** Listen for the seek start event */
     onSeeking(cb: () => {});
 
-    /** 取消监听音频进行跳转操作的事件 */
+    /** Remove listener for the seeking event */
     offSeeking(cb: () => {});
 
-    /** 监听音频完成跳转操作的事件 */
+    /** Listen for the seek complete event */
     onSeeked(cb: () => {});
 
-    /** 取消监听音频完成跳转操作的事件 */
+    /** Remove listener for the seeked event */
     offSeeked(cb: () => {});
   }
 
@@ -280,7 +280,7 @@ declare module wx {
     ) => void;
   }
 
-  /** 监听用户点击菜单「收藏」按钮时触发的事件（安卓7.0.15起支持，iOS 暂不支持 */
+  /** Listen for the event triggered when the user taps the "Favourite" menu button (supported on Android 7.0.15+; not yet on iOS) */
   function onAddToFavorites(
     fn: () => {
       title: string;
@@ -290,7 +290,7 @@ declare module wx {
     }
   ): void;
 
-  /** 获取系统信息 */
+  /** Get system information */
   function getSystemInfoSync(): {
     windowWidth: number;
     windowHeight: number;
@@ -357,7 +357,7 @@ declare module wx {
     userInfo: {
       nickName: string;
       avatarUrl: string;
-      /** 0: 未知 1: 男 2: 女 */
+      /** 0: unknown 1: male 2: female */
       gender: 0 | 1 | 2;
       country: string;
       city: string;
