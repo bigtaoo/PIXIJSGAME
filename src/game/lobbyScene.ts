@@ -22,12 +22,12 @@ const STAR_PAD_Y   = 4;
 
 // ── Adventure path ────────────────────────────────────────────────────────────
 const PATH_COLOR_DONE   = 0x6D4C41; // dark brown, completed segment
-const PATH_COLOR_LOCKED = 0x9E9E9E; // grey, locked segment
+const PATH_COLOR_LOCKED = 0x8B6E47; // mid warm-brown, locked segment
 const PATH_WIDTH        = 6;        // line width (logical pixels)
 const PATH_DASH         = 14;       // dash length
 const PATH_GAP          = 8;        // gap between dashes
 const PATH_ALPHA_DONE   = 0.8;
-const PATH_ALPHA_LOCKED = 0.25;
+const PATH_ALPHA_LOCKED = 0.55;
 
 // ── Daily challenge animation ─────────────────────────────────────────────────
 const GLOW_RADIUS_MIN  = 68;  // minimum glow radius (slightly larger than the circle icon radius of 65)
@@ -378,7 +378,7 @@ export class LobbyScene extends PIXI.Container {
     this.dailyEntry.streakDisplay.update(streakDays);
     const streakW = DC_ICON_W + DC_GAP + this.dailyEntry.streakDisplay.totalWidth;
     this.dailyEntry.streakRow.x       = x - streakW / 2;
-    this.dailyEntry.streakRow.y       = y + dr + (best > 0 ? 32 : 8);
+    this.dailyEntry.streakRow.y       = y + dr + (best > 0 ? 82 : 58);
     this.dailyEntry.streakRow.visible = true;
   }
 
@@ -444,6 +444,7 @@ export class LobbyScene extends PIXI.Container {
 
     const { x: pcx, y: pcy } = layout.dailyChallengePos;
     this.redrawPanel(pcx, pcy);
+    this.refreshPath();
   }
 
   // ── Daily challenge + music button background panel ───────────────────────────
@@ -535,11 +536,11 @@ export class LobbyScene extends PIXI.Container {
     const maxCompleted = StageManager.getMaxCompleted();
 
     for (let i = 0; i < positions.length - 1; i++) {
-      const a = positions[i]!;
-      const b = positions[i + 1]!;
-      const done  = a.stageIndex <= maxCompleted && b.stageIndex <= maxCompleted;
+      const a     = positions[i]!;
+      const b     = positions[i + 1]!;
+      const done  = a.stageIndex <= maxCompleted; // segment is "done" if its start node is completed
       const color = done ? PATH_COLOR_DONE : PATH_COLOR_LOCKED;
-      const alpha = done ? PATH_ALPHA_DONE  : PATH_ALPHA_LOCKED;
+      const alpha = done ? PATH_ALPHA_DONE : PATH_ALPHA_LOCKED;
       this.pathGraphics.lineStyle(PATH_WIDTH, color, alpha);
       this.drawDashedLine(this.pathGraphics, a.x, a.y, b.x, b.y);
     }
