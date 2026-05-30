@@ -202,6 +202,10 @@ export class DailyChallengeScene extends PIXI.Container {
     this.addChild(this.effectLayer.flyingLayer);
     this.addChild(this.resultOverlay);
 
+    // Apply the real screen dimensions — without this the overlay uses the
+    // hardcoded constructor defaults until the next external resize() call.
+    this.resultOverlay.resize(this.screen);
+
     this.syncGrid();
     this.header.setScore(0);
     this.header.setTimer(this.state.remainingSeconds);

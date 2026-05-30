@@ -137,12 +137,12 @@ export function landscapeDCLayout(): DCHeaderLayout {
   const timerRightX  = clockCx + clockSize / 2 + 120;     // 1295
 
   const trophySize   = 60;
-  const trophyX      = timerRightX + 20;                  // 1315
+  const trophyX      = timerRightX + 70;                  // 1315
   const trophyY      = Math.round(cy - trophySize / 2);
 
   const scoreDigitH  = 65;
   const scoreY       = Math.round(cy - scoreDigitH / 2);
-  const scoreCenterX = trophyX + trophySize + 110;        // 1485
+  const scoreCenterX = trophyX + trophySize + 50;        // 1485
 
   const btnSize   = 52;
   const rightEdge = barX + barW;                          // 1780
