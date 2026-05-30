@@ -200,22 +200,25 @@ export function drawRetryIcon(g: PIXI.Graphics, size: number): void {
   g.lineStyle(sw, C.icon, 1);
   g.arc(cx, cy, r, -Math.PI * 0.75, Math.PI * 0.67);
 
-  // Triangular arrowhead at the arc end
+  // Triangular arrowhead at the arc end.
+  // Base sits at the arc endpoint; tip extends in the travel direction.
   const endA  = Math.PI * 0.67;
-  const ax    = cx + Math.cos(endA) * r;
+  const ax    = cx + Math.cos(endA) * r;  // arc endpoint (= base centre)
   const ay    = cy + Math.sin(endA) * r;
-  const tA    = endA + Math.PI / 2; // tangent direction (arc travel direction)
-  const ah    = sw * 2.5;           // arrowhead length
-  const hw    = sw * 1.3;           // arrowhead half-width
-  const backA = tA + Math.PI;       // opposite to tangent (towards arrowhead base)
-  const perpA = tA + Math.PI / 2;   // perpendicular to tangent
-  // Centre of the base edge (behind the tip)
-  const bx = ax + Math.cos(backA) * ah;
-  const by = ay + Math.sin(backA) * ah;
+  const tA    = endA + Math.PI / 2;       // tangent = travel direction
+  const ah    = sw * 2.5;                 // arrowhead length (base → tip)
+  const hw    = sw * 1.3;                 // arrowhead half-width
+  const perpA = tA + Math.PI / 2;        // perpendicular to tangent
+  // Slide the base 3 px back so it overlaps the arc stroke for a seamless join.
+  const overlap = 3;
+  const bx = ax - Math.cos(tA) * overlap;
+  const by = ay - Math.sin(tA) * overlap;
+  const tipX = bx + Math.cos(tA) * ah;
+  const tipY = by + Math.sin(tA) * ah;
   g.lineStyle(0);
   g.beginFill(C.icon);
   g.drawPolygon([
-    ax, ay,                                                    // arrowhead tip
+    tipX, tipY,                                                // arrowhead tip
     bx + Math.cos(perpA) * hw, by + Math.sin(perpA) * hw,    // base corner 1
     bx - Math.cos(perpA) * hw, by - Math.sin(perpA) * hw,    // base corner 2
   ]);

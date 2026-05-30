@@ -38,22 +38,9 @@ window.onload = async () => {
   app.stage.addChild(coordinator);
 
   // ── Resize helper ──────────────────────────────────────────────────
-  // In debug mode the orientation may be force-swapped via localStorage;
-  // read it once at startup so the entire session uses consistent dimensions.
-  const DEBUG_KEY = 'debugOrientationSwapped';
-  const orientationSwapped =
-    process.env.NODE_ENV !== 'production' &&
-    localStorage.getItem(DEBUG_KEY) === '1';
-
-  const getSize = (): [number, number] =>
-    orientationSwapped
-      ? [window.innerHeight, window.innerWidth]
-      : [window.innerWidth,  window.innerHeight];
-
   const doResize = (): void => {
-    const [w, h] = getSize();
-    app.renderer.resize(w, h);
-    coordinator.resize(w, h);
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+    coordinator.resize(window.innerWidth, window.innerHeight);
   };
 
   doResize();
@@ -65,28 +52,6 @@ window.onload = async () => {
     canvas.removeEventListener('pointerdown', startMusicOnce);
   };
   canvas.addEventListener('pointerdown', startMusicOnce);
-
-  // ── Debug: orientation-toggle button (development build only) ───────
-  // Clicking toggles the stored preference and reloads — the freshly
-  // initialised game then picks up the correct dimensions from scratch.
-  if (process.env.NODE_ENV !== 'production') {
-    const isSwapped = localStorage.getItem(DEBUG_KEY) === '1';
-    const btn = document.createElement('button');
-    btn.textContent = isSwapped ? 'Portrait →Landscape' : 'Landscape →Portrait';
-    btn.title = 'Debug: reload after toggling landscape/portrait';
-    btn.style.cssText = [
-      'position:fixed', 'top:10px', 'right:10px', 'z-index:9999',
-      'padding:6px 12px', 'font-size:13px', 'cursor:pointer',
-      'background:rgba(0,0,0,0.55)', 'color:#fff',
-      'border:1px solid rgba(255,255,255,0.6)', 'border-radius:6px',
-      'font-family:sans-serif', 'user-select:none',
-    ].join(';');
-    btn.addEventListener('click', () => {
-      localStorage.setItem(DEBUG_KEY, isSwapped ? '0' : '1');
-      location.reload();
-    });
-    document.body.appendChild(btn);
-  }
 
   app.ticker.add(() => {
     coordinator.update(app.ticker.elapsedMS);

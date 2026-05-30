@@ -58,7 +58,7 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex: 19, x:  506, y:  200 },
 ];
 
-const PORTRAIT_DAILY_POS = { x: 90, y: 660 } as const;
+const PORTRAIT_DAILY_POS = { x: 177, y: 660 } as const;  // left margin 50px: 50 + DAILY_SIZE/2(127)
 
 // ── Landscape node coordinates (background 1920×1080, strictly aligned to the stretched background) ──
 // Baseline formula: x = round(portraitX * 16/9), y = round(portraitY * 9/16)

@@ -53,8 +53,8 @@ export interface DCHeaderLayout {
   timerRightX: number; timerY: number; timerDigitH: number;
   // Trophy icon before score
   trophyX: number; trophyY: number; trophySize: number;
-  // Score display, centred around scoreCenterX
-  scoreCenterX: number; scoreY: number; scoreDigitH: number;
+  // Score display, left-aligned from scoreX
+  scoreX: number; scoreY: number; scoreDigitH: number;
   // Hint formula
   tipY: number; tipSlotW: number; tipSlotH: number;
   tipSlot1X: number; tipPlusX: number;
@@ -70,51 +70,65 @@ export interface DCHeaderLayout {
 export function portraitDCLayout(): DCHeaderLayout {
   const barX = DC_HEADER_X_PORTRAIT;
   const barW = DC_HEADER_BAR_W_PORTRAIT;
-  const barH = OFFSET_Y - 20;                    // 280
-  const cy   = 10 + barH / 2;                    // 150  ← content centre y
+  const barH = 260;
 
-  const slotW = 65, slotH = 80;
-  const tipY  = Math.round(cy - slotH / 2);      // 110
+  // Two-row layout:
+  //   Row 1 (centre y ≈ 65):  hint formula (left) + music / dc-icon buttons (right)
+  //   Row 2 (centre y ≈ 195): clock + timer (left) + trophy + score (right)
+  const r1 = 65;
+  const r2 = 195;
 
-  const clockSize = 100;
-  const clockCx   = barX + barW / 2;             // 540
-  const clockX    = clockCx - clockSize / 2;     // 490
-  const clockY    = cy - clockSize / 2;          // 100
+  // Back icon — vertically centred across the full bar height
+  const backIconH = 90;
+  const backIconX = barX + 15;
+  const backIconY = Math.round(barH / 2 - backIconH / 2); // 85
 
-  const timerDigitH  = 70;
-  const timerY       = Math.round(cy - timerDigitH / 2);  // 115
-  const timerRightX  = clockCx + clockSize / 2 + 130;     // 720
+  // Hint formula (row 1) — 1.2×
+  const slotW = Math.round(62 * 1.2);  // 74
+  const slotH = Math.round(74 * 1.2);  // 89
+  const tipY  = Math.round(r1 - slotH / 2);  // 21
+  const tip0  = 145;                           // start after back icon
 
-  const trophySize   = 65;
-  const trophyX      = timerRightX + 20;                  // 740
-  const trophyY      = Math.round(cy - trophySize / 2);   // 117
-
-  const scoreDigitH  = 70;
-  const scoreY       = Math.round(cy - scoreDigitH / 2);  // 115
-  const scoreCenterX = trophyX + trophySize + 110;        // 915
-
-  const btnSize   = 52;
+  // Buttons (right side) — vertically centred in bar, shifted -50px left
+  const btnSize   = 102;
   const rightEdge = barX + barW;                          // 1060
-  const dcIconX   = rightEdge - btnSize - 15;             // 993
-  const musicX    = dcIconX - btnSize - 10;               // 931
+  const dcIconX   = rightEdge - btnSize - 12 - 50;        // 896
+  const musicX    = dcIconX - btnSize - 8;                 // 786
+  const btnY      = Math.round(barH / 2 - btnSize / 2);   // 79
+
+  // Clock + timer (row 2) — clock 1.2×
+  const clockSize   = Math.round(88 * 1.2);               // 106
+  const clockX      = 145;
+  const clockY      = Math.round(r2 - clockSize / 2);     // 142
+  const timerDigitH = 66;
+  const timerY      = Math.round(r2 - timerDigitH / 2); // 157
+  const timerRightX = clockX + clockSize + 130;           // 381
+
+  // Trophy + score (row 2, after timer)
+  const trophySize = 80;
+  const trophyX    = timerRightX + 70;                  // 433 (+50px)
+  const trophyY    = Math.round(r2 - trophySize / 2);   // 150
+  const scoreDigitH = 66;
+  const scoreX     = trophyX + trophySize + 10;         // 523
+  const scoreY     = Math.round(r2 - scoreDigitH / 2);  // 157
 
   return {
     barX, barY: 10, barW, barH,
-    backIconX: barX + 15, backIconY: Math.round(cy - 45), backIconH: 90,
+    backIconX, backIconY, backIconH,
     hitX: barX, hitY: 80, hitW: 145, hitH: 160,
     clockX, clockY, clockSize,
     timerRightX, timerY, timerDigitH,
     trophyX, trophyY, trophySize,
-    scoreCenterX, scoreY, scoreDigitH,
+    scoreX, scoreY, scoreDigitH,
     tipY, tipSlotW: slotW, tipSlotH: slotH,
-    tipSlot1X: 145,
-    tipPlusX:  145 + slotW + 8,
-    tipSlot2X: 145 + (slotW + 8) * 2,
-    tipEquaX:  145 + (slotW + 8) * 3,
-    tipTargetX: 145 + (slotW + 8) * 4,
-    tipTargetStep: 68,
-    dcIconX, dcIconY: 17, dcIconSize: btnSize,
-    musicX,  musicY: 17,  musicSize: btnSize,
+    tipSlot1X: tip0,
+    tipPlusX:  tip0 + (slotW + 8),
+    tipSlot2X: tip0 + (slotW + 8) * 2,
+    tipEquaX:  tip0 + (slotW + 8) * 3,
+    tipTargetX: tip0 + (slotW + 8) * 4,
+    tipTargetStep: Math.round(66 * 1.2),  // 79
+    dcIconX, dcIconY: btnY, dcIconSize: btnSize,
+    musicX,  musicY:  btnY, musicSize:  btnSize,
   };
 }
 
@@ -136,18 +150,22 @@ export function landscapeDCLayout(): DCHeaderLayout {
   const timerY       = Math.round(cy - timerDigitH / 2);
   const timerRightX  = clockCx + clockSize / 2 + 120;     // 1295
 
-  const trophySize   = 60;
-  const trophyX      = timerRightX + 70;                  // 1315
+  // Buttons inline with content row — 1.5× the original 52 px.
+  const btnSize   = 78;
+  const rightEdge = barX + barW;                          // 1780
+  const dcIconX   = rightEdge - btnSize - 12;             // 1690
+  const musicX    = dcIconX - btnSize - 10;               // 1602
+  const btnY      = Math.round(cy - btnSize / 2);         // 111
+
+  // Trophy: original 60 px × 1.5 = 90 px, shifted 20 px right.
+  const trophySize   = 90;
+  const trophyX      = timerRightX + 40 + 20;             // 1355
   const trophyY      = Math.round(cy - trophySize / 2);
 
+  // Score: left-aligned after trophy, ample space before music button.
   const scoreDigitH  = 65;
   const scoreY       = Math.round(cy - scoreDigitH / 2);
-  const scoreCenterX = trophyX + trophySize + 50;        // 1485
-
-  const btnSize   = 52;
-  const rightEdge = barX + barW;                          // 1780
-  const dcIconX   = rightEdge - btnSize - 15;             // 1713
-  const musicX    = dcIconX - btnSize - 10;               // 1651
+  const scoreX       = trophyX + trophySize + 12;         // 1457
 
   return {
     barX, barY: 10, barW, barH,
@@ -156,7 +174,7 @@ export function landscapeDCLayout(): DCHeaderLayout {
     clockX, clockY, clockSize,
     timerRightX, timerY, timerDigitH,
     trophyX, trophyY, trophySize,
-    scoreCenterX, scoreY, scoreDigitH,
+    scoreX, scoreY, scoreDigitH,
     tipY, tipSlotW: slotW, tipSlotH: slotH,
     tipSlot1X: barX + 30,
     tipPlusX:  barX + 30 + slotW + 8,
@@ -164,8 +182,8 @@ export function landscapeDCLayout(): DCHeaderLayout {
     tipEquaX:  barX + 30 + (slotW + 8) * 3,
     tipTargetX: barX + 30 + (slotW + 8) * 4,
     tipTargetStep: 68,
-    dcIconX, dcIconY: 17, dcIconSize: btnSize,
-    musicX,  musicY: 17,  musicSize: btnSize,
+    dcIconX, dcIconY: btnY, dcIconSize: btnSize,
+    musicX,  musicY:  btnY, musicSize:  btnSize,
   };
 }
 
@@ -189,6 +207,7 @@ export class DailyChallengeHeader extends PIXI.Container {
   private tipContainer!:    PIXI.Container;
   private tipResultElapsed = -1;
   private musicSprite!:     PIXI.Sprite;
+  private dcIconSprite!:    PIXI.Sprite;
   private layout:           DCHeaderLayout;
 
   constructor(
@@ -303,12 +322,18 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.musicSprite.x      = L.musicX;
     this.musicSprite.y      = L.musicY;
 
+    const dcScale = L.dcIconSize / Math.max(this.dcIconSprite.texture.width, this.dcIconSprite.texture.height);
+    this.dcIconSprite.width  = this.dcIconSprite.texture.width  * dcScale;
+    this.dcIconSprite.height = this.dcIconSprite.texture.height * dcScale;
+    this.dcIconSprite.x = L.dcIconX + (L.dcIconSize - this.dcIconSprite.width)  / 2;
+    this.dcIconSprite.y = L.dcIconY + (L.dcIconSize - this.dcIconSprite.height) / 2;
+
     this.rebuildTip(null, null);
   }
 
   public setScore(score: number): void {
     this.scoreDisplay.update(score);
-    this.scoreDisplay.x = this.layout.scoreCenterX - this.scoreDisplay.totalWidth / 2;
+    this.scoreDisplay.x = this.layout.scoreX;
   }
 
   public setTimer(secs: number): void {
@@ -363,7 +388,7 @@ export class DailyChallengeHeader extends PIXI.Container {
   /** Centre of the score area in scene coordinates (used for flying score animation). */
   public getScoreCenterPos(): { x: number; y: number } {
     return {
-      x: this.layout.scoreCenterX,
+      x: this.layout.scoreX + this.scoreDisplay.totalWidth / 2,
       y: this.layout.scoreY + this.layout.scoreDigitH / 2,
     };
   }
@@ -409,6 +434,7 @@ export class DailyChallengeHeader extends PIXI.Container {
     dcBtn.height = dcBtn.texture.height * scale;
     dcBtn.x = L.dcIconX + (L.dcIconSize - dcBtn.width)  / 2;
     dcBtn.y = L.dcIconY + (L.dcIconSize - dcBtn.height) / 2;
+    this.dcIconSprite = dcBtn;
     this.addChild(dcBtn);
     this.ctx.input.registerUI(new UIElement({
       zIndex: 15,

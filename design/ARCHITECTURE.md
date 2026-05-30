@@ -1,6 +1,6 @@
 # 架构文档
 
-**版本：** v1.2
+**版本：** v1.3
 **日期：** 2026年5月
 
 ---
@@ -167,7 +167,7 @@ StageConfig（关卡配置）
 
 ---
 
-## 7. 已修复的关键 Bug（v1.2）
+## 7. 已修复的关键 Bug（v1.2 / v1.3）
 
 ### 7.1 数字 alpha 残留（numbers.ts）
 
@@ -215,6 +215,47 @@ StageConfig（关卡配置）
 - `consts.ts` 新增 `HEADER_X_PORTRAIT=30`、`HEADER_BAR_W_PORTRAIT=1020`、`HEADER_X_LANDSCAPE=350`、`HEADER_BAR_W_LANDSCAPE=1350`。
 - `ScreenConfig.gridSize`：宽度约束改为对应方向的 header bar 宽度。
 - `ScreenConfig.offsetX`：从 header bar 左边界（`HEADER_X_*`）开始居中，格子左右边界与 Header 对齐。
+
+### 7.6 时间耗尽不重置棋盘（gameScene.ts）
+
+**旧行为：** 时间归零扣命 → 调 `retryStage()` 从第一个 target 重新开始，所有已消除的格子复原。
+
+**新行为：** 时间归零扣命 → 清除当前选中 → 补 30s → **继续当前棋盘原状**。仅当 lives=0 且不看广告时才真正 game over + 重置。`tryExtraLife()` 中同理（不再调 `retryStage`）。
+
+### 7.7 通关点击大厅后进度未记录（sceneCoordinator.ts + gameScene.ts）
+
+**原因 A（async 竞态）：** `showGame()` 等广告 `await` 期间玩家点大厅，await 结束后 `showGame()` 继续覆盖大厅场景。修复：用 `navGeneration` 计数器；`showLobby()`/`showDailyChallenge()` 递增，await 后检测不一致则提前 return。
+
+**原因 B（防御性）：** `GameScene.persistWinIfComplete()` 在 `showLobby()` 调用，确保 `isGameEnd && allTargetsCleared` 时二次写入星级和 maxCompleted（幂等）。
+
+### 7.8 每日挑战格子与 Header 不对齐（dailyChallengeHeader.ts + screenConfig.ts）
+
+**原因：** DC Header bar 为 `barX=20, barW=1040`，但 `ScreenConfig` 使用游戏关卡 Header 的常量（`barX=30, barW=1020`），导致格子整体偏移。
+
+**修复：** `ScreenConfig.setGridBounds()` 方法允许各场景传入自己的 header bar 边界；`dailyChallengeHeader.ts` 导出 `DC_HEADER_X_*` / `DC_HEADER_BAR_W_*` 常量；`DailyChallengeScene.applyGridDims()` 调用 `setGridBounds()`。
+
+### 7.9 每日挑战结算弹窗位置错误（dailyChallengeScene.ts）
+
+**同 7.3**：`buildScene()` 创建 `resultOverlay` 后未调 `resize(screen)`，首次显示时用硬编码默认坐标。修复：`buildScene()` 末尾补调 `resultOverlay.resize(this.screen)`。
+
+### 7.10 每日挑战 Header UI 重构（dailyChallengeHeader.ts）
+
+**变更：** 从"顶角小图标 + 独立内容行"改为全元素同行对齐。
+
+**新布局（主内容行，y=150 上下居中）：**
+`公式` | `闹钟 + 倒计时` | `奖杯 + 分数(左对齐)` | `音乐按钮 + 排行榜按钮`
+
+- 音乐 / 排行榜按钮移入内容行右端（与公式、时钟同高），portrait/landscape 均 78px（原 52px × 1.5）
+- 奖杯：portrait 82px（55 × 1.5）右移 20px；landscape 90px（60 × 1.5）右移 20px
+- 分数由居中改为**左对齐**，`scoreX` = 奖杯右边界 + 8px，避免有限空间下居中时压入奖杯区域
+- `getScoreCenterPos()` 返回 `scoreX + totalWidth / 2`（飞分动画终点）
+- 接口字段 `scoreCenterX` 已重命名为 `scoreX`
+
+### 7.12 重试按钮箭头方向错误（graphicsFactory.ts）
+
+**现象：** retry 图标的三角形尖端在弧线末端，应为底边在末端。
+
+**修复：** `drawRetryIcon()` 中将基边中心放在弧线端点 `(ax, ay)`，尖端沿切线方向延伸 `ah` 距离，并将基边整体向弧线内退 3px 以覆盖弧线末端，接缝更自然。
 
 ---
 

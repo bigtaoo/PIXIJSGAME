@@ -74,20 +74,57 @@ function landscapeLayout(): HeaderLayout {
 }
 
 /**
- * Portrait layout (Header at the top of the canvas, left offset 30, bar width 1020).
- * GAME_WIDTH=1080, pad=30 → bar width = 1020.
+ * Portrait layout — two-row design (Header at the top, left offset 30, bar width 1020).
+ *   Row 1 (centre y ≈ 75): hint formula only, horizontally centred
+ *   Row 2 (centre y ≈ 200): clock (1.5×) + time + hearts + music + settings
  */
 function portraitLayout(): HeaderLayout {
+  const barH = 280;
+  const r1   = 75;   // row-1 vertical centre (hint formula)
+  const r2   = 200;  // row-2 vertical centre (clock / time / hearts / music / settings)
+
+  // Clock + time: centred vertically in the bar (barH/2 = 140)
+  const clockCenterY  = barH / 2;            // 140
+  const clockSize     = 158;
+  const clockX        = 15;
+  const clockY        = clockCenterY - clockSize / 2;  // 61
+  const timeDigitH    = 135;
+  const timeDigitW    = 99;
+  const timeDigitGap  = 4;
+  const timeStartX    = clockX + clockSize + 8; // 181
+
+  // Hearts (row 2) — 1.5× size
+  const heartSize   = Math.round(62 * 1.5);  // 93
+  const heartGap    = 10;
+  const livesStartX = timeStartX + 3 * (timeDigitW + timeDigitGap) + 10; // 499
+  const livesY      = r2 - heartSize / 2;   // 169
+
+  // Music + settings (row 2) — 1.5× size
+  const heartsRight = livesStartX + 3 * heartSize + 2 * heartGap;        // 685
+  const btnSize     = Math.round(65 * 1.5);  // 98
+  const musicX      = heartsRight + 14;      // 699
+  const settingsX   = musicX + btnSize + 8;  // 805
+
+  // Hint formula — row 1, left edge aligned with hearts (livesStartX)
+  const slotW = 70, slotH = 80;
+  const tipTargetStep = 72;
+  const tip0 = livesStartX;                  // 499 — left-aligned with hearts
+  const tipY = r1 - slotH / 2;              // 35
+
   return {
-    barW: 1020, barH: 250,
-    tipY: 80, tipSlotW: 70, tipSlotH: 90,
-    tipSlot1X: 20, tipPlusX: 100, tipSlot2X: 180, tipEquaX: 260,
-    tipTargetX: 340, tipTargetStep: 75,
-    clockX: 510, clockY: 85, clockSize: 70,
-    timeStartX: 590, timeY: 95, timeDigitW: 44, timeDigitH: 60, timeDigitGap: 4,
-    livesStartX: 748, livesY: 93, heartSize: 52, heartGap: 8,
-    settingsX: 960, settingsY: 20, settingsSize: 52,
-    musicX:    900, musicY:    20, musicSize:    52,
+    barW: 1020, barH,
+    tipY, tipSlotW: slotW, tipSlotH: slotH,
+    tipSlot1X: tip0,
+    tipPlusX:  tip0 + (slotW + 8),
+    tipSlot2X: tip0 + (slotW + 8) * 2,
+    tipEquaX:  tip0 + (slotW + 8) * 3,
+    tipTargetX: tip0 + (slotW + 8) * 4,
+    tipTargetStep,
+    clockX, clockY, clockSize,
+    timeStartX, timeY: clockCenterY - timeDigitH / 2, timeDigitW, timeDigitH, timeDigitGap,
+    livesStartX, livesY, heartSize, heartGap,
+    settingsX, settingsY: r2 - btnSize / 2, settingsSize: btnSize,
+    musicX,    musicY:    r2 - btnSize / 2, musicSize:    btnSize,
   };
 }
 

@@ -36,12 +36,12 @@ const GLOW_PERIOD_MS   = 1200;
 const PULSE_PERIOD_MS  = 800; // node pulse period
 const BOUNCE_DURATION  = 100; // click bounce animation duration (ms)
 
-// ── Daily challenge area: icon + digit row dimensions ─────────────────────────
-const DC_ICON_H  = 30;
-const DC_ICON_W  = 30;
-const DC_DIGIT_H = 30;
-const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~23
-const DC_GAP     = 6;
+// ── Daily challenge area: icon + digit row dimensions (1.5 × 1.3 = 1.95× original) ─
+const DC_ICON_H  = 59;
+const DC_ICON_W  = 59;
+const DC_DIGIT_H = 59;
+const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~44
+const DC_GAP     = 12;
 
 // ── Node stage number dimensions ─────────────────────────────────────────────
 const NODE_DIGIT_H = 40;
@@ -69,13 +69,13 @@ interface DailyChallengeEntry {
   glow:          PIXI.Graphics;
 }
 
-const MUSIC_BTN_SIZE = 56;
+const MUSIC_BTN_SIZE = 109;  // 56 × 1.5 × 1.3
 
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
   private static readonly NODE_SIZE  = 100;
-  private static readonly DAILY_SIZE = 130;
+  private static readonly DAILY_SIZE = 254;  // 130 × 1.5 × 1.3
 
   private bg!: PIXI.Sprite;
 
