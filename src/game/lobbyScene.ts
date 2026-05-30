@@ -13,9 +13,12 @@ import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
 
 // ── Node star dimensions ──────────────────────────────────────────────────────
-const STAR_SIZE    = 18;
-const STAR_GAP     = 2;
+const STAR_SIZE    = 22;
+const STAR_GAP     = 3;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
+// Padding around stars for the white pill background
+const STAR_PAD_X   = 6;
+const STAR_PAD_Y   = 4;
 
 // ── Adventure path ────────────────────────────────────────────────────────────
 const PATH_COLOR_DONE   = 0x6D4C41; // dark brown, completed segment
@@ -242,6 +245,16 @@ export class LobbyScene extends PIXI.Container {
 
   private buildStarRow(): { container: PIXI.Container; sprites: PIXI.Sprite[] } {
     const container = new PIXI.Container();
+
+    // White pill background — makes stars legible on any map background.
+    const pillW = TOTAL_STAR_W + STAR_PAD_X * 2;
+    const pillH = STAR_SIZE    + STAR_PAD_Y * 2;
+    const pill  = new PIXI.Graphics();
+    pill.beginFill(0xFFFFFF, 0.88);
+    pill.drawRoundedRect(-STAR_PAD_X, -STAR_PAD_Y, pillW, pillH, pillH / 2);
+    pill.endFill();
+    container.addChild(pill);
+
     const sprites: PIXI.Sprite[] = [];
     for (let i = 0; i < 3; i++) {
       const s    = new PIXI.Sprite(this.ctx.assets.GetTexture('star.png'));
@@ -249,7 +262,8 @@ export class LobbyScene extends PIXI.Container {
       s.height   = STAR_SIZE;
       s.x        = i * (STAR_SIZE + STAR_GAP);
       s.y        = 0;
-      s.tint     = 0xEAB830;
+      s.tint     = 0x888888;
+      s.alpha    = 0.45;
       container.addChild(s);
       sprites.push(s);
     }

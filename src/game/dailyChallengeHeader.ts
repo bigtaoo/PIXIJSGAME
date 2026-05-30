@@ -3,19 +3,20 @@
  *
  * Header bar for the Daily Challenge scene.
  *
- * Contains:
- *   - DCHeaderLayout interface (portrait/landscape coordinate definitions)
- *   - portraitDCLayout / landscapeDCLayout (two layout functions; coordinates can be edited directly in this file)
- *   - DailyChallengeHeader class (PIXI.Container subclass that owns all header elements)
+ * Layout (both orientations):
+ *   Top-right corner : music-toggle button + leaderboard/lobby icon (small)
+ *   Main content row : [formula] … [clock + timer] … [trophy + score]
+ *   All main-row elements are vertically centred within the bar.
  *
  * Public API:
- *   new DailyChallengeHeader(ctx, onGoLobby)
- *   header.resize(screen)          — call when the screen orientation changes
- *   header.setScore(n)             — update the score display
- *   header.setTimer(secs)          — update the countdown display
- *   header.rebuildTip(first, second) — rebuild the hint formula
- *   header.tickTipReset(deltaMs)   — call every frame to drive automatic tip reset
- *   header.startTipResultTimer()   — call after a successful elimination to start the 500 ms reset timer
+ *   new DailyChallengeHeader(ctx, onGoLobby, screen)
+ *   header.resize(screen)
+ *   header.setScore(n)
+ *   header.setTimer(secs)
+ *   header.rebuildTip(first, second)
+ *   header.tickTipReset(deltaMs)
+ *   header.startTipResultTimer()
+ *   header.getScoreCenterPos()
  */
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
@@ -27,74 +28,144 @@ import { DigitDisplay } from './digitDisplay';
 import { GAME_WIDTH, OFFSET_Y } from './consts';
 import { getDailyTarget } from './dailyChallengeConfig';
 
+// ── Header-bar bounds (exported for ScreenConfig.setGridBounds) ───────────────
+
+export const DC_HEADER_X_PORTRAIT     = 20;
+export const DC_HEADER_BAR_W_PORTRAIT  = GAME_WIDTH - 40; // 1040
+export const DC_HEADER_X_LANDSCAPE    = 480;
+export const DC_HEADER_BAR_W_LANDSCAPE = 1300;
+
+/** Seconds at which the DC timer is considered "full" (hand at 12 o'clock). */
+const DC_TIMER_REF_SECS = 90;
+const WARN_THRESHOLD    = 10;
+const RESULT_DISPLAY_MS = 500;
+
 // ── Layout interface ──────────────────────────────────────────────────────────
 
 export interface DCHeaderLayout {
-  // Background bar
   barX: number; barY: number; barW: number; barH: number;
-  // Icon (daily_challenge_icon.png)
-  iconX: number; iconY: number; iconH: number;
-  // Return-to-lobby hit area
+  // Back/lobby icon (top-left, doubles as lobby button hit-area)
+  backIconX: number; backIconY: number; backIconH: number;
   hitX: number; hitY: number; hitW: number; hitH: number;
-  // Score: scoreCenterX = horizontal centre of the digit region
-  scoreCenterX: number; scoreY: number; scoreDigitH: number;
-  // Countdown: timerRightX = right-align baseline x for the digits
+  // Clock face (same design as game header)
+  clockX: number; clockY: number; clockSize: number;
+  // Countdown digits, right-aligned to timerRightX
   timerRightX: number; timerY: number; timerDigitH: number;
-  // Hint formula (□ + □ = Target)
+  // Trophy icon before score
+  trophyX: number; trophyY: number; trophySize: number;
+  // Score display, centred around scoreCenterX
+  scoreCenterX: number; scoreY: number; scoreDigitH: number;
+  // Hint formula
   tipY: number; tipSlotW: number; tipSlotH: number;
   tipSlot1X: number; tipPlusX: number;
   tipSlot2X: number; tipEquaX: number;
   tipTargetX: number; tipTargetStep: number;
-  // Music button
-  musicX: number; musicY: number; musicSize: number;
+  // Top-right small buttons
+  dcIconX: number; dcIconY: number; dcIconSize: number;
+  musicX: number;  musicY: number;  musicSize: number;
 }
 
 // ── Layout functions ──────────────────────────────────────────────────────────
 
-// Exported so DailyChallengeScene can pass these to ScreenConfig.setGridBounds().
-export const DC_HEADER_X_PORTRAIT    = 20;
-export const DC_HEADER_BAR_W_PORTRAIT = GAME_WIDTH - 40; // 1040
-export const DC_HEADER_X_LANDSCAPE   = 480;
-export const DC_HEADER_BAR_W_LANDSCAPE = 1300;
-
-/** Portrait layout (canvas width = GAME_WIDTH = 1080). */
 export function portraitDCLayout(): DCHeaderLayout {
+  const barX = DC_HEADER_X_PORTRAIT;
+  const barW = DC_HEADER_BAR_W_PORTRAIT;
+  const barH = OFFSET_Y - 20;                    // 280
+  const cy   = 10 + barH / 2;                    // 150  ← content centre y
+
+  const slotW = 65, slotH = 80;
+  const tipY  = Math.round(cy - slotH / 2);      // 110
+
+  const clockSize = 100;
+  const clockCx   = barX + barW / 2;             // 540
+  const clockX    = clockCx - clockSize / 2;     // 490
+  const clockY    = cy - clockSize / 2;          // 100
+
+  const timerDigitH  = 70;
+  const timerY       = Math.round(cy - timerDigitH / 2);  // 115
+  const timerRightX  = clockCx + clockSize / 2 + 130;     // 720
+
+  const trophySize   = 65;
+  const trophyX      = timerRightX + 20;                  // 740
+  const trophyY      = Math.round(cy - trophySize / 2);   // 117
+
+  const scoreDigitH  = 70;
+  const scoreY       = Math.round(cy - scoreDigitH / 2);  // 115
+  const scoreCenterX = trophyX + trophySize + 110;        // 915
+
+  const btnSize   = 52;
+  const rightEdge = barX + barW;                          // 1060
+  const dcIconX   = rightEdge - btnSize - 15;             // 993
+  const musicX    = dcIconX - btnSize - 10;               // 931
+
   return {
-    barX: DC_HEADER_X_PORTRAIT,  barY: 10, barW: DC_HEADER_BAR_W_PORTRAIT, barH: OFFSET_Y - 20,
-    iconX: 50, iconY: 15, iconH: 70,
-    hitX: 20,  hitY: 10, hitW: 260, hitH: 110,
-    scoreCenterX: GAME_WIDTH / 2,
-    scoreY: 18, scoreDigitH: 72,
-    timerRightX: GAME_WIDTH - 50,
-    timerY: 18, timerDigitH: 72,
-    tipY: 115, tipSlotW: 65, tipSlotH: 82,
-    tipSlot1X: 50,  tipPlusX: 125, tipSlot2X: 200,
-    tipEquaX: 275,  tipTargetX: 350, tipTargetStep: 70,
-    musicX: GAME_WIDTH - 160, musicY: 18, musicSize: 72,
+    barX, barY: 10, barW, barH,
+    backIconX: barX + 15, backIconY: Math.round(cy - 45), backIconH: 90,
+    hitX: barX, hitY: 80, hitW: 145, hitH: 160,
+    clockX, clockY, clockSize,
+    timerRightX, timerY, timerDigitH,
+    trophyX, trophyY, trophySize,
+    scoreCenterX, scoreY, scoreDigitH,
+    tipY, tipSlotW: slotW, tipSlotH: slotH,
+    tipSlot1X: 145,
+    tipPlusX:  145 + slotW + 8,
+    tipSlot2X: 145 + (slotW + 8) * 2,
+    tipEquaX:  145 + (slotW + 8) * 3,
+    tipTargetX: 145 + (slotW + 8) * 4,
+    tipTargetStep: 68,
+    dcIconX, dcIconY: 17, dcIconSize: btnSize,
+    musicX,  musicY: 17,  musicSize: btnSize,
   };
 }
 
-/**
- * Landscape layout.
- * barX / barW are absolute coordinates within the scene (no container x offset).
- * Coordinates can be adjusted directly here.
- */
 export function landscapeDCLayout(): DCHeaderLayout {
   const barX = DC_HEADER_X_LANDSCAPE;
   const barW = DC_HEADER_BAR_W_LANDSCAPE;
-  const cx   = barX + barW / 2;
+  const barH = OFFSET_Y - 20;                    // 280
+  const cy   = 10 + barH / 2;                    // 150
+
+  const slotW = 65, slotH = 80;
+  const tipY  = Math.round(cy - slotH / 2);      // 110
+
+  const clockSize = 90;
+  const clockCx   = barX + barW / 2;             // 1130
+  const clockX    = clockCx - clockSize / 2;     // 1085
+  const clockY    = cy - clockSize / 2;          // 105
+
+  const timerDigitH  = 65;
+  const timerY       = Math.round(cy - timerDigitH / 2);
+  const timerRightX  = clockCx + clockSize / 2 + 120;     // 1295
+
+  const trophySize   = 60;
+  const trophyX      = timerRightX + 20;                  // 1315
+  const trophyY      = Math.round(cy - trophySize / 2);
+
+  const scoreDigitH  = 65;
+  const scoreY       = Math.round(cy - scoreDigitH / 2);
+  const scoreCenterX = trophyX + trophySize + 110;        // 1485
+
+  const btnSize   = 52;
+  const rightEdge = barX + barW;                          // 1780
+  const dcIconX   = rightEdge - btnSize - 15;             // 1713
+  const musicX    = dcIconX - btnSize - 10;               // 1651
+
   return {
-    barX, barY: 10, barW, barH: OFFSET_Y - 20,
-    iconX: barX + 30, iconY: 15, iconH: 70,
-    hitX:  barX,      hitY: 10,  hitW: 260, hitH: 110,
-    scoreCenterX: cx,
-    scoreY: 18, scoreDigitH: 72,
-    timerRightX: barX + barW - 100,
-    timerY: 18, timerDigitH: 72,
-    tipY: 115, tipSlotW: 65, tipSlotH: 82,
-    tipSlot1X: barX + 30, tipPlusX: barX + 105, tipSlot2X: barX + 180,
-    tipEquaX:  barX + 255, tipTargetX: barX + 330, tipTargetStep: 70,
-    musicX: barX + barW - 90, musicY: 18, musicSize: 72,
+    barX, barY: 10, barW, barH,
+    backIconX: barX + 15, backIconY: Math.round(cy - 40), backIconH: 80,
+    hitX: barX, hitY: 80, hitW: 145, hitH: 160,
+    clockX, clockY, clockSize,
+    timerRightX, timerY, timerDigitH,
+    trophyX, trophyY, trophySize,
+    scoreCenterX, scoreY, scoreDigitH,
+    tipY, tipSlotW: slotW, tipSlotH: slotH,
+    tipSlot1X: barX + 30,
+    tipPlusX:  barX + 30 + slotW + 8,
+    tipSlot2X: barX + 30 + (slotW + 8) * 2,
+    tipEquaX:  barX + 30 + (slotW + 8) * 3,
+    tipTargetX: barX + 30 + (slotW + 8) * 4,
+    tipTargetStep: 68,
+    dcIconX, dcIconY: 17, dcIconSize: btnSize,
+    musicX,  musicY: 17,  musicSize: btnSize,
   };
 }
 
@@ -106,20 +177,19 @@ export function getDCLayout(screen: ScreenConfig): DCHeaderLayout {
 
 // ── DailyChallengeHeader ──────────────────────────────────────────────────────
 
-const RESULT_DISPLAY_MS = 500;
-
 export class DailyChallengeHeader extends PIXI.Container {
-  private readonly bar:          PIXI.Graphics;
-  private readonly icon:         PIXI.Sprite;
-  private readonly hit:          PIXI.Sprite;
-  private readonly scoreDisplay: DigitDisplay;
-  private readonly timerDisplay: DigitDisplay;
+  private readonly bar:            PIXI.Graphics;
+  private readonly clockContainer: PIXI.Container;
+  private readonly clockFace:     PIXI.Sprite;
+  private readonly clockHand:     PIXI.Sprite;
+  private readonly trophySprite:  PIXI.Sprite;
+  private readonly scoreDisplay:  DigitDisplay;
+  private readonly timerDisplay:  DigitDisplay;
 
   private tipContainer!:    PIXI.Container;
   private tipResultElapsed = -1;
-
-  private musicSprite!: PIXI.Sprite;
-  private layout: DCHeaderLayout;
+  private musicSprite!:     PIXI.Sprite;
+  private layout:           DCHeaderLayout;
 
   constructor(
     private readonly ctx:       AppContext,
@@ -131,46 +201,69 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.layout = getDCLayout(screen);
     const L = this.layout;
 
-    // Background bar
+    // ── Background bar ───────────────────────────────────────────────────
     this.bar = new PIXI.Graphics();
     drawHeaderBar(this.bar, L.barW, L.barH);
     this.bar.x = L.barX; this.bar.y = L.barY;
     this.addChild(this.bar);
 
-    // Icon
-    this.icon = new PIXI.Sprite(ctx.assets.GetTexture('daily_challenge_icon.png'));
-    this.applyIconScale(L);
-    this.addChild(this.icon);
+    // ── Clock (face + hand, same design as game header) ──────────────────
+    this.clockContainer = new PIXI.Container();
+    this.clockContainer.x = L.clockX;
+    this.clockContainer.y = L.clockY;
 
-    // Score
-    this.scoreDisplay = new DigitDisplay(ctx, Math.round(L.scoreDigitH * 120 / 160), L.scoreDigitH);
-    this.scoreDisplay.y = L.scoreY;
-    this.addChild(this.scoreDisplay);
+    this.clockFace = new PIXI.Sprite(ctx.assets.GetTexture('clock_face.png'));
+    this.clockFace.width  = L.clockSize;
+    this.clockFace.height = L.clockSize;
+    this.clockContainer.addChild(this.clockFace);
 
-    // Countdown
-    this.timerDisplay = new DigitDisplay(ctx, Math.round(L.timerDigitH * 120 / 160), L.timerDigitH);
+    const r = L.clockSize / 2;
+    this.clockHand = new PIXI.Sprite(ctx.assets.GetTexture('clock_hand.png'));
+    this.clockHand.width    = 6;
+    this.clockHand.height   = 33;
+    this.clockHand.pivot.set(3, 0);
+    this.clockHand.x        = r;
+    this.clockHand.y        = r;
+    this.clockHand.rotation = Math.PI; // 12 o'clock
+    this.clockContainer.addChild(this.clockHand);
+
+    this.addChild(this.clockContainer);
+
+    // ── Countdown digits ──────────────────────────────────────────────────
+    this.timerDisplay = new DigitDisplay(
+      ctx,
+      Math.round(L.timerDigitH * 120 / 160),
+      L.timerDigitH,
+    );
     this.timerDisplay.y = L.timerY;
     this.addChild(this.timerDisplay);
 
-    // Return hit area
-    this.hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
-    this.hit.width  = L.hitW; this.hit.height = L.hitH;
-    this.hit.x = L.hitX;     this.hit.y = L.hitY;
-    this.addChild(this.hit);
-    ctx.input.registerUI(
-      new UIElement({ zIndex: 15, sprite: this.hit, onTap: () => this.onGoLobby() }),
+    // ── Trophy icon ───────────────────────────────────────────────────────
+    this.trophySprite = new PIXI.Sprite(ctx.assets.GetTexture('trophy.png'));
+    this.trophySprite.width  = L.trophySize;
+    this.trophySprite.height = L.trophySize;
+    this.trophySprite.x      = L.trophyX;
+    this.trophySprite.y      = L.trophyY;
+    this.addChild(this.trophySprite);
+
+    // ── Score digits ──────────────────────────────────────────────────────
+    this.scoreDisplay = new DigitDisplay(
+      ctx,
+      Math.round(L.scoreDigitH * 120 / 160),
+      L.scoreDigitH,
     );
+    this.scoreDisplay.y = L.scoreY;
+    this.addChild(this.scoreDisplay);
 
-    // Music button
-    this.buildMusicButton(L);
+    // ── Top-right: music button + leaderboard/lobby icon ─────────────────
+    this.buildTopRightButtons(L);
 
-    // Initial tip (both slots empty)
+    // ── Hint formula ─────────────────────────────────────────────────────
     this.rebuildTip(null, null);
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // ── Public API ──────────────────────────────────────────────────────────────
 
-  /** Called by DailyChallengeScene when the screen orientation changes. */
   public resize(screen: ScreenConfig): void {
     this.layout = getDCLayout(screen);
     const L = this.layout;
@@ -179,19 +272,32 @@ export class DailyChallengeHeader extends PIXI.Container {
     drawHeaderBar(this.bar, L.barW, L.barH);
     this.bar.x = L.barX; this.bar.y = L.barY;
 
-    this.applyIconScale(L);
+    // Clock
+    this.clockContainer.x = L.clockX;
+    this.clockContainer.y = L.clockY;
+    this.clockFace.width  = L.clockSize;
+    this.clockFace.height = L.clockSize;
+    const r = L.clockSize / 2;
+    this.clockHand.x = r;
+    this.clockHand.y = r;
 
-    this.scoreDisplay.digitW = Math.round(L.scoreDigitH * 120 / 160);
-    this.scoreDisplay.digitH = L.scoreDigitH;
-    this.scoreDisplay.y      = L.scoreY;
-
+    // Timer
     this.timerDisplay.digitW = Math.round(L.timerDigitH * 120 / 160);
     this.timerDisplay.digitH = L.timerDigitH;
     this.timerDisplay.y      = L.timerY;
 
-    this.hit.x = L.hitX; this.hit.y = L.hitY;
-    this.hit.width = L.hitW; this.hit.height = L.hitH;
+    // Trophy
+    this.trophySprite.width  = L.trophySize;
+    this.trophySprite.height = L.trophySize;
+    this.trophySprite.x      = L.trophyX;
+    this.trophySprite.y      = L.trophyY;
 
+    // Score
+    this.scoreDisplay.digitW = Math.round(L.scoreDigitH * 120 / 160);
+    this.scoreDisplay.digitH = L.scoreDigitH;
+    this.scoreDisplay.y      = L.scoreY;
+
+    // Top-right buttons
     this.musicSprite.width  = L.musicSize;
     this.musicSprite.height = L.musicSize;
     this.musicSprite.x      = L.musicX;
@@ -200,20 +306,27 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.rebuildTip(null, null);
   }
 
-  /** Update the score digits. */
   public setScore(score: number): void {
     this.scoreDisplay.update(score);
     this.scoreDisplay.x = this.layout.scoreCenterX - this.scoreDisplay.totalWidth / 2;
   }
 
-  /** Update the countdown digits; turns red when below 10 seconds. */
   public setTimer(secs: number): void {
     this.timerDisplay.update(secs);
-    this.timerDisplay.x    = this.layout.timerRightX - this.timerDisplay.totalWidth;
-    this.timerDisplay.tint = secs <= 10 ? 0xff4444 : 0xFFFFFF;
+    this.timerDisplay.x = this.layout.timerRightX - this.timerDisplay.totalWidth;
+
+    // Clock hand rotation: ratio=1 → 12 o'clock (full time); decreases clockwise
+    const ratio = Math.min(Math.max(secs, 0) / DC_TIMER_REF_SECS, 1);
+    this.clockHand.rotation = Math.PI + (1 - ratio) * Math.PI * 2;
+
+    // Warning colour at < WARN_THRESHOLD seconds
+    const warn = secs > 0 && secs < WARN_THRESHOLD;
+    const tint  = warn ? 0xFF5252 : 0xFFFFFF;
+    this.clockFace.tint     = tint;
+    this.clockHand.tint     = tint;
+    this.timerDisplay.tint  = tint;
   }
 
-  /** Rebuild the hint formula. When first / second is null an empty slot is shown. */
   public rebuildTip(first: number | null, second: number | null): void {
     if (this.tipContainer) {
       this.removeChild(this.tipContainer);
@@ -225,15 +338,15 @@ export class DailyChallengeHeader extends PIXI.Container {
 
     this.addSlotOrValue(this.tipContainer, first,  L.tipSlot1X, Y, W, H);
 
-    const plus  = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
-    plus.width  = W; plus.height = H;
+    const plus   = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
+    plus.width   = W; plus.height = H;
     plus.x = L.tipPlusX; plus.y = Y;
     this.tipContainer.addChild(plus);
 
     this.addSlotOrValue(this.tipContainer, second, L.tipSlot2X, Y, W, H);
 
-    const equa  = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
-    equa.width  = W; equa.height = H;
+    const equa   = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
+    equa.width   = W; equa.height = H;
     equa.x = L.tipEquaX; equa.y = Y;
     this.tipContainer.addChild(equa);
 
@@ -247,10 +360,7 @@ export class DailyChallengeHeader extends PIXI.Container {
     this.addChild(this.tipContainer);
   }
 
-  /**
-   * Return the centre position of the score display area (in scene coordinates),
-   * used to anchor the flying score animation's end point.
-   */
+  /** Centre of the score area in scene coordinates (used for flying score animation). */
   public getScoreCenterPos(): { x: number; y: number } {
     return {
       x: this.layout.scoreCenterX,
@@ -258,12 +368,10 @@ export class DailyChallengeHeader extends PIXI.Container {
     };
   }
 
-  /** Call after a successful elimination to start the 500 ms auto-reset countdown. */
   public startTipResultTimer(): void {
     this.tipResultElapsed = 0;
   }
 
-  /** Called every frame by DailyChallengeScene.update(). */
   public tickTipReset(deltaMs: number): void {
     if (this.tipResultElapsed < 0) return;
     this.tipResultElapsed += deltaMs;
@@ -273,37 +381,44 @@ export class DailyChallengeHeader extends PIXI.Container {
     }
   }
 
-  // ── Private ────────────────────────────────────────────────────────────────
+  // ── Private ─────────────────────────────────────────────────────────────────
 
-  private buildMusicButton(L: DCHeaderLayout): void {
-    const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
-    btn.width  = L.musicSize;
-    btn.height = L.musicSize;
-    btn.x      = L.musicX;
-    btn.y      = L.musicY;
-    this.applyMusicTint(btn);
-    this.addChild(btn);
-    this.musicSprite = btn;
+  private buildTopRightButtons(L: DCHeaderLayout): void {
+    // Music button
+    const music = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
+    music.width  = L.musicSize;
+    music.height = L.musicSize;
+    music.x      = L.musicX;
+    music.y      = L.musicY;
+    this.applyMusicTint(music);
+    this.addChild(music);
+    this.musicSprite = music;
     this.ctx.input.registerUI(new UIElement({
       zIndex: 15,
-      sprite: btn,
+      sprite: music,
       onTap: () => {
         this.ctx.audio.toggleMusic();
-        this.applyMusicTint(btn);
+        this.applyMusicTint(music);
       },
+    }));
+
+    // Leaderboard / lobby icon (top-right)
+    const dcBtn = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
+    const scale  = L.dcIconSize / Math.max(dcBtn.texture.width, dcBtn.texture.height);
+    dcBtn.width  = dcBtn.texture.width  * scale;
+    dcBtn.height = dcBtn.texture.height * scale;
+    dcBtn.x = L.dcIconX + (L.dcIconSize - dcBtn.width)  / 2;
+    dcBtn.y = L.dcIconY + (L.dcIconSize - dcBtn.height) / 2;
+    this.addChild(dcBtn);
+    this.ctx.input.registerUI(new UIElement({
+      zIndex: 15,
+      sprite: dcBtn,
+      onTap: () => this.onGoLobby(),
     }));
   }
 
   private applyMusicTint(sprite: PIXI.Sprite): void {
     sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
-  }
-
-  private applyIconScale(L: DCHeaderLayout): void {
-    const scale = L.iconH / Math.max(this.icon.texture.width, this.icon.texture.height);
-    this.icon.width  = this.icon.texture.width  * scale;
-    this.icon.height = this.icon.texture.height * scale;
-    this.icon.x = L.iconX;
-    this.icon.y = L.iconY;
   }
 
   private addSlotOrValue(
