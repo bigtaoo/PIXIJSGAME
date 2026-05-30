@@ -1,6 +1,6 @@
 # 架构文档
 
-**版本：** v1.1
+**版本：** v1.2
 **日期：** 2026年5月
 
 ---
@@ -77,8 +77,8 @@ App 启动
 | `scale` | 物理像素 / 逻辑像素 |
 | `orientation` | Portrait / Landscape |
 | `gridCountW / gridCountH` | 格子列数 / 行数（受锁定机制影响） |
-| `gridSize` | 单格逻辑像素尺寸（受锁定机制影响） |
-| `offsetX / offsetY` | 格子区域的起始偏移（offsetY = OFFSET_Y = 300，固定值） |
+| `gridSize` | 单格逻辑像素尺寸；以 header bar 宽度而非全画布宽度为约束（受锁定机制影响） |
+| `offsetX / offsetY` | 格子区域起始偏移；offsetX 从 header bar 左边界居中，offsetY = OFFSET_Y = 300 固定值 |
 | `cellIndex(col, row)` | 编码：`col * 1000 + row` |
 | `indexToPos(idx)` | 解码为屏幕坐标 |
 | `lockLayout()` | 冻结格子相关计算值（见 4.3） |
@@ -167,7 +167,58 @@ StageConfig（关卡配置）
 
 ---
 
-## 7. 跨平台差异
+## 7. 已修复的关键 Bug（v1.2）
+
+### 7.1 数字 alpha 残留（numbers.ts）
+
+**现象：** 提示闪烁动画运行期间发生关卡重试，旧动画继续作用于新格子的 Sprite，导致数字 alpha 卡在低值（视觉上变暗）。
+
+**修复：**
+- `NumberLayer.reconfigure()` 开头清空 `hintAnimations`，并将所有 Sprite 的 `alpha` 重置为 1。
+- `layoutOneDigit()` / `layoutTwoDigits()` 中显式设置 `s.alpha = 1`，防止其他路径复用带低 alpha 的 Sprite。
+
+### 7.2 爱心动画后尺寸异常（header.ts）
+
+**现象：** 失去生命时爱心弹出动画结束后，两颗爱心变得异常巨大。
+
+**原因：** 动画通过 `scale.set(factor)` 控制缩放，结束时 `scale.set(1)` 将 Sprite 的 scale 还原为 (1,1)，相当于按原始纹理像素尺寸渲染，远大于布局设定的 `heartSize`。
+
+**修复：** `heartAnims` 中额外记录 `baseScaleX / baseScaleY`（动画开始时的实际布局 scale），所有 scale 操作均相对于基准值进行，动画结束后恢复到 `baseScaleX / baseScaleY`。
+
+### 7.3 结算弹窗位置错误（gameResult.ts + gameScene.ts）
+
+**现象：** 胜利时结算弹窗偏移到屏幕角落，失败时正常。
+
+**原因：**
+1. `portraitLayout()` 硬编码 `panelY = 710`，仅对逻辑高度 1920 的屏幕居中。
+2. `buildScene()` 中创建 `resultOverlay` 后未调用 `resize()`，`_lastLayout` 停留在构造函数默认值，直到下次外部 resize 才更新。失败路径恰好在此之后，胜利路径可能先发生。
+
+**修复：**
+- `portraitLayout(screenH)` / `landscapeLayout(screenW, screenH)` 改为动态计算 `panelY = (screenH - panelH) / 2`，始终垂直居中。
+- `buildScene()` 末尾补调 `resultOverlay.resize(screen)` 和 `settingsOverlay.resize(screen)`。
+
+### 7.4 新增格子选中高亮被遮挡（grid.ts）
+
+**现象：** 关卡扩大格子数（如从 4×7 升到 5×8）后，新增的行/列点击无选中高亮效果。
+
+**原因：** `selectionHighlight` Sprite 在首次 `showSelection()` 时加入显示列表。后续 `reconfigure()` 再向同一容器 `addChild` 新格子 Sprite，这些 Sprite 渲染层级高于 `selectionHighlight`，将高亮遮盖。
+
+**修复：** `showSelection()` 中若高亮已存在，调用 `setChildIndex(selectionHighlight, children.length - 1)` 将其置顶。
+
+### 7.5 格子与 Header 对齐（screenConfig.ts + consts.ts）
+
+**现象：** 宽屏设备上格子水平范围与 Header 不一致，整体偏右。
+
+**原因：** `gridSize` 以全画布宽度（1080）为约束，`offsetX` 在全画布居中。Header bar 实际宽度 portrait=1020（x=30起）、landscape=1350（x=350起），与全画布不等宽，导致格子边界超出或不对齐 Header。
+
+**修复：**
+- `consts.ts` 新增 `HEADER_X_PORTRAIT=30`、`HEADER_BAR_W_PORTRAIT=1020`、`HEADER_X_LANDSCAPE=350`、`HEADER_BAR_W_LANDSCAPE=1350`。
+- `ScreenConfig.gridSize`：宽度约束改为对应方向的 header bar 宽度。
+- `ScreenConfig.offsetX`：从 header bar 左边界（`HEADER_X_*`）开始居中，格子左右边界与 Header 对齐。
+
+---
+
+## 8. 跨平台差异
 
 | 能力 | Web | 微信小游戏 |
 |------|-----|-----------|

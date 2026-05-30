@@ -35,6 +35,13 @@ export class SceneCoordinator extends PIXI.Container {
   private started = false;
   /** Skip the interstitial on the very first showGame call (initial load). */
   private firstGameShow = true;
+  /**
+   * Incremented whenever a navigation away from the game scene occurs
+   * (showLobby / showDailyChallenge).  showGame() compares this value after
+   * awaiting the interstitial to detect whether the user navigated away during
+   * the ad and cancels the transition if so.
+   */
+  private navGeneration = 0;
 
   constructor(private readonly ctx: AppContext) {
     super();
@@ -97,6 +104,8 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the stage lobby. Refreshes button states to reflect current progress. */
   public showLobby(): void {
+    this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
+    this.gameScene.persistWinIfComplete(); // safety-net: ensure win data is saved
     this.ctx.platform?.gameplayStop();
     this.gameScene.visible           = false;
     this.dailyChallengeScene.visible = false;
@@ -108,6 +117,7 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the Daily Challenge scene. */
   public showDailyChallenge(): void {
+    this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
     this.ctx.platform?.gameplayStop();
     this.lobbyScene.visible          = false;
     this.gameScene.visible           = false;
@@ -132,7 +142,12 @@ export class SceneCoordinator extends PIXI.Container {
     if (this.firstGameShow) {
       this.firstGameShow = false;
     } else {
+      // Snapshot the navigation generation before the async gap so we can
+      // detect if the player navigated away (lobby / daily challenge) while
+      // the interstitial was playing.
+      const gen = this.navGeneration;
       await this.ctx.platform?.requestInterstitialAd();
+      if (this.navGeneration !== gen) return; // user navigated away during ad
     }
 
     this.lobbyScene.visible          = false;

@@ -73,6 +73,27 @@ export class GameScene extends PIXI.Container {
 
   // ── Public API ─────────────────────────────────────────────────────
 
+  /**
+   * Safety-net: re-persist win progress if the stage was completed but for
+   * some reason the saves in onTargetCleared() were not committed (e.g. an
+   * exception was thrown after removeNumber but before recordComplete, or the
+   * call order was disrupted by an unusual platform event).
+   *
+   * Safe to call multiple times — StarManager.saveStars and
+   * StageManager.recordComplete are both idempotent.
+   */
+  public persistWinIfComplete(): void {
+    if (!this.initialized) return;
+    if (!this.state.isGameEnd) return;
+    if (this.currentTargetIdx < this.stage.targets.length) return;
+
+    const stars = StarManager.calculateStars(
+      this.stage.stageIndex, this.livesEverLost, this.state.timeRemainingMs,
+    );
+    StarManager.saveStars(this.stage.stageIndex, stars);
+    StageManager.recordComplete(this.stage.stageIndex);
+  }
+
   public loadStage(stage: StageData): void {
     this.stage = stage;
     this.screen.setGridDims(stage.gridW, stage.gridH);
@@ -257,7 +278,13 @@ export class GameScene extends PIXI.Container {
     const livesSnapshot = this.lives;
     this.header.triggerHeartLost(lostIdx, () => this.header.updateLives(livesSnapshot));
     if (this.lives > 0) {
-      this.retryStage();
+      // Keep the board intact — just clear the selection and refill the time
+      // pool so the player continues from exactly where they were.
+      this.selectedIndex = -1;
+      this.gridLayer.hideSelection();
+      this.header.resetTip();
+      this.resetHintTimer();
+      this.state.addTime(30_000);
     } else {
       // Freeze the game loop before triggering the rewarded-ad / game-over flow.
       this.state.isGameEnd = true;
@@ -286,12 +313,16 @@ export class GameScene extends PIXI.Container {
 
     this.ctx.platform.requestExtraLife().then((watched) => {
       if (watched) {
-        // Grant one extra life and resume.
+        // Grant one extra life and resume from the current board state.
         // livesEverLost is already true, so the star penalty stays in effect.
         this.lives = 1;
         this.header.updateLives(this.lives);
         this.state.isGameEnd = false;
-        this.retryStage();
+        this.selectedIndex = -1;
+        this.gridLayer.hideSelection();
+        this.header.resetTip();
+        this.resetHintTimer();
+        this.state.addTime(30_000);
       } else {
         this.ctx.audio.playGameOver();
         this.resultOverlay.show(false);
