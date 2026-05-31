@@ -120,17 +120,29 @@ git push origin v1.0.0
 ## 七、Workflow 执行流程概览
 
 ```
-Checkout → npm ci → build:web → cap sync ios
-  → pod install → 导入证书 → 安装 Provisioning Profile
+Checkout → npm ci → build:crazygames → cap sync ios
+  → 导入签名证书（import-codesign-certs）
+  → 手动安装 Provisioning Profile（base64 decode → ~/Library/MobileDevice/Provisioning Profiles/）
   → xcodebuild archive → xcodebuild -exportArchive (IPA)
-  → xcrun altool 上传至 App Store Connect
+  → upload-testflight-build 上传至 App Store Connect
 ```
 
 上传成功后，在 App Store Connect → TestFlight 即可看到新构建。
 
 ---
 
-## 八、屏幕方向说明
+## 八、ios/ 目录说明
 
-`ios/` 不入库，由 CI 每次运行时通过 `cap add ios` 生成。
-Workflow 中的 **"Patch Info.plist orientations"** 步骤已自动写入 Portrait + LandscapeLeft + LandscapeRight，无需手动操作。
+`ios/` 目录**需要提交到仓库**。首次发布前，在本地执行：
+
+```bash
+npm install
+npx cap add ios
+git add ios/
+git commit -m "feat: add capacitor ios platform"
+git push
+```
+
+之后 CI 只需 `cap sync ios`（同步 web 产物到已有的 ios 目录），无需重新 `cap add`。
+
+屏幕方向（Portrait + LandscapeLeft + LandscapeRight）在 `ios/App/App/Info.plist` 中配置，随 `ios/` 一起入库，CI 无需额外 patch。
