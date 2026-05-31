@@ -33,7 +33,7 @@ openssl genrsa -out distribution.key 2048
 
 # 生成 CSR（填写你的信息）
 openssl req -new -key distribution.key -out distribution.csr \
-  -subj "/emailAddress=tao.wang@elk.de/CN=Tao Wang/C=DE"
+  -subj "/emailAddress=tao.wang.go@gmail.com/CN=Tao Wang/C=DE"
 ```
 
 ### 2.2 在 Apple Developer 网站申请证书
@@ -48,11 +48,7 @@ openssl req -new -key distribution.key -out distribution.csr \
 openssl x509 -in distribution.cer -inform DER -out distribution.pem -outform PEM
 
 # 打包私钥 + 证书为 .p12（设置一个密码，记住它）
-openssl pkcs12 -export \
-  -inkey distribution.key \
-  -in distribution.pem \
-  -out distribution.p12 \
-  -name "Apple Distribution"
+openssl pkcs12 -export  -inkey distribution.key -in distribution.pem -out distribution.p12  -name "Apple Distribution"
 ```
 
 ### 2.4 创建 Provisioning Profile
@@ -79,16 +75,13 @@ openssl pkcs12 -export \
 
 ```powershell
 # distribution certificate
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("distribution.p12")) |
-  Set-Content -NoNewline cert_b64.txt
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("distribution.p12")) | Set-Content -NoNewline cert_b64.txt
 
 # provisioning profile
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("xxx.mobileprovision")) |
-  Set-Content -NoNewline profile_b64.txt
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("comgamestaosumquestprofile.mobileprovision")) | Set-Content -NoNewline profile_b64.txt
 
 # App Store Connect API key
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXXXX.p8")) |
-  Set-Content -NoNewline apikey_b64.txt
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_7AGSL2YMN7.p8")) | Set-Content -NoNewline apikey_b64.txt
 ```
 
 ---
