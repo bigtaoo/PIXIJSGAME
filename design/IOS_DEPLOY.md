@@ -11,11 +11,11 @@
 
 ### 2. 在 Apple Developer 网站创建 App ID
 `developer.apple.com` → Identifiers → + → App IDs  
-Bundle ID：`de.elk.pixigame`（与 `capacitor.config.ts` 中的 `appId` 一致）
+Bundle ID：`com.gamestao.sumquest`（与 `capacitor.config.ts` 中的 `appId` 一致）
 
 ### 3. 在 App Store Connect 创建 App
 `appstoreconnect.apple.com` → My Apps → +  
-Bundle ID 选择上一步创建的 `de.elk.pixigame`。
+Bundle ID 选择上一步创建的 `com.gamestao.sumquest`。
 
 ---
 
@@ -58,7 +58,7 @@ openssl pkcs12 -export \
 ### 2.4 创建 Provisioning Profile
 
 `developer.apple.com` → Profiles → + → **App Store Connect**  
-选择 App ID `de.elk.pixigame`，选择上一步的 Distribution certificate，下载 `xxx.mobileprovision`。
+选择 App ID `com.gamestao.sumquest`，选择上一步的 Distribution certificate，下载 `xxx.mobileprovision`。
 
 记录 Profile 的 **Name**（后面配 `PROVISIONING_PROFILE_NAME` secret 用）。
 

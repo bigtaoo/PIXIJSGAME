@@ -1,0 +1,34 @@
+name: CrazyGames - Package for Upload
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build CrazyGames
+        run: npm run build:crazygames
+
+      - name: Zip for upload
+        run: |
+          cd crazygames
+          zip -r ../sumquest-crazygames.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sumquest-crazygames
+          path: sumquest-crazygames.zip
+          retention-days: 30

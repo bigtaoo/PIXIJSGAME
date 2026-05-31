@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'de.elk.pixigame',
-  appName: 'PixiGame',
+  appId: 'com.gamestao.sumquest',
+  appName: 'SumQuest',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
