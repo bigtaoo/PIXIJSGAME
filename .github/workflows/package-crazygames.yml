@@ -21,14 +21,9 @@ jobs:
       - name: Build CrazyGames
         run: npm run build:crazygames
 
-      - name: Zip for upload
-        run: |
-          cd crazygames
-          zip -r ../sumquest-crazygames.zip .
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: sumquest-crazygames
-          path: sumquest-crazygames.zip
+          path: crazygames/
           retention-days: 30
