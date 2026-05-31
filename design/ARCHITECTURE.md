@@ -1,6 +1,6 @@
 # 架构文档
 
-**版本：** v1.3
+**版本：** v1.4
 **日期：** 2026年5月
 
 ---
@@ -11,8 +11,8 @@
 |------|------|
 | 渲染引擎 | PixiJS（pixi.js-legacy，兼容低端设备） |
 | 语言 | TypeScript |
-| 打包工具 | Webpack（Web）/ Rollup（微信） |
-| 平台 | Web（CrazyGames）、微信小游戏 |
+| 打包工具 | Webpack（Web / Mobile）/ Rollup（微信） |
+| 平台 | Web（CrazyGames）、微信小游戏、iOS / Android（Capacitor） |
 
 ---
 
@@ -266,11 +266,64 @@ StageConfig（关卡配置）
 
 ## 8. 跨平台差异
 
-| 能力 | Web | 微信小游戏 |
-|------|-----|-----------|
+| 能力 | Web / Mobile | 微信小游戏 |
+|------|-------------|-----------|
 | 资源加载 | `webAssetsManager` | `wechatAssetsManager` |
 | 存档 | `localStorage` | `wx.setStorageSync` |
 | 平台回调 | `crazygamesIndex.ts` | — |
 | 打包 | Webpack | Rollup |
+| 横竖屏事件 | `window` resize | `wx.onWindowResize` |
 
 平台差异通过 `AppContext.platform` 注入，游戏核心代码不感知平台。
+
+---
+
+## 9. iOS / Android 发布（Capacitor）
+
+Capacitor 将 Web 构建（`dist/`）包装为原生 App（WKWebView on iOS，WebView on Android）。配置文件：`capacitor.config.ts`。
+
+### 9.1 横竖屏支持
+
+WKWebView / Android WebView 在设备旋转时正常触发 `window` resize 事件，现有 `index.ts` 中的监听**无需修改**。  
+iOS 允许哪些方向由 Xcode → Target → General → **Supported Orientations** 控制，需勾选 Portrait + Landscape Left + Landscape Right。
+
+### 9.2 首次初始化（只做一次）
+
+```bash
+npm install
+npx cap add ios      # 生成 ios/ 目录（需要 macOS + Xcode）
+npx cap add android  # 生成 android/ 目录（需要 Android Studio）
+```
+
+`ios/` 和 `android/` 目录生成后应加入 git（含 Xcode project 和 Gradle 文件）。
+
+> 完整的 Windows 配置步骤（证书、Secrets、首次 cap add ios）见 `design/IOS_DEPLOY.md`。
+
+### 9.3 日常发布流程
+
+```bash
+# iOS
+npm run deploy:ios       # = build:web + cap sync ios
+npm run cap:open:ios     # 打开 Xcode → Archive → App Store Connect
+
+# Android
+npm run deploy:android   # = build:web + cap sync android
+npm run cap:open:android # 打开 Android Studio → Build → Generate Signed APK/AAB
+```
+
+### 9.4 Safe Area（刘海 / 圆角屏）
+
+`capacitor.config.ts` 设置了 `ios.contentInset: 'always'`，WKWebView 会在安全区域内布局。  
+若游戏内容被 home indicator 或 notch 遮挡，在 `public/index.html` 的 `body` 样式中追加：
+
+```css
+padding: env(safe-area-inset-top) env(safe-area-inset-right)
+         env(safe-area-inset-bottom) env(safe-area-inset-left);
+```
+
+### 9.5 技术栈更新
+
+| 项目 | 内容 |
+|------|------|
+| 打包工具 | Webpack（Web / Mobile）/ Rollup（微信） |
+| 平台 | Web（CrazyGames）、微信小游戏、iOS（Capacitor）、Android（Capacitor） |
