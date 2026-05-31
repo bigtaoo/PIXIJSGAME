@@ -74,12 +74,17 @@ window.onload = async () => {
   doResize();
   window.addEventListener('resize', doResize);
 
-  // ── 8. Page lifecycle ─────────────────────────────────────────────
+  // ── 8. Game loop ──────────────────────────────────────────────────
+  app.ticker.add(() => {
+    coordinator.update(app.ticker.elapsedMS);
+  });
+
+  // ── 9. Page lifecycle ─────────────────────────────────────────────
   // Notify CrazyGames before the page reloads or navigates away so it
   // doesn't count the session as a crash.
   window.addEventListener('beforeunload', () => crazyGames.sdkGameLoadingStart());
 
-  // ── 9. Auth state listener (optional) ────────────────────────────
+  // ── 10. Auth state listener (optional) ───────────────────────────
   if (crazyGames.isUserAccountAvailable) {
     crazyGames.onAuthChange((user) => {
       console.log('[CrazyGames] Auth state changed:', user?.username ?? 'logged out');
