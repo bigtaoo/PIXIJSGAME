@@ -107,9 +107,12 @@ jobs:
           path: ${{ runner.temp }}/ipa/*.ipa
 
       - name: Upload to App Store Connect
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ runner.temp }}/ipa/App.ipa
-          issuer-id: ${{ secrets.ASC_API_ISSUER_ID }}
-          api-key-id: ${{ secrets.ASC_API_KEY_ID }}
-          api-private-key: ${{ secrets.ASC_API_KEY_CONTENT_BASE64 }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "${{ secrets.ASC_API_KEY_CONTENT_BASE64 }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.ASC_API_KEY_ID }}.p8
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "$RUNNER_TEMP/ipa/App.ipa" \
+            --apiKey "${{ secrets.ASC_API_KEY_ID }}" \
+            --apiIssuer "${{ secrets.ASC_API_ISSUER_ID }}"
