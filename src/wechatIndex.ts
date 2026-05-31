@@ -49,6 +49,12 @@ async function Init() {
   coordinator.resize(width, height);
 
   app.ticker.add(() => coordinator.update(app.ticker.elapsedMS));
+
+  wx.onWindowResize((res: { windowWidth: number; windowHeight: number }) => {
+    const { windowWidth: w, windowHeight: h } = res;
+    app.renderer.resize(w, h);
+    coordinator.resize(w, h);
+  });
 }
 
 Init();

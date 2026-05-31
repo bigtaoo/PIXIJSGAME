@@ -52,7 +52,12 @@ App 启动
        └─ DailyChallengeScene  每日挑战
 ```
 
-`SceneCoordinator` 监听 `window.resize`，调用当前场景的 `resize(w, h)`。
+横竖屏切换由各入口负责监听并转发：
+
+- **Web / CrazyGames**（`index.ts` / `crazygamesIndex.ts`）：`window.addEventListener('resize', ...)` → `coordinator.resize(window.innerWidth, window.innerHeight)`
+- **微信小游戏**（`wechatIndex.ts`）：`wx.onWindowResize(res => coordinator.resize(res.windowWidth, res.windowHeight))`
+
+`SceneCoordinator.resize(w, h)` 再调用当前活跃场景的 `resize(w, h)`。
 
 ---
 
