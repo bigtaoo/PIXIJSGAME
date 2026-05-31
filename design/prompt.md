@@ -8,7 +8,20 @@ Square composition (1:1 aspect ratio), seamless at edges for 90-degree rotation.
 --ar 1:1 --v 6 --style raw --chaos 15
 
 icon
-A clean square app icon with rounded corners (radius 20%) for a number elimination puzzle game, warm beige background (#F5EDD6). Three-line vertical layout: Top line: bold rounded numbers "3" (gold #FFD700) and "7" (sky blue #4FC3F7) with a small gold plus sign "+" (#FFD700, 1px) between them, all with dark brown outline (#333333, 2px). Middle line: thin horizontal divider line (#6D4C41, 1px). Bottom line: bold rounded number "10" (sky blue #4FC3F7) with dark brown outline (#333333, 2px). All elements centered horizontally, hand-drawn sketch style, flat design, no gradient, minimalist, high contrast for small sizes, transparent background, centered on 1024x1024 canvas. --ar 1:1 --v 6 --style raw
+A clean and warm SQUARE game icon (1024x1024px) for a number elimination puzzle game, featuring the complete equation "3 + 7 = 10" in a notebook style.
+The numbers are bold rounded sans-serif (Noto Sans Rounded Black style), with the following color scheme:
+- "3" and "7": white fill (#FAFAF8) + dark brown outline (#6D4C41, 12% of font size)
+- "10": GOLD fill (#FFD700) + dark brown outline (#6D4C41, 12% of font size) + golden glow (radius 12px, alpha 30%)
+- "+" and "=": dark brown (#6D4C41), same thickness as outlines
+Background: warm beige (#F5EDD6) with a subtle grid paper texture (light gray #E0E0E0, 15% opacity, 20x20px grid), but the notebook edges are inset by 10% to avoid cropping in square format.
+Layout:
+- All elements horizontally centered in the square canvas.
+- Equal spacing between ALL elements: "3" [10% width] "+" [10% width] "7" [10% width] "=" [10% width] "10".
+- "10" is 110% the size of "3" and "7" to emphasize it as the target.
+- The "=" symbol has the same line weight as the number outlines.
+Soft drop shadow under all elements (offsetY 4px, blur 8px, alpha 20%, color #6D4C41).
+Flat design, no gradients except the glow on "10". Clean and readable at 60x60px. High contrast between "10" and the rest, with a playful game feel.
+--ar 1:1 --v 6 --style raw
 
 音符
 A single music note icon, gold fill color (#FFD700), dark brown outline (#333333, 2px width), bold rounded thick lines, minimalist hand-drawn sketch style, flat design, no gradient, no shadow, transparent background, clean game UI asset, centered on 512x512 canvas, simple and readable. --ar 1:1 --v 6 --style raw
