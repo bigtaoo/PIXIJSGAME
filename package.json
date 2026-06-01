@@ -10,8 +10,9 @@
     "build:wechat": "rollup -c",
     "build:crazygames": "webpack --mode production --env TARGET=crazygames",
     "format": "prettier --write .",
-    "deploy:ios": "npm run build:web && cap sync ios",
-    "deploy:android": "npm run build:web && cap sync android",
+    "build:mobile": "webpack --mode production --env TARGET=mobile",
+    "deploy:ios": "npm run build:mobile && cap sync ios",
+    "deploy:android": "npm run build:mobile && cap sync android",
     "cap:open:ios": "cap open ios",
     "cap:open:android": "cap open android"
   },

@@ -33,7 +33,7 @@ jobs:
         run: npm ci
 
       - name: Build web
-        run: npm run build:web
+        run: npm run build:mobile
 
       - name: Install Capacitor CLI
         run: npm install -g @capacitor/cli
