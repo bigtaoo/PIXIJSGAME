@@ -41,6 +41,11 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
+      - name: Set build number
+        run: |
+          agvtool new-version -all ${{ github.run_number }}
+        working-directory: ios/App
+
       - name: Import signing certificate
         uses: apple-actions/import-codesign-certs@v3
         with:
