@@ -6,7 +6,7 @@ import { AppContext } from './game/appContext';
 import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
-import { AudioManager } from './game/audioManager';
+import { MobileAudioManager } from './game/mobileAudioManager';
 
 window.onload = async () => {
   const app = new PIXI.Application({
@@ -40,7 +40,7 @@ window.onload = async () => {
   const input = new InputManager();
   setupWebInput(canvas, input);
 
-  const audio = new AudioManager(prefs);
+  const audio = new MobileAudioManager(prefs);
 
   const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
 
