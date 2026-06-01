@@ -38,17 +38,27 @@ export class WebAssetsManager implements IAssetsManager {
   private textures: Record<string, PIXI.Texture> = {};
 
   public async loadAssets(): Promise<void> {
-    await Promise.all([
-      this.loadDigits(),
-      this.loadHearts(),
-      this.loadExplosionAtlas(),
-      this.loadBg(),
-      this.loadDailyIcon(),
-      this.loadStar(),
-      this.loadTrophy(),
-      this.loadFire(),
-      this.loadMusic(),
-    ]);
+    const tasks: Array<[string, () => Promise<void>]> = [
+      ['digits',     () => this.loadDigits()],
+      ['hearts',     () => this.loadHearts()],
+      ['explosion',  () => this.loadExplosionAtlas()],
+      ['lobby_bg',   () => this.loadBg()],
+      ['daily_icon', () => this.loadDailyIcon()],
+      ['star',       () => this.loadStar()],
+      ['trophy',     () => this.loadTrophy()],
+      ['fire',       () => this.loadFire()],
+      ['music',      () => this.loadMusic()],
+    ];
+
+    await Promise.all(
+      tasks.map(async ([name, fn]) => {
+        try {
+          await fn();
+        } catch (err) {
+          throw new Error(`[asset:${name}] ${String(err)}`);
+        }
+      }),
+    );
   }
 
   private async loadBg(): Promise<void> {

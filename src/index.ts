@@ -22,7 +22,17 @@ window.onload = async () => {
   setPlayerPrefsImpl(prefs);
 
   const assets = new WebAssetsManager();
-  await assets.loadAssets();
+  try {
+    await assets.loadAssets();
+  } catch (err) {
+    console.error('[init] loadAssets failed:', err);
+    // Show error on screen so we can diagnose on device
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;top:0;left:0;width:100%;padding:20px;background:#c00;color:#fff;font:16px monospace;z-index:9999;word-break:break-all;';
+    msg.textContent = '[loadAssets error] ' + String(err);
+    document.body.appendChild(msg);
+    return;
+  }
 
   // Generate programmatic textures after renderer is ready
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
