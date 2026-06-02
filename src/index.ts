@@ -55,6 +55,9 @@ window.onload = async () => {
 
   doResize();
   window.addEventListener('resize', doResize);
+  // iOS WKWebView does not reliably fire 'resize' on orientation change;
+  // listen to 'orientationchange' and delay until dimensions are updated.
+  window.addEventListener('orientationchange', () => setTimeout(doResize, 150));
 
   // Start background music on first user gesture (browser autoplay policy).
   const startMusicOnce = (): void => {
