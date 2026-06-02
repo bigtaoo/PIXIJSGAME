@@ -59,6 +59,15 @@ App 启动
 
 `SceneCoordinator.resize(w, h)` 再调用当前活跃场景的 `resize(w, h)`。
 
+### 后台暂停（App 切出自动暂停）
+
+切出游戏时自动弹出设置/暂停界面，三端分别监听：
+
+- **Web + Capacitor iOS**（`index.ts` / `crazygamesIndex.ts`）：`document.addEventListener('visibilitychange', ...)` — 页面隐藏时调 `coordinator.pauseIfPlaying()`
+- **微信小游戏**（`wechatIndex.ts`）：`wx.onHide(...)` — 进后台时调 `coordinator.pauseIfPlaying()`
+
+`SceneCoordinator.pauseIfPlaying()` 只在当前活跃场景为 `GameScene` 时转发；`GameScene.pauseIfPlaying()` 检查游戏未结束且未暂停后调用 `openSettings()`。
+
 ---
 
 ## 4. 屏幕适配机制

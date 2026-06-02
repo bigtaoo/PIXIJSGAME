@@ -518,6 +518,12 @@ export class GameScene extends PIXI.Container {
 
   // Settings / pause
 
+  /** Called when the app loses focus (visibilitychange / wx.onHide). */
+  public pauseIfPlaying(): void {
+    if (this.state.isGameEnd || this.state.isPause) return;
+    this.openSettings();
+  }
+
   private openSettings(): void {
     if (this.state.isGameEnd) return;
     this.state.isPause = true;

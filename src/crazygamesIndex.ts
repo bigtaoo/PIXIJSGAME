@@ -84,6 +84,11 @@ window.onload = async () => {
   // doesn't count the session as a crash.
   window.addEventListener('beforeunload', () => crazyGames.sdkGameLoadingStart());
 
+  // Pause when the tab/app goes to background.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) coordinator.pauseIfPlaying();
+  });
+
   // ── 10. Auth state listener (optional) ───────────────────────────
   if (crazyGames.isUserAccountAvailable) {
     crazyGames.onAuthChange((user) => {

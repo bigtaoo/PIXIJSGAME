@@ -84,6 +84,13 @@ export class SceneCoordinator extends PIXI.Container {
     }
   }
 
+  /** Pause the game if a game scene is currently active and running. */
+  public pauseIfPlaying(): void {
+    if (this.activeScene instanceof GameScene) {
+      this.activeScene.pauseIfPlaying();
+    }
+  }
+
   public update(deltaMs: number): void {
     if (this.activeScene instanceof GameScene) {
       this.activeScene.update(deltaMs);

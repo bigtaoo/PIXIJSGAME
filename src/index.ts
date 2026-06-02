@@ -69,4 +69,9 @@ window.onload = async () => {
   app.ticker.add(() => {
     coordinator.update(app.ticker.elapsedMS);
   });
+
+  // Pause when the tab/app goes to background (web + Capacitor iOS).
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) coordinator.pauseIfPlaying();
+  });
 };

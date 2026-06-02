@@ -50,6 +50,9 @@ async function Init() {
 
   app.ticker.add(() => coordinator.update(app.ticker.elapsedMS));
 
+  // Pause when the mini-game goes to background.
+  wx.onHide(() => coordinator.pauseIfPlaying());
+
   wx.onWindowResize((res: { windowWidth: number; windowHeight: number }) => {
     const { windowWidth: w, windowHeight: h } = res;
     app.renderer.resize(w, h);
