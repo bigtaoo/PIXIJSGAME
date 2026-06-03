@@ -30,6 +30,8 @@ window.onload = async () => {
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: 0x1099bb,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    autoDensity: true,
   });
 
   const canvas = app.view as HTMLCanvasElement;
