@@ -192,11 +192,7 @@ export class LobbyScene extends PIXI.Container {
   }
 
   private buildBackground(): void {
-    this.bg        = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
-    this.bg.x      = 0;
-    this.bg.y      = 0;
-    this.bg.width  = GAME_WIDTH;
-    this.bg.height = GAME_HEIGHT;
+    this.bg = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
     this.addChild(this.bg);
   }
 
@@ -386,13 +382,17 @@ export class LobbyScene extends PIXI.Container {
 
   private updateBgSize(): void {
     if (!this.bg) return;
-    if (this.screen.orientation === Orientation.Landscape) {
-      this.bg.width  = GAME_HEIGHT;
-      this.bg.height = GAME_WIDTH;
-    } else {
-      this.bg.width  = GAME_WIDTH;
-      this.bg.height = GAME_HEIGHT;
-    }
+    const canvasW = this.screen.width;
+    const canvasH = this.screen.height;
+    const texW    = this.bg.texture.width;
+    const texH    = this.bg.texture.height;
+    const scale   = Math.max(canvasW / texW, canvasH / texH);
+    const dispW   = texW * scale;
+    const dispH   = texH * scale;
+    this.bg.width  = dispW;
+    this.bg.height = dispH;
+    this.bg.x      = (canvasW - dispW) / 2;
+    this.bg.y      = (canvasH - dispH) / 2;
   }
 
   /**
