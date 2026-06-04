@@ -73,7 +73,7 @@ const LANDSCAPE_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex:  6, x:  1600, y:  871 },
   { stageIndex:  7, x: 1770, y:  670 },
   { stageIndex:  8, x:  1380, y:  669 },
-  { stageIndex:  9, x: 980, y:  590 },
+  { stageIndex:  9, x: 1150, y:  550 },
   { stageIndex: 10, x:  660, y:  518 },
   { stageIndex: 11, x: 900, y:  418 },
   { stageIndex: 12, x: 1299, y:  410 },
