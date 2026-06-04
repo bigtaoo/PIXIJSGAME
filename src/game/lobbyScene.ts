@@ -44,8 +44,8 @@ const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~44
 const DC_GAP     = 12;
 
 // ── Node stage number dimensions ─────────────────────────────────────────────
-const NODE_DIGIT_H = 40;
-const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // 30
+const NODE_DIGIT_H = Math.round(150 * 0.85); // 127 — 85% of NODE_SIZE
+const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // ~95
 
 // Per-node runtime data for repositioning on resize
 interface NodeEntry {
@@ -74,7 +74,7 @@ const MUSIC_BTN_SIZE = 109;  // 56 × 1.5 × 1.3
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
-  private static readonly NODE_SIZE  = 100;
+  private static readonly NODE_SIZE  = 150;
   private static readonly DAILY_SIZE = 254;  // 130 × 1.5 × 1.3
 
   private bg!: PIXI.Sprite;
@@ -137,20 +137,24 @@ export class LobbyScene extends PIXI.Container {
       const completed = stage.stageIndex <= maxCompleted;
       const isCurrent = stage.stageIndex === maxCompleted + 1;
 
+      const entry = this.nodeEntries[i];
       if (isCurrent) {
         card.texture   = this.cardSelectedTexture;
         card.tint      = 0xFFFFFF;
         card.alpha     = 1;
         this.currentCard = card;
+        if (entry) entry.numDisplay.tint = 0xF5EAC8;
       } else if (completed) {
         card.texture = this.cardTexture;
         card.tint    = 0xFFFFFF;
         card.alpha   = 1;
+        if (entry) entry.numDisplay.tint = 0xF5EAC8;
       } else {
         card.texture = this.cardTexture;
-        card.tint    = 0x888888;
-        card.alpha   = 0.5;
+        card.tint    = 0xB09060;
+        card.alpha   = 0.75;
         if (this.currentCard === card) this.currentCard = null;
+        if (entry) entry.numDisplay.tint = 0xB09060;
       }
 
       if (completed || isCurrent) {
@@ -215,7 +219,7 @@ export class LobbyScene extends PIXI.Container {
       const card = this.buildStageButton(stage, cx - r, cy - r, sz);
       this.stageCards.push(card);
 
-      const numDisplay = new DigitDisplay(this.ctx, NODE_DIGIT_W, NODE_DIGIT_H);
+      const numDisplay = new DigitDisplay(this.ctx, NODE_DIGIT_W, NODE_DIGIT_H, 0xFFFFFF, Math.round(NODE_DIGIT_W * 2 / 3));
       numDisplay.update(stage.stageIndex);
       numDisplay.x = cx - numDisplay.totalWidth / 2;
       numDisplay.y = cy - NODE_DIGIT_H / 2;

@@ -25,6 +25,11 @@ export const C = {
   cellSelFill:   0xFBF8EE,
   cellSelBorder: 0xEAB830,
 
+  // Lobby node circle (warmer parchment tone)
+  nodeFill:      0xEEDFBD,
+  nodeSelFill:   0xF5EAC8,
+  nodeBorder:    0xC4A870,
+
   // Panel (Header / result overlay / settings overlay)
   panelFill:     0xFAFAF8,
   panelBorder:   0xE0DAD0,
@@ -93,8 +98,8 @@ export function drawCircleCell(g: PIXI.Graphics, size: number): void {
   const cx = size / 2;
   const cy = size / 2;
   const r  = size / 2 - 2;
-  g.lineStyle(1.5, C.cellBorder, 1);
-  g.beginFill(C.cellFill);
+  g.lineStyle(2, C.nodeBorder, 0.8);
+  g.beginFill(C.nodeFill);
   g.drawCircle(cx, cy, r);
   g.endFill();
 }
@@ -108,7 +113,7 @@ export function drawCircleCellSelected(g: PIXI.Graphics, size: number): void {
   const bw = Math.max(5, Math.round(size * 0.042));
   const r  = size / 2 - bw / 2;
   g.lineStyle(bw, C.cellSelBorder, 1);
-  g.beginFill(C.cellSelFill);
+  g.beginFill(C.nodeSelFill);
   g.drawCircle(cx, cy, r);
   g.endFill();
 }

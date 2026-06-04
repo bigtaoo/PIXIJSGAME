@@ -23,6 +23,8 @@ export class DigitDisplay extends PIXI.Container {
     public digitW: number,
     public digitH: number,
     tint: number = 0xFFFFFF,
+    /** X step between digits. Defaults to digitW (no overlap). */
+    public digitSpacing: number = digitW,
   ) {
     super();
     this._tint = tint;
@@ -61,7 +63,7 @@ export class DigitDisplay extends PIXI.Container {
         s.texture  = this.ctx.assets.GetTexture(`${str[i]}.png`);
         s.width    = this.digitW;
         s.height   = this.digitH;
-        s.x        = i * this.digitW;
+        s.x        = i * this.digitSpacing;
         s.y        = 0;
         s.tint     = this._tint;
         s.visible  = true;
@@ -70,6 +72,6 @@ export class DigitDisplay extends PIXI.Container {
       }
     }
 
-    this._totalWidth = len * this.digitW;
+    this._totalWidth = len === 0 ? 0 : (len - 1) * this.digitSpacing + this.digitW;
   }
 }
