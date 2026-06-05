@@ -8,7 +8,39 @@ import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WechatAudioManager } from './game/wechatAudioManager';
 import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
 
+function setupPixiWechatAdapter() {
+  // PixiJS's CanvasResource.test() uses `instanceof HTMLCanvasElement` and
+  // ImageResource.test() uses `instanceof HTMLImageElement`. Neither class
+  // exists in the WeChat mini-game runtime, so we register the WeChat
+  // constructors as globals so PixiJS can recognise them.
+  const wxCanvas = wx.createCanvas();
+  const wxImage  = wx.createImage();
+  (globalThis as any).HTMLCanvasElement = wxCanvas.constructor;
+  (globalThis as any).HTMLImageElement  = wxImage.constructor;
+
+  // Override settings.ADAPTER so all internal PixiJS canvas creation
+  // (Texture.WHITE, tinting, etc.) uses wx.createCanvas() instead of
+  // document.createElement('canvas').
+  PIXI.settings.ADAPTER = {
+    createCanvas: (width?: number, height?: number) => {
+      const c = wx.createCanvas();
+      if (width  !== undefined) c.width  = width;
+      if (height !== undefined) c.height = height;
+      return c as unknown as HTMLCanvasElement;
+    },
+    getCanvasRenderingContext2D: () => CanvasRenderingContext2D as any,
+    getWebGLRenderingContext:    () => WebGLRenderingContext as any,
+    getNavigator:  () => ({ userAgent: '' } as Navigator),
+    getBaseUrl:    () => '',
+    getFontFaceSet: () => undefined as any,
+    fetch:     (url: RequestInfo, init?: RequestInit) => fetch(url as string, init),
+    parseXML:  () => null as any,
+  };
+}
+
 async function Init() {
+  setupPixiWechatAdapter();
+
   const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
   const width = info.screenWidth;
   const height = info.screenHeight;

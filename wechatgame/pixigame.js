@@ -25019,15 +25019,17 @@ void main(void)\r
           // Daily challenge icon
           const dailyImg = await this.loadImageWX('assets/daily_challenge_icon.png');
           this.textures['daily_challenge_icon.png'] = new Texture(this.imageToBaseTexture(dailyImg));
-          // Icons: star / trophy / fire
-          const [starImg, trophyImg, fireImg] = await Promise.all([
+          // Icons: star / trophy / fire / music
+          const [starImg, trophyImg, fireImg, musicImg] = await Promise.all([
               this.loadImageWX('assets/star.png'),
               this.loadImageWX('assets/trophy.png'),
               this.loadImageWX('assets/fire.png'),
+              this.loadImageWX('assets/music.png'),
           ]);
           this.textures['star.png'] = new Texture(this.imageToBaseTexture(starImg));
           this.textures['trophy.png'] = new Texture(this.imageToBaseTexture(trophyImg));
           this.textures['fire.png'] = new Texture(this.imageToBaseTexture(fireImg));
+          this.textures['music.png'] = new Texture(this.imageToBaseTexture(musicImg));
           // Explosion particle atlas (load failure does not affect the game)
           await this.loadExplosionAtlasWX().catch(() => { });
       }
@@ -29888,7 +29890,38 @@ void main(void)\r
       }
   }
 
+  function setupPixiWechatAdapter() {
+      // PixiJS's CanvasResource.test() uses `instanceof HTMLCanvasElement` and
+      // ImageResource.test() uses `instanceof HTMLImageElement`. Neither class
+      // exists in the WeChat mini-game runtime, so we register the WeChat
+      // constructors as globals so PixiJS can recognise them.
+      const wxCanvas = wx.createCanvas();
+      const wxImage = wx.createImage();
+      globalThis.HTMLCanvasElement = wxCanvas.constructor;
+      globalThis.HTMLImageElement = wxImage.constructor;
+      // Override settings.ADAPTER so all internal PixiJS canvas creation
+      // (Texture.WHITE, tinting, etc.) uses wx.createCanvas() instead of
+      // document.createElement('canvas').
+      settings.ADAPTER = {
+          createCanvas: (width, height) => {
+              const c = wx.createCanvas();
+              if (width !== undefined)
+                  c.width = width;
+              if (height !== undefined)
+                  c.height = height;
+              return c;
+          },
+          getCanvasRenderingContext2D: () => CanvasRenderingContext2D,
+          getWebGLRenderingContext: () => WebGLRenderingContext,
+          getNavigator: () => ({ userAgent: '' }),
+          getBaseUrl: () => '',
+          getFontFaceSet: () => undefined,
+          fetch: (url, init) => fetch(url, init),
+          parseXML: () => null,
+      };
+  }
   async function Init() {
+      setupPixiWechatAdapter();
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const width = info.screenWidth;
       const height = info.screenHeight;

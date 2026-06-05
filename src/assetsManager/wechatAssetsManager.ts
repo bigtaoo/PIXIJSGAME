@@ -49,15 +49,17 @@ export class WechatAssetsManager implements IAssetsManager {
     const dailyImg = await this.loadImageWX('assets/daily_challenge_icon.png');
     this.textures['daily_challenge_icon.png'] = new PIXI.Texture(this.imageToBaseTexture(dailyImg));
 
-    // Icons: star / trophy / fire
-    const [starImg, trophyImg, fireImg] = await Promise.all([
+    // Icons: star / trophy / fire / music
+    const [starImg, trophyImg, fireImg, musicImg] = await Promise.all([
       this.loadImageWX('assets/star.png'),
       this.loadImageWX('assets/trophy.png'),
       this.loadImageWX('assets/fire.png'),
+      this.loadImageWX('assets/music.png'),
     ]);
     this.textures['star.png']   = new PIXI.Texture(this.imageToBaseTexture(starImg));
     this.textures['trophy.png'] = new PIXI.Texture(this.imageToBaseTexture(trophyImg));
     this.textures['fire.png']   = new PIXI.Texture(this.imageToBaseTexture(fireImg));
+    this.textures['music.png']  = new PIXI.Texture(this.imageToBaseTexture(musicImg));
 
     // Explosion particle atlas (load failure does not affect the game)
     await this.loadExplosionAtlasWX().catch(() => {/* ignore */});
