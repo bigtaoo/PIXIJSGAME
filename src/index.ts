@@ -1,5 +1,8 @@
 import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
+import { LoadingOverlay } from './ui/loadingOverlay';
+
+declare const TARGET: string;
 import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
@@ -9,6 +12,8 @@ import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 import { MobileAudioManager } from './game/mobileAudioManager';
 
 window.onload = async () => {
+  const loadingOverlay = TARGET !== 'mobile' ? new LoadingOverlay() : null;
+
   const app = new PIXI.Application({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -25,7 +30,7 @@ window.onload = async () => {
 
   const assets = new WebAssetsManager();
   try {
-    await assets.loadAssets();
+    await assets.loadAssets((loaded, total) => loadingOverlay?.setProgress(loaded / total));
   } catch (err) {
     console.error('[init] loadAssets failed:', err);
     // Show error on screen so we can diagnose on device
@@ -38,6 +43,7 @@ window.onload = async () => {
 
   // Generate programmatic textures after renderer is ready
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
+  await loadingOverlay?.dismiss();
 
   const input = new InputManager();
   setupWebInput(canvas, input);

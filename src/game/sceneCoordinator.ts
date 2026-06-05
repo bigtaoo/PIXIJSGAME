@@ -42,6 +42,9 @@ export class SceneCoordinator extends PIXI.Container {
    * the ad and cancels the transition if so.
    */
   private navGeneration = 0;
+  /** True after the first gameplayStart() has been called. Prevents a spurious
+   *  gameplayStop() from being sent before gameplay has ever begun. */
+  private gameplayStarted = false;
 
   constructor(private readonly ctx: AppContext) {
     super();
@@ -113,7 +116,7 @@ export class SceneCoordinator extends PIXI.Container {
   public showLobby(): void {
     this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
     this.gameScene.persistWinIfComplete(); // safety-net: ensure win data is saved
-    this.ctx.platform?.gameplayStop();
+    if (this.gameplayStarted) this.ctx.platform?.gameplayStop();
     this.gameScene.visible           = false;
     this.dailyChallengeScene.visible = false;
     this.lobbyScene.visible          = true;
@@ -125,13 +128,14 @@ export class SceneCoordinator extends PIXI.Container {
   /** Show the Daily Challenge scene. */
   public showDailyChallenge(): void {
     this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
-    this.ctx.platform?.gameplayStop();
+    if (this.gameplayStarted) this.ctx.platform?.gameplayStop();
     this.lobbyScene.visible          = false;
     this.gameScene.visible           = false;
     this.dailyChallengeScene.visible = true;
     this.activeScene                 = this.dailyChallengeScene;
     this.dailyChallengeScene.start();
     this.dailyChallengeScene.resize(this.windowWidth, this.windowHeight);
+    this.gameplayStarted = true;
     this.ctx.platform?.gameplayStart();
   }
 
@@ -144,7 +148,7 @@ export class SceneCoordinator extends PIXI.Container {
    * rapid stage transitions are not penalised.
    */
   public async showGame(stage: StageData): Promise<void> {
-    this.ctx.platform?.gameplayStop();
+    if (this.gameplayStarted) this.ctx.platform?.gameplayStop();
 
     if (this.firstGameShow) {
       this.firstGameShow = false;
@@ -163,6 +167,7 @@ export class SceneCoordinator extends PIXI.Container {
     this.activeScene                 = this.gameScene;
     this.gameScene.loadStage(stage);
     this.gameScene.resize(this.windowWidth, this.windowHeight);
+    this.gameplayStarted = true;
     this.ctx.platform?.gameplayStart();
   }
 

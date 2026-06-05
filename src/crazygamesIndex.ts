@@ -9,6 +9,7 @@
 
 import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
+import { LoadingOverlay } from './ui/loadingOverlay';
 import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
@@ -19,6 +20,9 @@ import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 import { crazyGames } from './platform/crazygamesService';
 
 window.onload = async () => {
+  // ── 0. Show loading overlay immediately ───────────────────────────
+  const loadingOverlay = new LoadingOverlay();
+
   // ── 1. Init SDK (must happen before loadingStart) ─────────────────
   await crazyGames.init();
 
@@ -42,14 +46,15 @@ window.onload = async () => {
   setPlayerPrefsImpl(prefs);
 
   const assets = new WebAssetsManager();
-  await assets.loadAssets();
+  await assets.loadAssets((loaded, total) => loadingOverlay.setProgress(loaded / total));
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
 
   const input = new InputManager();
   setupWebInput(canvas, input);
 
-  // ── 5. Signal loading complete ────────────────────────────────────
+  // ── 5. Signal loading complete and dismiss overlay ────────────────
   crazyGames.loadingStop();
+  await loadingOverlay.dismiss();
 
   // ── 6. Build scene graph ──────────────────────────────────────────
   const audio = new AudioManager(prefs);

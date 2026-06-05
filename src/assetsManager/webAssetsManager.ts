@@ -37,7 +37,9 @@ const SETTINGS_SIZE  = 80;
 export class WebAssetsManager implements IAssetsManager {
   private textures: Record<string, PIXI.Texture> = {};
 
-  public async loadAssets(): Promise<void> {
+  public async loadAssets(
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<void> {
     const tasks: Array<[string, () => Promise<void>]> = [
       ['digits',     () => this.loadDigits()],
       ['hearts',     () => this.loadHearts()],
@@ -50,10 +52,15 @@ export class WebAssetsManager implements IAssetsManager {
       ['music',      () => this.loadMusic()],
     ];
 
+    const total = tasks.length;
+    let loaded = 0;
+
     await Promise.all(
       tasks.map(async ([name, fn]) => {
         try {
           await fn();
+          loaded++;
+          onProgress?.(loaded, total);
         } catch (err) {
           throw new Error(`[asset:${name}] ${String(err)}`);
         }
