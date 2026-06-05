@@ -21,14 +21,14 @@ module.exports = {
     }),
     commonjs(),
     json(),
-    typescript(),
+    typescript({ tsconfig: './tsconfig.wechat.json' }),
     // Transpile ES2020 syntax (??  and ?.) that WeChat's JS engine rejects.
     // Runs after typescript so it covers both our code and third-party bundles.
     babel({
       babelHelpers: 'bundled',
       plugins: [
-        '@babel/plugin-proposal-nullish-coalescing-operator',
         '@babel/plugin-proposal-optional-chaining',
+        '@babel/plugin-proposal-nullish-coalescing-operator',
       ],
       // Apply to all JS in the bundle (including node_modules like pixi.js)
       exclude: [],
