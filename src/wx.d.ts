@@ -27,7 +27,7 @@ declare module wx {
     opts: Callback<{
       finderUserName: string;
     }>
-  );
+  ): void;
 
   interface Touch {
     identifier: number;
@@ -119,79 +119,79 @@ declare module wx {
     readonly buffered: number;
 
     /** Start playback */
-    play();
+    play(): void;
 
     /** Pause. Resuming after a pause restarts from the paused position. */
-    pause();
+    pause(): void;
 
     /** Stop. Resuming after a stop restarts from the beginning. */
-    stop();
+    stop(): void;
 
     /** Seek to the specified position */
-    seek(position: number);
+    seek(position: number): void;
 
     /** Destroy the current instance */
-    destroy();
+    destroy(): void;
 
     /** Listen for the event when the audio enters a playable state (does not guarantee smooth playback) */
-    onCanplay(cb: () => {});
+    onCanplay(cb: () => void): void;
 
     /** Remove listener for the canplay event */
-    offCanplay(cb: () => {});
+    offCanplay(cb: () => void): void;
 
     /** Listen for the audio play event */
-    onPlay(cb: () => {});
+    onPlay(cb: () => void): void;
 
     /** Remove listener for the play event */
-    offPlay(cb: () => {});
+    offPlay(cb: () => void): void;
 
     /** Listen for the audio pause event */
-    onPause(cb: () => {});
+    onPause(cb: () => void): void;
 
     /** Remove listener for the pause event */
-    offPause(cb: () => {});
+    offPause(cb: () => void): void;
 
     /** Listen for the audio stop event */
-    onStop(cb: () => {});
+    onStop(cb: () => void): void;
 
     /** Remove listener for the stop event */
-    offStop(cb: () => {});
+    offStop(cb: () => void): void;
 
     /** Listen for the event when audio playback reaches the end naturally */
-    onEnded(cb: () => {});
+    onEnded(cb: () => void): void;
 
     /** Remove listener for the ended event */
-    offEnded(cb: () => {});
+    offEnded(cb: () => void): void;
 
     /** Listen for audio playback progress update events */
-    onTimeUpdate(cb: () => {});
+    onTimeUpdate(cb: () => void): void;
 
     /** Remove listener for timeupdate events */
-    offTimeUpdate(cb: () => {});
+    offTimeUpdate(cb: () => void): void;
 
     /** Listen for the audio error event */
-    onError(cb: () => {});
+    onError(cb: () => void): void;
 
     /** Remove listener for the error event */
-    offError(cb: () => {});
+    offError(cb: () => void): void;
 
     /** Listen for the audio buffering event (triggered when audio stops to buffer due to insufficient data) */
-    onWaiting(cb: () => {});
+    onWaiting(cb: () => void): void;
 
     /** Remove listener for the waiting event */
-    offWaiting(cb: () => {});
+    offWaiting(cb: () => void): void;
 
     /** Listen for the seek start event */
-    onSeeking(cb: () => {});
+    onSeeking(cb: () => void): void;
 
     /** Remove listener for the seeking event */
-    offSeeking(cb: () => {});
+    offSeeking(cb: () => void): void;
 
     /** Listen for the seek complete event */
-    onSeeked(cb: () => {});
+    onSeeked(cb: () => void): void;
 
     /** Remove listener for the seeked event */
-    offSeeked(cb: () => {});
+    offSeeked(cb: () => void): void;
   }
 
   function createInnerAudioContext(opts?: { useWebAudioImplement?: boolean }): IInnerAudioContext;
@@ -290,18 +290,28 @@ declare module wx {
     }
   ): void;
 
-  /** Get system information */
-  function getSystemInfoSync(): {
+  interface IWindowInfo {
+    /** 可使用窗口宽度 px */
     windowWidth: number;
+    /** 可使用窗口高度 px */
     windowHeight: number;
+    /** 屏幕物理宽度 px */
+    screenWidth: number;
+    /** 屏幕物理高度 px */
+    screenHeight: number;
+    /** 设备像素比 */
     pixelRatio: number;
-  };
+  }
 
-  function getWindowInfo();
+  /** Get system information (deprecated — prefer getWindowInfo) */
+  function getSystemInfoSync(): IWindowInfo;
 
-  function createCanvas();
-  function createImage();
-  function request(any);
+  /** Get window info (recommended replacement for getSystemInfoSync) */
+  function getWindowInfo(): IWindowInfo;
+
+  function createCanvas(): HTMLCanvasElement;
+  function createImage(): HTMLImageElement;
+  function request(opts: any): void;
 
   function onShow(
     opt: (opt: {
@@ -493,6 +503,9 @@ declare module wx {
   function createInterstitialAd(opts: { adUnitId: string }): IInterstitialAd;
 
   function loadFont(path: string): string;
+
+  function onWindowResize(cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void): void;
+  function offWindowResize(cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void): void;
 
   type Callback<T> = T &
     Omit<

@@ -53,8 +53,8 @@ async function Init() {
   // Pause when the mini-game goes to background.
   wx.onHide(() => coordinator.pauseIfPlaying());
 
-  wx.onWindowResize((res: { windowWidth: number; windowHeight: number }) => {
-    const { windowWidth: w, windowHeight: h } = res;
+  wx.onWindowResize((res) => {
+    const { windowWidth: w, windowHeight: h } = res.size;
     app.renderer.resize(w, h);
     coordinator.resize(w, h);
   });

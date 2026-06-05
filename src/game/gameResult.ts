@@ -74,7 +74,7 @@ export class GameResultOverlay extends PIXI.Container {
   private readonly starSprites: PIXI.Sprite[] = [];
   private lastPanelW = 0;
   private lastPanelH = 0;
-  private _lastLayout: GameResultLayout = portraitLayout();
+  private _lastLayout: GameResultLayout = portraitLayout(0);
 
   constructor(
     private readonly ctx: AppContext,

@@ -20,7 +20,7 @@ const SRC_VICTORY  = 'assets/victory.ogg';
 const SRC_GAMEOVER = 'assets/gameover.ogg';
 
 export class WechatAudioManager implements IAudioManager {
-  private bgCtx: WechatMinigame.InnerAudioContext | null = null;
+  private bgCtx: wx.IInnerAudioContext | null = null;
   private musicEnabled: boolean;
 
   constructor(private readonly prefs: IPlayerPrefs) {
