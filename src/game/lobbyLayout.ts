@@ -37,25 +37,25 @@ export interface LobbyNodePos {
  * stageIndex 1 = bottom of the map; 19 = top of the map.
  */
 const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
-  { stageIndex:  1, x:  540, y: 1820 },
+  { stageIndex:  1, x:  600, y: 1790 },
   { stageIndex:  2, x:  303, y: 1730 },
   { stageIndex:  3, x:  878, y: 1640 },
-  { stageIndex:  4, x:  573, y: 1550 },
+  { stageIndex:  4, x:  390, y: 1550 },
   { stageIndex:  5, x:  708, y: 1460 },
-  { stageIndex:  6, x:  438, y: 1370 },
+  { stageIndex:  6, x:  200, y: 1370 },
   { stageIndex:  7, x:  708, y: 1280 },
   { stageIndex:  8, x:  303, y: 1190 },
   { stageIndex:  9, x:  776, y: 1100 },
-  { stageIndex: 10, x:  540, y: 1010 },
+  { stageIndex: 10, x:  500, y: 1000 },
   { stageIndex: 11, x:  641, y:  920 },
   { stageIndex: 12, x:  843, y:  830 },
   { stageIndex: 13, x:  506, y:  740 },
   { stageIndex: 14, x:  843, y:  650 },
-  { stageIndex: 15, x:  573, y:  560 },
+  { stageIndex: 15, x:  390, y:  560 },
   { stageIndex: 16, x:  708, y:  470 },
-  { stageIndex: 17, x:  843, y:  380 },
-  { stageIndex: 18, x:  708, y:  290 },
-  { stageIndex: 19, x:  506, y:  200 },
+  { stageIndex: 17, x:  893, y:  380 },
+  { stageIndex: 18, x:  508, y:  290 },
+  { stageIndex: 19, x:  906, y:  100 },
 ];
 
 const PORTRAIT_DAILY_POS = { x: 177, y: 660 } as const;  // left margin 50px: 50 + DAILY_SIZE/2(127)
