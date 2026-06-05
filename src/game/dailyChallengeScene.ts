@@ -291,6 +291,7 @@ export class DailyChallengeScene extends PIXI.Container {
     const isCombo = this.comboCount > 1;
     this.effectLayer.playEffect(idxA, isCombo, this.comboCount);
     this.effectLayer.playEffect(idxB, isCombo, this.comboCount);
+    this.ctx.audio.playAddTime();
     this.logic.removeNumber(idxA);
     this.logic.removeNumber(idxB);
     this.selectedIndex = -1;
