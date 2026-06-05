@@ -29890,15 +29890,15 @@ void main(void)\r
       }
   }
 
-  function setupPixiWechatAdapter() {
+  function setupPixiWechatAdapter(mainCanvas) {
       // PixiJS's CanvasResource.test() uses `instanceof HTMLCanvasElement` and
       // ImageResource.test() uses `instanceof HTMLImageElement`. Neither class
       // exists in the WeChat mini-game runtime, so we register the WeChat
       // constructors as globals so PixiJS can recognise them.
-      const wxCanvas = wx.createCanvas();
-      const wxImage = wx.createImage();
-      globalThis.HTMLCanvasElement = wxCanvas.constructor;
-      globalThis.HTMLImageElement = wxImage.constructor;
+      // Use the already-created main canvas to get its constructor — avoids
+      // consuming the main canvas slot with a throwaway call to wx.createCanvas().
+      globalThis.HTMLCanvasElement = mainCanvas.constructor;
+      globalThis.HTMLImageElement = wx.createImage().constructor;
       // Override settings.ADAPTER so all internal PixiJS canvas creation
       // (Texture.WHITE, tinting, etc.) uses wx.createCanvas() instead of
       // document.createElement('canvas').
@@ -29921,11 +29921,13 @@ void main(void)\r
       };
   }
   async function Init() {
-      setupPixiWechatAdapter();
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const width = info.screenWidth;
       const height = info.screenHeight;
+      // Must be the FIRST wx.createCanvas() call — WeChat makes the first canvas
+      // the visible screen canvas; all subsequent calls return offscreen canvases.
       const canvas = wx.createCanvas();
+      setupPixiWechatAdapter(canvas);
       const globalObj = typeof GameGlobal !== 'undefined' ? GameGlobal : null;
       if (globalObj)
           globalObj.canvas = canvas;
