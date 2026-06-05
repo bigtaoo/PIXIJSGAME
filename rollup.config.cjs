@@ -3,6 +3,7 @@ const commonjs = require('@rollup/plugin-commonjs');
 const typescript = require('@rollup/plugin-typescript');
 const polyfillNode = require('rollup-plugin-polyfill-node');
 const json = require('@rollup/plugin-json');
+const babel = require('@rollup/plugin-babel').default;
 
 module.exports = {
   input: 'src/wechatIndex.ts',
@@ -21,5 +22,16 @@ module.exports = {
     commonjs(),
     json(),
     typescript(),
+    // Transpile ES2020 syntax (??  and ?.) that WeChat's JS engine rejects.
+    // Runs after typescript so it covers both our code and third-party bundles.
+    babel({
+      babelHelpers: 'bundled',
+      plugins: [
+        '@babel/plugin-proposal-nullish-coalescing-operator',
+        '@babel/plugin-proposal-optional-chaining',
+      ],
+      // Apply to all JS in the bundle (including node_modules like pixi.js)
+      exclude: [],
+    }),
   ],
 };
