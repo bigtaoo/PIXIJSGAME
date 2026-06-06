@@ -287,7 +287,60 @@ StageConfig（关卡配置）
 
 ---
 
-## 9. iOS / Android 发布（Capacitor）
+## 9. 微信小游戏构建配置
+
+### 9.1 TypeScript target 分离
+
+微信 JS 引擎不支持 ES2020 语法（`??` / `?.`），因此微信构建使用独立的 tsconfig：
+
+| 文件 | target | 用途 |
+|------|--------|------|
+| `tsconfig.json` | ES2020 | Web / Mobile / 默认 |
+| `tsconfig.wechat.json` | ES2015 | 微信 Rollup 构建专用 |
+
+`tsconfig.wechat.json` 只继承并覆盖 target，其余选项复用：
+
+```json
+{ "extends": "./tsconfig.json", "compilerOptions": { "target": "ES2015" } }
+```
+
+`rollup.config.cjs` 中引用：`typescript({ tsconfig: './tsconfig.wechat.json' })`
+
+### 9.2 Babel 补充转译
+
+PixiJS 等第三方库内部也有 `??` / `?.`，TypeScript 不处理 node_modules，因此在 Rollup 插件链末尾加了 Babel：
+
+```js
+babel({
+  babelHelpers: 'bundled',
+  plugins: [
+    '@babel/plugin-proposal-optional-chaining',        // 顺序重要：先处理 ?.
+    '@babel/plugin-proposal-nullish-coalescing-operator', // 再处理 ??
+  ],
+  exclude: [],  // 包含 node_modules
+})
+```
+
+**注意插件顺序**：optional-chaining 必须在 nullish-coalescing 之前，否则 `x?.[0] ?? y` 这类组合表达式可能漏转。
+
+### 9.3 PixiJS Adapter（无 DOM 环境）
+
+微信小游戏没有 `document`，PixiJS 需要覆盖适配层（`wechatIndex.ts`）：
+
+```typescript
+// 注册 WeChat canvas/image 构造函数，让 PixiJS instanceof 检查通过
+globalThis.HTMLCanvasElement = (mainCanvas as any).constructor;
+globalThis.HTMLImageElement  = wx.createImage().constructor;
+
+// 覆盖 PIXI.settings.ADAPTER，用 wx.createCanvas() 替代 document.createElement
+PIXI.settings.ADAPTER = { createCanvas: ..., ... };
+```
+
+**关键约束**：`wx.createCanvas()` 的**第一次调用**返回可见屏幕 canvas，后续调用返回离屏 canvas。因此 `Init()` 中必须先 `const canvas = wx.createCanvas()`，再传给 `setupPixiWechatAdapter(canvas)`，避免适配层内部消耗掉可见 canvas 名额。
+
+---
+
+## 10. iOS / Android 发布（Capacitor）
 
 Capacitor 将 Web 构建（`dist/`）包装为原生 App（WKWebView on iOS，WebView on Android）。配置文件：`capacitor.config.ts`。
 
