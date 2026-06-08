@@ -76,14 +76,53 @@ export const C = {
  */
 export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
   g.clear();
+
+  // ── Base fill ──────────────────────────────────────────────────────────────
   g.beginFill(C.bgFill);
   g.drawRect(0, 0, w, h);
   g.endFill();
 
-  g.lineStyle(1, C.bgLine, C.bgLineAlpha);
-  const sp = 20;
-  for (let x = sp; x < w; x += sp) { g.moveTo(x, 0); g.lineTo(x, h); }
-  for (let y = sp; y < h; y += sp) { g.moveTo(0, y); g.lineTo(w, y); }
+  // ── Grid lines ─────────────────────────────────────────────────────────────
+  const sp        = 24;   // grid spacing (px)
+  const lineColor = 0xB8A88A;   // warm tan — warmer than gray, fits stationery theme
+  const alphaMin  = 0.22;       // minor lines
+  const alphaMaj  = 0.40;       // every 4th line (major grid)
+
+  for (let x = sp; x < w; x += sp) {
+    const isMajor = Math.round(x / sp) % 4 === 0;
+    g.lineStyle(isMajor ? 1.2 : 0.8, lineColor, isMajor ? alphaMaj : alphaMin);
+    g.moveTo(x, 0); g.lineTo(x, h);
+  }
+  for (let y = sp; y < h; y += sp) {
+    const isMajor = Math.round(y / sp) % 4 === 0;
+    g.lineStyle(isMajor ? 1.2 : 0.8, lineColor, isMajor ? alphaMaj : alphaMin);
+    g.moveTo(0, y); g.lineTo(w, y);
+  }
+
+  // ── Small dots at every intersection (minor lines only) ───────────────────
+  g.lineStyle(0);
+  for (let x = sp; x < w; x += sp) {
+    for (let y = sp; y < h; y += sp) {
+      const isMajorX = Math.round(x / sp) % 4 === 0;
+      const isMajorY = Math.round(y / sp) % 4 === 0;
+      if (!isMajorX && !isMajorY) {
+        g.beginFill(lineColor, 0.28);
+        g.drawCircle(x, y, 1.2);
+        g.endFill();
+      }
+    }
+  }
+
+  // ── Vignette: subtle dark overlay at the four edges ───────────────────────
+  // Drawn as four thin dark rectangles to simulate a soft shadow border.
+  const vStrength = 0.06;
+  const vSize     = Math.min(w, h) * 0.12;
+  g.beginFill(0x3D2200, vStrength);
+  g.drawRect(0, 0, w, vSize);          // top
+  g.drawRect(0, h - vSize, w, vSize);  // bottom
+  g.drawRect(0, 0, vSize, h);          // left
+  g.drawRect(w - vSize, 0, vSize, h);  // right
+  g.endFill();
 }
 
 // ─── Cell ─────────────────────────────────────────────────────────────────────
