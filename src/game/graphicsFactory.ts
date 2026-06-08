@@ -10,11 +10,14 @@
 import * as PIXI from 'pixi.js-legacy';
 
 // ─── Cell colour palette (exported so assetsManager can generate per-colour textures) ──
+/**
+ * Three tier colours — map small→mid→large numbers to cool→neutral→warm.
+ * Index 0 = tier 0 (small numbers), 1 = tier 1 (mid), 2 = tier 2 (large).
+ */
 export const CELL_PALETTE = [
-  0xFFF3CC,  // warm honey cream
-  0xC5E8FA,  // soft sky blue
-  0xFFCCBC,  // soft coral / peach
-  0xD8F0D0,  // soft sage green
+  0xC5E8FA,  // tier 0 — soft sky blue   (small numbers)
+  0xFFF3CC,  // tier 1 — warm cream       (mid numbers)
+  0xFFCCBC,  // tier 2 — soft coral/peach (large numbers)
 ] as const;
 
 /** One gloss ellipse: position + size as fractions of cell size. */

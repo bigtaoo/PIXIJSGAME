@@ -3,7 +3,7 @@ import { AppContext } from './appContext';
 import { ScreenConfig } from './screenConfig';
 import { GameState } from './gameState';
 import { Logic } from './logic';
-import { Grid } from './grid';
+import { Grid } from './grid'; // also provides Grid.tierForValue()
 import { NumberLayer } from './numbers';
 import { EffectManager } from './effectManager';
 import { Header } from './header';
@@ -241,6 +241,19 @@ export class GameScene extends PIXI.Container {
 
     this.gridLayer.reconfigure();
     this.numberLayer.reconfigure(this.logic);
+
+    // Colour cells by number tier (small=blue / mid=cream / large=coral)
+    const { gridCountW: w, gridCountH: h } = this.screen;
+    for (let col = 0; col < w; col++) {
+      for (let row = 0; row < h; row++) {
+        const idx = this.screen.cellIndex(col, row);
+        const val = this.logic.getNumberByIndex(idx);
+        if (val > 0) {
+          this.gridLayer.setCellTier(idx, Grid.tierForValue(val, target));
+        }
+      }
+    }
+
     this.screen.lockLayout();
     this.updateGameContainerTransform();
 

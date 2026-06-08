@@ -173,19 +173,19 @@ export class WebAssetsManager implements IAssetsManager {
   }
 
   public generateProgrammaticTextures(renderer: PIXI.Renderer): void {
-    // Generate 4 colours × 6 random gloss variants = 24 cell textures.
-    // Each variant has a freshly-randomised gloss layout (1 large / 2 medium / 3 small).
-    CELL_PALETTE.forEach((color, ci) => {
+    // Generate 3 tier colours × 6 random gloss variants = 18 cell textures.
+    // Key format: cell_t{tier}_g{gloss}.png
+    CELL_PALETTE.forEach((color, tier) => {
       for (let gi = 0; gi < GLOSS_PER_COLOR; gi++) {
-        const key = `cell_${ci * GLOSS_PER_COLOR + gi}.png`;
+        const key = `cell_t${tier}_g${gi}.png`;
         const gloss = makeGlossEllipses();
         this.textures[key] = makeTexture(
           renderer, g => drawCell(g, CELL_BASE, color, gloss), CELL_BASE,
         );
       }
     });
-    // 'cell.png' kept for any legacy references
-    this.textures['cell.png'] = this.textures['cell_0.png'];
+    // 'cell.png' kept for any legacy references (defaults to tier 0, gloss 0)
+    this.textures['cell.png'] = this.textures['cell_t0_g0.png'];
 
     this.textures['cell_selected.png'] = makeTexture(
       renderer, g => drawCellSelected(g, CELL_BASE), CELL_BASE,

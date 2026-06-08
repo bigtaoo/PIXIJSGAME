@@ -3,18 +3,13 @@ import { AppContext } from './appContext';
 import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
 
-export class Grid extends PIXI.Container {
-  private cells: Map<number, PIXI.Sprite>     = new Map();
-  private cellKeys: Map<number, string>        = new Map();
-  private selectionHighlight: PIXI.Sprite | undefined;
+const GLOSS_PER_COLOR = 6; // must match webAssetsManager constant
 
-  private getCellTextureKey(idx: number): string {
-    if (!this.cellKeys.has(idx)) {
-      const i = Math.floor(Math.random() * 24); // 4 colours × 6 gloss variants
-      this.cellKeys.set(idx, `cell_${i}.png`);
-    }
-    return this.cellKeys.get(idx)!;
-  }
+export class Grid extends PIXI.Container {
+  private cells:         Map<number, PIXI.Sprite> = new Map();
+  private cellGlossIdx:  Map<number, number>       = new Map(); // random 0–5, persistent
+  private cellTier:      Map<number, 0|1|2>        = new Map(); // set by GameScene
+  private selectionHighlight: PIXI.Sprite | undefined;
 
   constructor(
     private readonly ctx: AppContext,
@@ -22,6 +17,43 @@ export class Grid extends PIXI.Container {
     private readonly onCellClick: (index: number) => void,
   ) {
     super();
+  }
+
+  // ── Texture key helpers ────────────────────────────────────────────────────
+
+  private getGlossIdx(idx: number): number {
+    if (!this.cellGlossIdx.has(idx)) {
+      this.cellGlossIdx.set(idx, Math.floor(Math.random() * GLOSS_PER_COLOR));
+    }
+    return this.cellGlossIdx.get(idx)!;
+  }
+
+  private textureKey(idx: number): string {
+    const tier  = this.cellTier.get(idx) ?? 0;
+    const gloss = this.getGlossIdx(idx);
+    return `cell_t${tier}_g${gloss}.png`;
+  }
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+
+  /**
+   * Assign a tier colour (0 = small / 1 = mid / 2 = large) to a cell.
+   * Called by GameScene after numbers are placed so colours reflect values.
+   */
+  public setCellTier(idx: number, tier: 0|1|2): void {
+    this.cellTier.set(idx, tier);
+    const sprite = this.cells.get(idx);
+    if (sprite) {
+      sprite.texture = this.ctx.assets.GetTexture(this.textureKey(idx));
+    }
+  }
+
+  /** Compute the tier index for a number value given the current target. */
+  public static tierForValue(value: number, target: number): 0|1|2 {
+    const maxVal = target - 1;
+    if (value <= maxVal / 3)       return 0;
+    if (value <= (maxVal * 2) / 3) return 1;
+    return 2;
   }
 
   public reconfigure(): void {
@@ -36,7 +68,7 @@ export class Grid extends PIXI.Container {
         let sprite = this.cells.get(idx);
 
         if (!sprite) {
-          sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(this.getCellTextureKey(idx)));
+          sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(this.textureKey(idx)));
           this.addChild(sprite);
           this.cells.set(idx, sprite);
 
@@ -51,10 +83,10 @@ export class Grid extends PIXI.Container {
         }
 
         const GAP = 5;
-        sprite.x      = col * gridSize + offsetX;
-        sprite.y      = row * gridSize + offsetY;
-        sprite.width  = gridSize - GAP;
-        sprite.height = gridSize - GAP;
+        sprite.x       = col * gridSize + offsetX;
+        sprite.y       = row * gridSize + offsetY;
+        sprite.width   = gridSize - GAP;
+        sprite.height  = gridSize - GAP;
         sprite.visible = true;
       }
     }
@@ -80,8 +112,6 @@ export class Grid extends PIXI.Container {
       this.selectionHighlight.height = gridSize;
       this.addChild(this.selectionHighlight);
     } else {
-      // Always keep the highlight on top so it is not obscured by cell sprites
-      // that were added during a later reconfigure() call (e.g. grid expansion).
       this.setChildIndex(this.selectionHighlight, this.children.length - 1);
     }
 
