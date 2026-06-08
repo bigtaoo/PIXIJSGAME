@@ -9,6 +9,28 @@
 
 import * as PIXI from 'pixi.js-legacy';
 
+// ─── Cell colour palette (exported so assetsManager can generate per-colour textures) ──
+export const CELL_PALETTE = [
+  0xFFF3CC,  // warm honey cream
+  0xC5E8FA,  // soft sky blue
+  0xFFCCBC,  // soft coral / peach
+  0xD8F0D0,  // soft sage green
+] as const;
+
+/** One gloss ellipse: position + size as fractions of cell size. */
+export interface GlossEllipse { cx: number; cy: number; rx: number; ry: number; }
+
+// ─── Internal helper ──────────────────────────────────────────────────────────
+
+/** Darken a hex colour by `amount` (0–1). */
+function darkenHex(color: number, amount: number): number {
+  const f = 1 - amount;
+  const r = Math.round(((color >> 16) & 0xFF) * f);
+  const g = Math.round(((color >> 8)  & 0xFF) * f);
+  const b = Math.round((color & 0xFF) * f);
+  return (r << 16) | (g << 8) | b;
+}
+
 // ─── Colour palette ───────────────────────────────────────────────────────────
 
 export const C = {
@@ -64,28 +86,66 @@ export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
 // ─── Cell ─────────────────────────────────────────────────────────────────────
 
 /**
- * Normal cell: warm-white rounded rectangle + light border.
+ * Normal cell: coloured rounded rectangle with 3-D depth effect.
+ *   - Bottom shadow strip (darker shade of fillColor) gives a "raised tile" look.
+ *   - Top-left gloss ellipse (semi-transparent white) simulates a light source.
  * Drawing region (0, 0, size, size).
  */
-export function drawCell(g: PIXI.Graphics, size: number): void {
-  const r = Math.round(size * 0.11);
-  g.lineStyle(1.5, C.cellBorder, 1);
-  g.beginFill(C.cellFill);
-  g.drawRoundedRect(0, 0, size, size, r);
+export function drawCell(
+  g: PIXI.Graphics,
+  size: number,
+  fillColor: number = C.cellFill,
+  glossEllipses: readonly GlossEllipse[] = [{ cx: 0.31, cy: 0.19, rx: 0.19, ry: 0.10 }],
+): void {
+  const r      = Math.round(size * 0.18);
+  const depth  = Math.round(size * 0.10);
+  const shadow = darkenHex(fillColor, 0.28);
+
+  // ── Layer 1: shadow strip ──────────────────────────────────────────────────
+  g.lineStyle(0);
+  g.beginFill(shadow);
+  g.drawRoundedRect(0, depth, size, size - depth, r);
   g.endFill();
+
+  // ── Layer 2: main tile body ────────────────────────────────────────────────
+  g.beginFill(fillColor);
+  g.drawRoundedRect(0, 0, size, size - depth, r);
+  g.endFill();
+
+  // ── Layer 3: gloss ellipses (1 large / 2 medium / 3 small, random positions)
+  for (const { cx, cy, rx, ry } of glossEllipses) {
+    g.beginFill(0xFFFFFF, 0.38);
+    g.drawEllipse(size * cx, size * cy, size * rx, size * ry);
+    g.endFill();
+  }
 }
 
 /**
- * Selected cell: gold border + slightly brighter fill.
- * Drawing region (0, 0, size, size); border is inset to keep the outer outline consistent.
+ * Selected cell: gold border + 3-D depth effect matching drawCell.
+ * Drawing region (0, 0, size, size).
  */
 export function drawCellSelected(g: PIXI.Graphics, size: number): void {
-  const r   = Math.round(size * 0.11);
-  const bw  = Math.max(5, Math.round(size * 0.042));
-  const ins = bw * 0.5; // inset amount — ensures the border does not exceed the boundary
+  const r     = Math.round(size * 0.18);
+  const depth = Math.round(size * 0.10);
+  const bw    = Math.max(5, Math.round(size * 0.05));
+  const shadow = darkenHex(C.cellSelFill, 0.22);
+
+  // Shadow strip
+  g.lineStyle(0);
+  g.beginFill(shadow);
+  g.drawRoundedRect(0, depth, size, size - depth, r);
+  g.endFill();
+
+  // Main tile with gold border
   g.lineStyle(bw, C.cellSelBorder, 1);
   g.beginFill(C.cellSelFill);
-  g.drawRoundedRect(ins, ins, size - ins * 2, size - ins * 2, r);
+  g.drawRoundedRect(bw / 2, bw / 2, size - bw, size - depth - bw / 2, r);
+  g.endFill();
+
+  // Gloss
+  g.lineStyle(0);
+  g.beginFill(0xFFFFFF, 0.40);
+  g.drawEllipse(size * 0.31, size * 0.19, size * 0.19, size * 0.10);
   g.endFill();
 }
 

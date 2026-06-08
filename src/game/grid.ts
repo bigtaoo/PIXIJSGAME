@@ -4,8 +4,17 @@ import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
 
 export class Grid extends PIXI.Container {
-  private cells: Map<number, PIXI.Sprite> = new Map();
+  private cells: Map<number, PIXI.Sprite>     = new Map();
+  private cellKeys: Map<number, string>        = new Map();
   private selectionHighlight: PIXI.Sprite | undefined;
+
+  private getCellTextureKey(idx: number): string {
+    if (!this.cellKeys.has(idx)) {
+      const i = Math.floor(Math.random() * 24); // 4 colours × 6 gloss variants
+      this.cellKeys.set(idx, `cell_${i}.png`);
+    }
+    return this.cellKeys.get(idx)!;
+  }
 
   constructor(
     private readonly ctx: AppContext,
@@ -27,7 +36,7 @@ export class Grid extends PIXI.Container {
         let sprite = this.cells.get(idx);
 
         if (!sprite) {
-          sprite = new PIXI.Sprite(this.ctx.assets.GetTexture('cell.png'));
+          sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(this.getCellTextureKey(idx)));
           this.addChild(sprite);
           this.cells.set(idx, sprite);
 
@@ -41,10 +50,11 @@ export class Grid extends PIXI.Container {
           );
         }
 
+        const GAP = 5;
         sprite.x      = col * gridSize + offsetX;
         sprite.y      = row * gridSize + offsetY;
-        sprite.width  = gridSize;
-        sprite.height = gridSize;
+        sprite.width  = gridSize - GAP;
+        sprite.height = gridSize - GAP;
         sprite.visible = true;
       }
     }

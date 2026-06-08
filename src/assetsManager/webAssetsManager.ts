@@ -13,12 +13,49 @@ import musicPngUrl   from '../assets/music.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
+  CELL_PALETTE,
+  GlossEllipse,
   drawCell, drawCellSelected,
   drawClockFace, drawClockHand,
   drawPlus, drawEquals,
   drawRetryIcon, drawNextIcon, drawSettingsIcon, drawLobbyIcon,
   drawLetterS,
 } from '../game/graphicsFactory';
+
+/** Number of random gloss variants generated per palette colour. */
+const GLOSS_PER_COLOR = 6; // 4 colours × 6 = 24 cell textures total
+
+/**
+ * Generate a random gloss config for a cell texture.
+ * Returns 1 large / 2 medium / 3 small ellipses with randomised positions.
+ */
+function makeGlossEllipses(): GlossEllipse[] {
+  const r   = Math.random;
+  const typ = Math.floor(r() * 3); // 0 = large, 1 = two medium, 2 = three small
+
+  if (typ === 0) {
+    // 1 large ellipse — random position in upper portion
+    return [{
+      cx: 0.18 + r() * 0.44,
+      cy: 0.13 + r() * 0.10,
+      rx: 0.18 + r() * 0.09,
+      ry: 0.09 + r() * 0.05,
+    }];
+  } else if (typ === 1) {
+    // 2 medium ellipses — left half and right half
+    return [
+      { cx: 0.13 + r() * 0.22, cy: 0.13 + r() * 0.10, rx: 0.11 + r() * 0.05, ry: 0.06 + r() * 0.03 },
+      { cx: 0.52 + r() * 0.22, cy: 0.13 + r() * 0.10, rx: 0.10 + r() * 0.05, ry: 0.06 + r() * 0.03 },
+    ];
+  } else {
+    // 3 small ellipses — spread across left / centre / right
+    return [
+      { cx: 0.12 + r() * 0.14, cy: 0.12 + r() * 0.12, rx: 0.07 + r() * 0.04, ry: 0.04 + r() * 0.02 },
+      { cx: 0.36 + r() * 0.12, cy: 0.15 + r() * 0.10, rx: 0.07 + r() * 0.04, ry: 0.04 + r() * 0.02 },
+      { cx: 0.60 + r() * 0.14, cy: 0.12 + r() * 0.12, rx: 0.07 + r() * 0.04, ry: 0.04 + r() * 0.02 },
+    ];
+  }
+}
 
 const DIGIT_W   = 120;
 const DIGIT_H   = 160;
@@ -136,9 +173,20 @@ export class WebAssetsManager implements IAssetsManager {
   }
 
   public generateProgrammaticTextures(renderer: PIXI.Renderer): void {
-    this.textures['cell.png'] = makeTexture(
-      renderer, g => drawCell(g, CELL_BASE), CELL_BASE,
-    );
+    // Generate 4 colours × 6 random gloss variants = 24 cell textures.
+    // Each variant has a freshly-randomised gloss layout (1 large / 2 medium / 3 small).
+    CELL_PALETTE.forEach((color, ci) => {
+      for (let gi = 0; gi < GLOSS_PER_COLOR; gi++) {
+        const key = `cell_${ci * GLOSS_PER_COLOR + gi}.png`;
+        const gloss = makeGlossEllipses();
+        this.textures[key] = makeTexture(
+          renderer, g => drawCell(g, CELL_BASE, color, gloss), CELL_BASE,
+        );
+      }
+    });
+    // 'cell.png' kept for any legacy references
+    this.textures['cell.png'] = this.textures['cell_0.png'];
+
     this.textures['cell_selected.png'] = makeTexture(
       renderer, g => drawCellSelected(g, CELL_BASE), CELL_BASE,
     );
