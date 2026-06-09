@@ -217,12 +217,16 @@ export class DailyChallengeScene extends PIXI.Container {
     this.gridLayer.reconfigure();
     this.numberLayer.reconfigure(this.logic);
 
+    const target = this.pendingTarget;
     for (let col = 0; col < this.screen.gridCountW; col++) {
       for (let row = 0; row < this.screen.gridCountH; row++) {
         const idx = this.screen.cellIndex(col, row);
-        if (this.logic.getNumberByIndex(idx) === 0) {
+        const val = this.logic.getNumberByIndex(idx);
+        if (val === 0) {
           this.gridLayer.hideCell(idx);
           this.numberLayer.hideNumber(idx);
+        } else {
+          this.gridLayer.setCellTier(idx, Grid.tierForValue(val, target));
         }
       }
     }
