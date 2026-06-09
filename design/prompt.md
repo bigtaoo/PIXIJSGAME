@@ -7,6 +7,26 @@ Warm brown, olive green, and earthy yellow palette. Watercolor pencil style, sof
 Square composition (1:1 aspect ratio), seamless at edges for 90-degree rotation.
 --ar 1:1 --v 6 --style raw --chaos 15
 
+deco_pencil.png
+A single wooden pencil, angled 30 degrees, classic yellow body with pink eraser tip,
+sharp pointed, hand-drawn watercolor pencil style, warm earthy tones,
+transparent background, centered on 300x120 canvas.
+No text, no shadow, clean isolated object. --ar 5:2 --v 6 --style raw
+
+deco_eraser.png
+A single rectangular pink eraser, slightly worn edges, simple flat illustration style,
+pink body (#F4A7B9) with light smudge marks, hand-drawn look, warm palette,
+transparent background, centered on 200x140 canvas.
+No text, no shadow, clean isolated object. --ar 7:5 --v 6 --style raw
+
+
+deco_paperclip.png
+A single silver paper clip, classic oval shape, metallic sheen,
+simple clean illustration style, warm silver-gray tones,
+transparent background, centered on 120x200 canvas.
+No text, no shadow, clean isolated object. --ar 3:5 --v 6 --style raw
+
+
 icon
 A clean and warm SQUARE game icon (1024x1024px) for a number elimination puzzle game, featuring the complete equation "3 + 7 = 10" in a notebook style.
 The numbers are bold rounded sans-serif (Noto Sans Rounded Black style), with the following color scheme:

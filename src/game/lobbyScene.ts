@@ -198,6 +198,44 @@ export class LobbyScene extends PIXI.Container {
   private buildBackground(): void {
     this.bg = new PIXI.Sprite(this.ctx.assets.GetTexture('lobby_bg.png'));
     this.addChild(this.bg);
+    this.buildLobbyDecos();
+  }
+
+  /**
+   * Overlays stationery decorations on the lobby map background.
+   * Silently skips any texture that hasn't been generated yet.
+   *
+   * Assets required (place in src/assets/):
+   *   deco_pencil.png    — angled pencil
+   *   deco_eraser.png    — rectangular eraser
+   *   deco_paperclip.png — oval paperclip
+   */
+  private buildLobbyDecos(): void {
+    const w = this.screen.width;
+    const h = this.screen.height;
+    const ALPHA = 0.40;
+
+    // [ key, x-anchor, y-anchor, x-pos, y-pos, rotation-deg ]
+    const configs: Array<[string, number, number, number, number, number]> = [
+      ['deco_pencil.png',    0, 0, w * 0.03, h * 0.08,   20],
+      ['deco_eraser.png',    1, 0, w * 0.95, h * 0.06,  -12],
+      ['deco_paperclip.png', 0, 1, w * 0.04, h * 0.88,   15],
+      ['deco_eraser.png',    1, 1, w * 0.96, h * 0.90,   10],
+    ];
+
+    for (const [key, ax, ay, x, y, deg] of configs) {
+      let tex: PIXI.Texture | null = null;
+      try { tex = this.ctx.assets.GetTexture(key); } catch { /* not yet available */ }
+      if (!tex) continue;
+
+      const spr = new PIXI.Sprite(tex);
+      spr.anchor.set(ax, ay);
+      spr.x = x;
+      spr.y = y;
+      spr.rotation = (deg * Math.PI) / 180;
+      spr.alpha = ALPHA;
+      this.addChildAt(spr, 1);
+    }
   }
 
   private buildAdventureMap(): void {

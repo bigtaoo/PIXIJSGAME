@@ -223,35 +223,58 @@ export function drawCircleCellSelected(g: PIXI.Graphics, size: number): void {
 // ─── Clock ────────────────────────────────────────────────────────────────────
 
 /**
- * Clock face: circle + centre dot + 4 tick marks.
+ * Clock face: 3-layer bevel ring + warm face + 12 tick marks + centre dot.
  * Drawing region (0, 0, radius*2, radius*2).
+ *
+ * Designed to remain readable when the caller applies a red tint (warning state):
+ * the near-white face turns bright red, the dark-brown ticks become dark red.
  */
 export function drawClockFace(g: PIXI.Graphics, radius: number): void {
-  const cx = radius;
-  const cy = radius;
-  const r  = radius - 3;
+  const cx     = radius;
+  const cy     = radius;
+  const rOuter = radius - 2;   // outer edge of the rim ring
+  const rRim   = rOuter - Math.round(radius * 0.10);  // dark-to-gold border
+  const rFace  = rRim   - Math.round(radius * 0.07);  // gold-to-face border
 
-  // Clock face
-  g.lineStyle(3, C.clockBorder, 1);
-  g.beginFill(C.clockFace);
-  g.drawCircle(cx, cy, r);
-  g.endFill();
-
-  // Centre dot
+  // ── Drop shadow (creates elevation above the header bar) ─────────────
   g.lineStyle(0);
-  g.beginFill(C.clockBorder);
-  g.drawCircle(cx, cy, 3);
+  g.beginFill(0x3D2200, 0.22);
+  g.drawCircle(cx + Math.round(radius * 0.04), cy + Math.round(radius * 0.06), rOuter);
   g.endFill();
 
-  // 4 tick marks (12 / 3 / 6 / 9 o'clock positions)
-  g.lineStyle(3, C.clockBorder, 0.7);
-  for (let i = 0; i < 4; i++) {
-    const a     = (i * Math.PI) / 2 - Math.PI / 2;
-    const inner = r - 9;
-    const outer = r - 2;
-    g.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-    g.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+  // ── Outer rim — dark warm brown ──────────────────────────────────────
+  g.beginFill(0x7A5530);
+  g.drawCircle(cx, cy, rOuter);
+  g.endFill();
+
+  // ── Inner ring — warm gold (bevel highlight) ─────────────────────────
+  g.beginFill(0xE8C060);
+  g.drawCircle(cx, cy, rRim);
+  g.endFill();
+
+  // ── Main face — near-white warm cream ────────────────────────────────
+  // Keep close to white so the warning red-tint (0xFF5252) renders as bright red.
+  g.beginFill(0xFFF8F0);
+  g.drawCircle(cx, cy, rFace);
+  g.endFill();
+
+  // ── 12 tick marks ─────────────────────────────────────────────────────
+  const tickOuter = rFace - Math.round(radius * 0.03);
+  for (let i = 0; i < 12; i++) {
+    const a       = (i * Math.PI) / 6 - Math.PI / 2;
+    const isMajor = i % 3 === 0;
+    const tickLen = Math.round(radius * (isMajor ? 0.22 : 0.13));
+    const lw      = isMajor ? Math.round(radius * 0.06) : Math.round(radius * 0.04);
+    g.lineStyle(lw, 0x6B4C2A, isMajor ? 1.0 : 0.65);
+    g.moveTo(cx + Math.cos(a) * (tickOuter - tickLen), cy + Math.sin(a) * (tickOuter - tickLen));
+    g.lineTo(cx + Math.cos(a) *  tickOuter,            cy + Math.sin(a) *  tickOuter);
   }
+
+  // ── Centre dot ────────────────────────────────────────────────────────
+  g.lineStyle(0);
+  g.beginFill(0x6B4C2A);
+  g.drawCircle(cx, cy, Math.round(radius * 0.09));
+  g.endFill();
 }
 
 /**
@@ -296,14 +319,48 @@ export function drawEquals(g: PIXI.Graphics, w: number, h: number): void {
 
 // ─── Button icons ─────────────────────────────────────────────────────────────
 
-/** Retry icon (arc arrow), drawing region (0, 0, size, size). */
-export function drawRetryIcon(g: PIXI.Graphics, size: number): void {
-  const cx = size / 2;
-  const cy = size / 2;
+// ─── Button background ────────────────────────────────────────────────────────
+
+/**
+ * Warm parchment rounded-rect button background.
+ * Drawing region (0, 0, size, size).
+ * Call this BEFORE drawing the icon so the icon renders on top.
+ */
+export function drawButtonBackground(g: PIXI.Graphics, size: number): void {
+  const r  = Math.round(size * 0.20);
+  const bw = Math.max(3, Math.round(size * 0.025));
+
+  // Drop shadow
+  g.lineStyle(0);
+  g.beginFill(0x3D2200, 0.20);
+  g.drawRoundedRect(2, 3, size, size, r);
+  g.endFill();
+
+  // Main body
+  g.lineStyle(bw, 0xC4A870, 1);
+  g.beginFill(0xEEDFBD);
+  g.drawRoundedRect(0, 0, size, size, r);
+  g.endFill();
+
+  // Top highlight strip
+  g.lineStyle(0);
+  g.beginFill(0xFFFFFF, 0.15);
+  g.drawRoundedRect(bw, bw, size - bw * 2, size * 0.35, r - 2);
+  g.endFill();
+}
+
+// ─── Button icons ─────────────────────────────────────────────────────────────
+
+/** Retry icon (arc arrow).
+ *  @param ox  X offset of the icon's (0,0) corner within the Graphics (default 0)
+ *  @param oy  Y offset of the icon's (0,0) corner within the Graphics (default 0)
+ */
+export function drawRetryIcon(g: PIXI.Graphics, size: number, ox = 0, oy = 0): void {
+  const cx = ox + size / 2;
+  const cy = oy + size / 2;
   const r  = size * 0.33;
   const sw = Math.max(5, Math.round(size * 0.1));
 
-  // Arc: from approximately -135° clockwise to about 120°
   g.lineStyle(sw, C.icon, 1);
   g.arc(cx, cy, r, -Math.PI * 0.75, Math.PI * 0.67);
 
@@ -332,21 +389,27 @@ export function drawRetryIcon(g: PIXI.Graphics, size: number): void {
   g.endFill();
 }
 
-/** Solid right-pointing triangle (next level), drawing region (0, 0, size, size). */
-export function drawNextIcon(g: PIXI.Graphics, size: number): void {
+/** Solid right-pointing triangle (next level).
+ *  @param ox  X offset (default 0)
+ *  @param oy  Y offset (default 0)
+ */
+export function drawNextIcon(g: PIXI.Graphics, size: number, ox = 0, oy = 0): void {
   const pad = size * 0.22;
   g.lineStyle(0);
   g.beginFill(C.icon);
   g.drawPolygon([
-    pad,          pad,
-    size - pad,   size / 2,
-    pad,          size - pad,
+    ox + pad,          oy + pad,
+    ox + size - pad,   oy + size / 2,
+    ox + pad,          oy + size - pad,
   ]);
   g.endFill();
 }
 
-/** Hamburger menu (settings), drawing region (0, 0, size, size). */
-export function drawSettingsIcon(g: PIXI.Graphics, size: number): void {
+/** Hamburger menu (settings).
+ *  @param ox  X offset (default 0)
+ *  @param oy  Y offset (default 0)
+ */
+export function drawSettingsIcon(g: PIXI.Graphics, size: number, ox = 0, oy = 0): void {
   const pad  = size * 0.2;
   const barH = Math.round(size * 0.13);
   const barW = size - pad * 2;
@@ -354,13 +417,16 @@ export function drawSettingsIcon(g: PIXI.Graphics, size: number): void {
   g.lineStyle(0);
   g.beginFill(C.icon);
   for (let i = 0; i < 3; i++) {
-    g.drawRoundedRect(pad, pad + i * (barH + gap), barW, barH, barH / 2);
+    g.drawRoundedRect(ox + pad, oy + pad + i * (barH + gap), barW, barH, barH / 2);
   }
   g.endFill();
 }
 
-/** 2×2 grid (return to lobby), drawing region (0, 0, size, size). */
-export function drawLobbyIcon(g: PIXI.Graphics, size: number): void {
+/** 2×2 grid (return to lobby).
+ *  @param ox  X offset (default 0)
+ *  @param oy  Y offset (default 0)
+ */
+export function drawLobbyIcon(g: PIXI.Graphics, size: number, ox = 0, oy = 0): void {
   const pad = size * 0.18;
   const gap = size * 0.1;
   const sq  = (size - pad * 2 - gap) / 2;
@@ -369,8 +435,8 @@ export function drawLobbyIcon(g: PIXI.Graphics, size: number): void {
   for (let row = 0; row < 2; row++) {
     for (let col = 0; col < 2; col++) {
       g.drawRoundedRect(
-        pad + col * (sq + gap),
-        pad + row * (sq + gap),
+        ox + pad + col * (sq + gap),
+        oy + pad + row * (sq + gap),
         sq, sq, 4,
       );
     }
@@ -381,31 +447,70 @@ export function drawLobbyIcon(g: PIXI.Graphics, size: number): void {
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
 /**
- * Pop-up panel (result / settings overlay): warm-white rounded rectangle + subtle shadow.
- * Drawing region (0, 0, w+4, h+4) (shadow offset 4px down-right).
+ * Pop-up panel (result / settings overlay): warm parchment paper look —
+ * shadow + warm-gold border + paper fill + subtle grid-dot pattern + top highlight.
+ * Drawing region (0, 0, w+4, h+5).
  */
 export function drawPanel(g: PIXI.Graphics, w: number, h: number): void {
-  const r = 20;
-  // Shadow layer
+  const r  = 22;
+  const bw = 3;
+
+  // ── Drop shadow ──────────────────────────────────────────────────────────
   g.lineStyle(0);
-  g.beginFill(0x000000, 0.15);
-  g.drawRoundedRect(4, 4, w, h, r);
+  g.beginFill(0x3D2200, 0.18);
+  g.drawRoundedRect(4, 5, w, h, r);
   g.endFill();
-  // Main panel
-  g.lineStyle(1.5, C.panelBorder, 0.7);
-  g.beginFill(C.panelFill);
+
+  // ── Main body — warm parchment ───────────────────────────────────────────
+  g.lineStyle(bw, 0xC4A870, 1);
+  g.beginFill(0xFDF6E3);
   g.drawRoundedRect(0, 0, w, h, r);
+  g.endFill();
+
+  // ── Inner grid-dot pattern (graph-paper feel) ────────────────────────────
+  const spacing = 24;
+  const dotR    = 1.5;
+  const pad     = r + 4;
+  g.lineStyle(0);
+  g.beginFill(0xB0A090, 0.30);
+  for (let x = pad; x < w - pad + 1; x += spacing) {
+    for (let y = pad; y < h - pad + 1; y += spacing) {
+      g.drawCircle(x, y, dotR);
+    }
+  }
+  g.endFill();
+
+  // ── Top highlight strip ───────────────────────────────────────────────────
+  g.lineStyle(0);
+  g.beginFill(0xFFFFFF, 0.25);
+  g.drawRoundedRect(bw + 2, bw + 2, w - (bw + 2) * 2, h * 0.22, r - 4);
   g.endFill();
 }
 
 /**
- * Header background bar: warm-white rounded rectangle, no shadow.
- * Drawing region (0, 0, w, h).
+ * Header background bar: warm parchment panel floating above the grid-paper
+ * background.  A soft drop-shadow below the bar sells the "raised tile" look.
+ * Drawing region (0, 0, w, h); shadow extends slightly below h.
  */
 export function drawHeaderBar(g: PIXI.Graphics, w: number, h: number): void {
-  g.lineStyle(1, C.panelBorder, 0.6);
-  g.beginFill(C.panelFill);
-  g.drawRoundedRect(0, 0, w, h, 16);
+  const r = 16;
+
+  // ── Drop shadow ── dark warm stripe offset 5 px down, alpha 0.18
+  g.lineStyle(0);
+  g.beginFill(0x3D2200, 0.18);
+  g.drawRoundedRect(3, 5, w - 3, h, r);
+  g.endFill();
+
+  // ── Main bar ── warm parchment, warm gold border
+  g.lineStyle(1.5, 0xC4A068, 0.55);
+  g.beginFill(0xEAD5A8);
+  g.drawRoundedRect(0, 0, w, h, r);
+  g.endFill();
+
+  // ── Subtle top highlight ── gives a slight convex / raised feel
+  g.lineStyle(0);
+  g.beginFill(0xFFFFFF, 0.18);
+  g.drawRoundedRect(5, 3, w - 10, h * 0.38, r - 2);
   g.endFill();
 }
 
@@ -414,13 +519,14 @@ export function drawHeaderBar(g: PIXI.Graphics, w: number, h: number): void {
 /**
  * Question mark, used when a tip slot has not been filled.
  * Drawn centred at (cx, cy) within a region of height approximately h.
- * Colour is fixed at light-grey 0xBBBBBB, matching the original text style.
+ * Colour is warm brown 0x8B6030, matching the header's warm palette.
  */
 export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: number): void {
-  const sw = Math.round(h * 0.13);
-  const r  = h * 0.19;
+  const sw    = Math.round(h * 0.13);
+  const r     = h * 0.19;
+  const color = 0x8B6030;
 
-  g.lineStyle(sw, 0xBBBBBB, 1);
+  g.lineStyle(sw, color, 1);
   // Upper arc: semicircle (left to right)
   g.arc(cx, cy - h * 0.14, r, Math.PI, 0, false);
   // Curve down to the stem
@@ -432,7 +538,7 @@ export function drawQuestionMark(g: PIXI.Graphics, cx: number, cy: number, h: nu
 
   // Lower dot
   g.lineStyle(0);
-  g.beginFill(0xBBBBBB);
+  g.beginFill(color);
   g.drawCircle(cx, cy + h * 0.30, sw * 0.75);
   g.endFill();
 }
@@ -451,6 +557,28 @@ export function drawLetterS(g: PIXI.Graphics, w: number, h: number): void {
   g.bezierCurveTo(w * 0.08, h * 0.48, w * 0.92, h * 0.52, w * 0.92, h * 0.70);
   // Lower C-arc (opens to the right)
   g.bezierCurveTo(w * 0.92, h * 0.99, w * 0.22, h * 0.99, w * 0.22, h * 0.82);
+}
+
+// ─── Utility functions ────────────────────────────────────────────────────────
+
+/**
+ * Combo glow overlay for a single cell: concentric filled circles fading outward.
+ * Drawing region (0, 0, size, size). Callers tint the sprite gold or green.
+ * Uses concentric rings at decreasing alpha to simulate a radial gradient.
+ */
+export function drawComboGlow(g: PIXI.Graphics, size: number): void {
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = size / 2;
+  const steps = 8;
+  g.lineStyle(0);
+  for (let i = steps; i >= 1; i--) {
+    const r = maxR * (i / steps);
+    const a = 0.18 * (1 - i / steps);
+    g.beginFill(0xFFFFFF, a);
+    g.drawCircle(cx, cy, r);
+    g.endFill();
+  }
 }
 
 // ─── Utility functions ────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import { Header } from './header';
 import { GameResultOverlay } from './gameResult';
 import { SettingsOverlay } from './settings';
 import { StageData } from './stageConfig';
-import { drawBackground } from './graphicsFactory';
+import { drawBackground, drawPanel } from './graphicsFactory';
 import { StarManager } from './starManager';
 import { StageManager } from './stageManager';
 
@@ -41,6 +41,19 @@ export class GameScene extends PIXI.Container {
   private comboCount = 0;
   private lastEliminationGameTime = -Infinity;
   private gameTimeMs = 0;
+
+  /** Full-screen edge glow shown on combo ≥ 3 (programmatic vignette). */
+  private comboVignette!: PIXI.Graphics;
+  /** Tracks vignette fade state: alpha 0–1, decays in update(). */
+  private vignetteAlpha = 0;
+  /** Combo colour used for the current vignette (gold or green). */
+  private vignetteColor = 0xFFD700;
+
+  /** Callback invoked when the sub-target celebration finishes. null = not celebrating. */
+  private _celebrationDone: (() => void) | null = null;
+  /** Elapsed ms since the celebration started. */
+  private _celebrationElapsed = 0;
+  private static readonly CELEBRATION_DURATION_MS = 2000;
 
   /** How many ms have elapsed since the player selected the first tile. −1 = inactive. */
   private hintTimerMs = -1;
@@ -120,6 +133,7 @@ export class GameScene extends PIXI.Container {
       this.initialized = true;
     } else {
       drawBackground(this.bg, this.screen.width, this.screen.height);
+      this.redrawVignette(this.screen.width, this.screen.height);
 
       if (this.screen.isLocked) {
         // Layout is locked (game in progress) — do NOT reconfigure the grid.
@@ -147,6 +161,24 @@ export class GameScene extends PIXI.Container {
     this.header.update(deltaMs);
     // Keep hint flash animations running even while paused/ended
     this.numberLayer.update(deltaMs);
+
+    // Fade out combo vignette (~400ms)
+    if (this.vignetteAlpha > 0) {
+      this.vignetteAlpha = Math.max(0, this.vignetteAlpha - deltaMs / 400);
+      this.comboVignette.alpha = this.vignetteAlpha;
+    }
+
+    // Tick celebration timer while paused
+    if (this._celebrationDone) {
+      this._celebrationElapsed += deltaMs;
+      if (this._celebrationElapsed >= GameScene.CELEBRATION_DURATION_MS) {
+        const done = this._celebrationDone;
+        this._celebrationDone    = null;
+        this._celebrationElapsed = 0;
+        this.state.isPause       = false;
+        done();
+      }
+    }
 
     if (this.state.isGameEnd || this.state.isPause) return;
 
@@ -177,6 +209,12 @@ export class GameScene extends PIXI.Container {
     this.bg = new PIXI.Graphics();
     drawBackground(this.bg, this.screen.width, this.screen.height);
     this.addChild(this.bg);
+    this.buildBackgroundDecos();
+
+    this.comboVignette = new PIXI.Graphics();
+    this.comboVignette.alpha = 0;
+    this.comboVignette.interactiveChildren = false;
+    this.redrawVignette(this.screen.width, this.screen.height);
 
     const audio = this.ctx.audio;
 
@@ -212,6 +250,7 @@ export class GameScene extends PIXI.Container {
     this.addChild(this.header);
     // flyingLayer must sit ABOVE the header so bonus labels are never obscured
     this.addChild(this.effectLayer.flyingLayer);
+    this.addChild(this.comboVignette);
     this.addChild(this.resultOverlay);
     this.addChild(this.settingsOverlay);
 
@@ -280,8 +319,46 @@ export class GameScene extends PIXI.Container {
       this.ctx.audio.playVictory();
       this.resultOverlay.show(true, stars);
     } else {
-      this.startCurrentTarget();
+      this.showTargetClearCelebration(() => this.startCurrentTarget());
     }
+  }
+
+  /**
+   * Sub-target cleared celebration: fire ~12 staggered explosion effects across
+   * the empty grid over 1.6 s, then the update() timer triggers onDone at 2 s.
+   */
+  private showTargetClearCelebration(onDone: () => void): void {
+    this.state.isPause    = true;
+    this._celebrationElapsed = 0;
+    this._celebrationDone    = onDone;
+
+    const cols       = this.screen.gridCountW;
+    const rows       = this.screen.gridCountH;
+    const SPREAD_MS  = 1600;
+    const BURST      = Math.min(12, cols * rows);
+
+    // Pre-schedule random effect times within the first SPREAD_MS
+    const schedule: Array<{ t: number; idx: number }> = [];
+    for (let i = 0; i < BURST; i++) {
+      const col = Math.floor(Math.random() * cols);
+      const row = Math.floor(Math.random() * rows);
+      schedule.push({ t: Math.random() * SPREAD_MS, idx: this.screen.cellIndex(col, row) });
+    }
+    schedule.sort((a, b) => a.t - b.t);
+
+    let elapsed = 0;
+    let next    = 0;
+    const fireFn = (deltaMs: number): void => {
+      elapsed += deltaMs;
+      while (next < schedule.length && schedule[next].t <= elapsed) {
+        this.effectLayer.playEffect(schedule[next].idx, true, 3);
+        next++;
+      }
+      if (next >= schedule.length) {
+        PIXI.Ticker.shared.remove(fireFn);
+      }
+    };
+    PIXI.Ticker.shared.add(fireFn);
   }
 
   private onTimeUp(): void {
@@ -426,6 +503,10 @@ export class GameScene extends PIXI.Container {
     this.effectLayer.playEffect(idxA, isCombo, this.comboCount);
     this.effectLayer.playEffect(idxB, isCombo, this.comboCount);
 
+    if (this.comboCount >= 3) {
+      this.triggerComboVignette(this.comboCount);
+    }
+
     this.logic.removeNumber(idxA);
     this.logic.removeNumber(idxB);
     this.selectedIndex = -1;
@@ -527,6 +608,63 @@ export class GameScene extends PIXI.Container {
     // offsetY * s.  Shift the container up by the difference so cells stay
     // flush below the header.
     this.gameContainer.y = offsetY * (1 - s);
+  }
+
+  // ── Background decorations §4.2 ────────────────────────────────────────
+
+  private buildBackgroundDecos(): void {
+    const w = this.screen.width;
+    const h = this.screen.height;
+    const ALPHA = 0.35;
+    // [key, anchorX, anchorY, x, y, rotation_deg, scale]
+    const configs: Array<[string, number, number, number, number, number, number]> = [
+      // corners
+      ['deco_pencil.png',    0,   0,   w * 0.02, h * 0.03,   15,  1.00],
+      ['deco_eraser.png',    1,   0,   w * 0.98, h * 0.04,  -10,  1.00],
+      ['deco_paperclip.png', 1,   1,   w * 0.97, h * 0.95,   20,  1.00],
+      ['deco_pencil.png',    0,   1,   w * 0.03, h * 0.95,  -20,  1.00],
+      // left / right mid-edge
+      ['deco_paperclip.png', 0, 0.5,   w * 0.01, h * 0.48,   85,  0.80],
+      ['deco_eraser.png',    1, 0.5,   w * 0.99, h * 0.52,  -80,  0.75],
+      // extra corner accents
+      ['deco_paperclip.png', 0,   0,   w * 0.04, h * 0.12,  -30,  0.70],
+      ['deco_pencil.png',    1,   1,   w * 0.96, h * 0.88,   10,  0.70],
+    ];
+    for (const [key, ax, ay, x, y, deg, sc] of configs) {
+      let tex: PIXI.Texture | null = null;
+      try { tex = this.ctx.assets.GetTexture(key); } catch { /* not yet available */ }
+      if (!tex) continue;
+      const spr = new PIXI.Sprite(tex);
+      spr.anchor.set(ax, ay);
+      spr.x = x;
+      spr.y = y;
+      spr.rotation = (deg * Math.PI) / 180;
+      spr.alpha = ALPHA;
+      spr.scale.set(sc);
+      this.addChildAt(spr, 1);
+    }
+  }
+
+  // ── Combo vignette §10 ──────────────────────────────────────────────────
+
+  private redrawVignette(w: number, h: number): void {
+    const g = this.comboVignette;
+    g.clear();
+    const depth = Math.round(Math.min(w, h) * 0.18);
+    g.lineStyle(0);
+    g.beginFill(this.vignetteColor, 0.15);
+    g.drawRect(0, 0, w, depth);
+    g.drawRect(0, h - depth, w, depth);
+    g.drawRect(0, 0, depth, h);
+    g.drawRect(w - depth, 0, depth, h);
+    g.endFill();
+  }
+
+  private triggerComboVignette(comboCount: number): void {
+    this.vignetteColor = comboCount >= 4 ? 0x76FF03 : 0xFFD700;
+    this.redrawVignette(this.screen.width, this.screen.height);
+    this.vignetteAlpha = 1;
+    this.comboVignette.alpha = 1;
   }
 
   // Settings / pause

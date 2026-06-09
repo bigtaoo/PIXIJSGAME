@@ -1,7 +1,7 @@
 # 数字消除游戏 美术文档
 
-**版本：** v1.0  
-**日期：** 2026年5月  
+**版本：** v1.2  
+**日期：** 2026年6月  
 **关联文档：** 策划文档 v1.0
 
 ---
@@ -85,9 +85,24 @@
 - 纹理为无缝平铺，适应不同屏幕分辨率
 - 避免任何高频细节（防止在低分辨率设备上产生摩尔纹）
 
-### 4.2 背景装饰（可选）
+### 4.2 背景装饰 ✅（v1.2 已实现）
 
 可在背景四角或边缘添加**轻量装饰元素**，如：铅笔、橡皮擦、回形针、便签条等文具图案，作为静态装饰图层。装饰元素透明度建议 30–50%，不可干扰游戏区域。
+
+**v1.2 实现：** `gameScene.ts` `buildBackgroundDecos()` 放置 8 个文具精灵，alpha 0.45。布局如下：
+
+| 素材 | 位置 | 旋转 | 缩放 |
+|------|------|------|------|
+| `deco_pencil.png` | 左上角 | +15° | 1.0 |
+| `deco_eraser.png` | 右上角 | −10° | 1.0 |
+| `deco_paperclip.png` | 右下角 | +20° | 1.0 |
+| `deco_pencil.png` | 左下角 | −20° | 1.0 |
+| `deco_paperclip.png` | 左侧中段 | +85° | 0.8 |
+| `deco_eraser.png` | 右侧中段 | −80° | 0.75 |
+| `deco_paperclip.png` | 左上角辅助 | −30° | 0.7 |
+| `deco_pencil.png` | 右下角辅助 | +10° | 0.7 |
+
+大厅场景同步通过 `buildLobbyDecos()` 放置相同四角布局。
 
 ### 4.3 层级结构
 
@@ -378,7 +393,7 @@ z 层级（从底到顶）
 | 加号 | **程序绘制** → `generateTexture` | `plus.png`，用于飞行加时动画 |
 | 等号 | **程序绘制** → `generateTexture` | `equa.png` |
 | 字母 s | **程序绘制** → `generateTexture` | `s.png`，用于飞行加时动画（"+2s" 中的 "s"） |
-| 按钮图标 | **程序绘制** → `generateTexture` | `retry.png` / `next.png` / `lobby.png` / `settings.png` |
+| 按钮图标 | **程序绘制** → `generateTexture` | `retry.png` / `next.png` / `lobby.png` / `settings.png`；**v1.1 起每个图标外加背景圆角矩形框（见下方规格）** |
 | 数字 0–9 | **图片（脚本预生成）** | `digits.png` 精灵图，运行时切片为 `0.png`–`9.png`（120×160px/帧） |
 | 心形图标 | **图片** | `heart.png` / `heart_empty.png`，见下方规格 |
 | 消除序列帧 | **图片** | `explosion.png` + `explosion.json` 图集 |
@@ -433,13 +448,80 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 
 ---
 
-### 9.2 可选素材（后期锦上添花）
+### 9.2 可选素材 ✅（v1.2 全部已实现）
 
-| 素材 | 说明 |
+| 素材 | 说明 | 状态 |
+|------|------|------|
+| `deco_pencil.png` | 游戏场景 + 大厅背景装饰·铅笔 | ✅ 已加载 |
+| `deco_eraser.png` | 游戏场景 + 大厅背景装饰·橡皮擦 | ✅ 已加载 |
+| `deco_paperclip.png` | 游戏场景 + 大厅背景装饰·回形针 | ✅ 已加载 |
+| `combo_glow.png` | 连消激活时格子额外发光层（程序生成） | ✅ 已实现 |
+
+> `combo_glow.png` 通过 `drawComboGlow()` 程序绘制生成，无需提供图片文件。连消2 着色为金黄 `#FFD700`，连消3+ 着色为亮绿 `#76FF03`，混合模式 `ADD`。
+
+---
+
+### 9.3 按钮背景框规格（v1.1 新增）
+
+当前 `retry.png` / `next.png` / `lobby.png` / `settings.png` 仅包含图标本身，无背景框，视觉上悬浮感不足。
+
+**修改方案：** 在 `graphicsFactory.ts` 中新增 `drawButtonBackground(g, size)` 函数，并在 `webAssetsManager.ts` 生成各按钮纹理时先调用背景函数、再绘制图标。
+
+#### 背景框参数
+
+| 属性 | 规格 |
 |------|------|
-| `lobby_deco_pencil.png` | 大厅地图背景装饰·铅笔 |
-| `lobby_deco_eraser.png` | 大厅地图背景装饰·橡皮擦 |
-| `combo_glow.png` | 连消激活时格子额外发光层 |
+| 填色 | 暖皮纸 `0xEEDFBD`（与大厅节点 `nodeFill` 一致） |
+| 边框颜色 | 暖金 `0xC4A870`（与 `nodeBorder` 一致） |
+| 边框宽度 | `max(3, size * 0.025)` |
+| 圆角半径 | `size * 0.20` |
+| 投影 | offset (2, 3)px，暗棕 `0x3D2200`，alpha 0.20 |
+| 顶部高光条 | 白色 alpha 0.15，高度 `size * 0.35`，圆角与主体一致，模拟凸面高光 |
+
+#### 图标缩放
+
+加背景框后，图标本身在纹理内的占比缩减，避免紧贴边缘：
+
+| 按钮尺寸 | 图标绘制区偏移 | 图标有效区 |
+|---------|-------------|-----------|
+| 200px（retry / next / lobby） | 四边内缩 `size * 0.16`（≈ 32px） | 136 × 136px |
+| 80px（settings） | 四边内缩 `size * 0.14`（≈ 11px） | 58 × 58px |
+
+#### 代码参考
+
+```typescript
+// graphicsFactory.ts（新增）
+export function drawButtonBackground(g: PIXI.Graphics, size: number): void {
+  const r   = Math.round(size * 0.20);
+  const bw  = Math.max(3, Math.round(size * 0.025));
+  // Drop shadow
+  g.lineStyle(0);
+  g.beginFill(0x3D2200, 0.20);
+  g.drawRoundedRect(2, 3, size, size, r);
+  g.endFill();
+  // Main body
+  g.lineStyle(bw, 0xC4A870, 1);
+  g.beginFill(0xEEDFBD);
+  g.drawRoundedRect(0, 0, size, size, r);
+  g.endFill();
+  // Top highlight
+  g.lineStyle(0);
+  g.beginFill(0xFFFFFF, 0.15);
+  g.drawRoundedRect(bw, bw, size - bw * 2, size * 0.35, r - 2);
+  g.endFill();
+}
+
+// webAssetsManager.ts（修改示例，以 next.png 为例）
+this.textures['next.png'] = makeTexture(renderer, g => {
+  drawButtonBackground(g, BTN_SIZE);
+  const pad = Math.round(BTN_SIZE * 0.16);
+  // 平移画笔坐标使图标居中
+  g.position.set(pad, pad);           // ← 伪代码，实际需将图标函数接受 offset 参数
+  drawNextIcon(g, BTN_SIZE - pad * 2);
+}, BTN_SIZE);
+```
+
+> **实现提示**：最简单的做法是给 `drawRetryIcon` / `drawNextIcon` / `drawLobbyIcon` 各自增加 `(x, y, size)` 偏移参数，调用时传入 `pad` 值，而不需要修改 Graphics 坐标系。
 
 ---
 
@@ -477,9 +559,17 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 
 实现为对象池，无额外 GC 压力。
 
-### 方案 A（可选，暂不实现）
+### 方案 A：屏幕边缘泛光 ✅（v1.2 已实现）
 
-高连消（≥3）时可叠加极轻的屏幕边缘泛光（alpha ≤ 0.15），目前暂不实现，待体验测试后决定。
+高连消（≥3）时叠加屏幕边缘泛光（`comboVignette`，`gameScene.ts`）：
+
+| 属性 | 规格 |
+|------|------|
+| 实现 | `PIXI.Graphics` 四边矩形，程序绘制 |
+| 深度 | `min(w, h) * 0.18` |
+| alpha | 连消3：金黄 `#FFD700`，连消4+：亮绿 `#76FF03`，填充 alpha 0.15 |
+| 淡出 | 触发后约 400ms 线性衰减至 0 |
+| 层级 | 位于特效层之上、结果浮层之下 |
 
 ---
 
@@ -498,3 +588,138 @@ centered on 160x160 canvas. Empty/depleted state. --ar 1:1 --v 6 --style raw
 | 每日挑战光晕呼吸 | 1200ms 循环 | sin | ✅ |
 | 每日挑战点击弹性 | 100ms | sin arc | ✅ |
 | 时间预警数字抖动 | 持续，sin 100ms/周期 | sin | ✅ |
+
+> **实现提示**：最简单的做法是给 `drawRetryIcon` / `drawNextIcon` / `drawLobbyIcon` 各自增加 `(x, y, size)` 偏移参数，调用时传入 `pad` 值，而不需要修改 Graphics 坐标系。
+
+---
+
+## 12. 小关过关庆祝动画 ✅（v1.2 已实现）
+
+### 12.1 触发时机
+
+每次清除单个 Target（即 `onTargetCleared()` 检测到仍有剩余 target 时），在进入下一个 target 之前播放庆祝动画。最后一个 target 清除时不触发（直接显示关卡结算 `GameResultOverlay`）。
+
+### 12.2 视觉描述
+
+屏幕中央弹出一个数字 Banner，展示刚刚通过的 Target 数值，同时棋盘上多处爆发粒子效果，持续约 900ms 后自动进入下一个 target。
+
+**Banner 元素：**
+- 背景：`drawPanel` 圆角面板，宽 500px、高 280px，居中于屏幕
+- 核心内容：已清除的 target 数值（`DigitDisplay`），字号约为正常棋盘内数字的 2 倍
+- 文字标签："CLEAR!" 用与 Header 一致的 `drawLetterS` 风格手写字（或跳过，仅显示大数字）
+- 粒子：在棋盘格子层随机选取 4–6 个位置，触发 `effectManager.playEffect()`
+
+**动画时序（总时长 900ms）：**
+
+| 阶段 | 时间 | 内容 |
+|------|------|------|
+| Pop-in | 0–200ms | Banner 从 scale 0.2 → 1.0，cubic ease-out（1−(1−t)³） |
+| Hold | 200–900ms | Banner 静止显示；粒子在进入时立即触发（4–6 随机格子） |
+| Done | 900ms | Banner 销毁，回调 `startCurrentTarget()`，`isPause = false` |
+
+> 淡出阶段当前版本省略，Banner 在 900ms 时直接移除。后续可加入 alpha 淡出。
+
+### 12.3 游戏状态
+
+动画播放期间 `state.isPause = true`，防止输入和时间推进。动画结束后在调用 `startCurrentTarget()` 前重置 `state.isPause = false`。
+
+时间池（`state.timeRemainingMs`）在 `startCurrentTarget()` 内部调用 `state.addTime(30_000)` 补充，不需要提前处理。
+
+### 12.4 建议实现方式
+
+在 `gameScene.ts` 中新增私有方法，**不需要新建独立文件**：
+
+```typescript
+// gameScene.ts（新增）
+private showTargetClearCelebration(clearedTarget: number, onDone: () => void): void {
+  this.state.isPause = true;
+
+  // 1. 建 Banner 容器
+  const banner = new PIXI.Container();
+  const bg = new PIXI.Graphics();
+  drawPanel(bg, 500, 280);
+  bg.x = (this.screen.width  - 500) / 2;
+  bg.y = (this.screen.height - 280) / 2;
+  banner.addChild(bg);
+
+  // 2. 数字显示（复用 DigitDisplay）
+  const display = new DigitDisplay(this.ctx, 2);  // scale factor 2
+  display.setValue(clearedTarget);
+  display.x = this.screen.width  / 2;
+  display.y = this.screen.height / 2;
+  banner.addChild(display);
+
+  this.addChild(banner);
+  banner.scale.set(0);
+
+  // 3. 粒子位置：target 清除时棋盘已全空，直接从网格坐标范围随机取 index。
+  //    effectManager.playEffect() 内部只用 screen.indexToPos(index) 换算屏幕坐标，
+  //    不关心格子是否存在，因此不需要格子有数字。
+  const total = this.screen.cols * this.screen.rows;
+  const indices: number[] = [];
+  while (indices.length < 5) {
+    const idx = Math.floor(Math.random() * total);
+    if (!indices.includes(idx)) indices.push(idx);
+  }
+  let particleTimer = 0;
+
+  // 4. Ticker 驱动动画
+  let elapsed = 0;
+  const TOTAL = 900;
+  const onTick = (deltaMs: number) => {
+    elapsed += deltaMs;
+    particleTimer += deltaMs;
+
+    // 粒子分批（每 60ms 一批）
+    if (particleTimer > 60 && indices.length > 0) {
+      this.effectLayer.playEffect(indices.shift()!, false, 1);
+      particleTimer = 0;
+    }
+
+    // Pop-in: 0–120ms
+    if (elapsed < 120) {
+      const t = elapsed / 120;
+      const s = t < 0.7 ? (t / 0.7) * 1.08 : 1.08 - (t - 0.7) / 0.3 * 0.08;
+      banner.scale.set(s);
+    } else if (elapsed < 700) {
+      banner.scale.set(1);
+    } else {
+      // Fade-out: 700–900ms
+      const t = (elapsed - 700) / 200;
+      banner.alpha = 1 - t;
+      banner.scale.set(1 - t * 0.15);
+    }
+
+    if (elapsed >= TOTAL) {
+      this.removeChild(banner);
+      banner.destroy({ children: true });
+      this.state.isPause = false;
+      onDone();
+    }
+  };
+
+  // 挂到 gameScene 的 update() 或用临时 PIXI.Ticker
+  this._celebrationTick = onTick;
+}
+
+private _celebrationTick: ((deltaMs: number) => void) | null = null;
+
+// 在 update() 中添加调用：
+public update(deltaMs: number): void {
+  this._celebrationTick?.(deltaMs);
+  if (this._celebrationTick) return;   // 动画期间跳过其余更新
+  // ... 原有 update 逻辑
+}
+```
+
+`screen.cols` 和 `screen.rows` 在 `ScreenConfig` 上已有，网格 index 范围 `[0, cols * rows)`，无需改动 `logic.ts`。
+
+### 12.5 动画参数速查
+
+| 动画 | 时长 | 缓动 |
+|------|------|------|
+| Banner pop-in | 120ms | ease-out（0→70%: linear 0→1.08，70%→100%: 1.08→1.0） |
+| Banner hold | 580ms | 静止 |
+| Banner fade-out | 200ms | linear（alpha + scale） |
+| 粒子触发 | 每 60ms 一批，共 ~5 次 | — |
+| 总时长 | **900ms** | — |

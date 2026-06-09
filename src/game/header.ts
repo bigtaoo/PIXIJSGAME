@@ -337,6 +337,15 @@ export class Header extends PIXI.Container {
     this.clockFaceSprite.width  = L.clockSize;
     this.clockFaceSprite.height = L.clockSize;
 
+    // Hand — proportional to clockSize
+    const handW = Math.round(L.clockSize * 0.063);
+    const handH = Math.round(L.clockSize * 0.350);
+    this.clockHandSprite.width  = handW;
+    this.clockHandSprite.height = handH;
+    this.clockHandSprite.pivot.set(handW / 2, 0);
+    this.clockHandSprite.x = L.clockSize / 2;
+    this.clockHandSprite.y = L.clockSize / 2;
+
     // Time digit sprites
     for (let i = 0; i < this.timeSprites.length; i++) {
       const s  = this.timeSprites[i];
@@ -418,19 +427,23 @@ export class Header extends PIXI.Container {
     // Left slot
     this.addSlotOrValue(this.tipContainer, first,  L.tipSlot1X, L.tipY, L.tipSlotW, L.tipSlotH);
 
-    // Plus sign
+    // Plus sign — 2/3 of slot size, centred within its allocated space
+    const symW = Math.round(L.tipSlotW * 2 / 3);
+    const symH = Math.round(L.tipSlotH * 2 / 3);
+    const symDY = Math.round((L.tipSlotH - symH) / 2);
+    const symDX = Math.round((L.tipSlotW - symW) / 2);
     const plus   = new PIXI.Sprite(this.ctx.assets.GetTexture('plus.png'));
-    plus.width   = L.tipSlotW; plus.height = L.tipSlotH;
-    plus.x       = L.tipPlusX; plus.y      = L.tipY;
+    plus.width   = symW; plus.height = symH;
+    plus.x       = L.tipPlusX + symDX; plus.y = L.tipY + symDY;
     this.tipContainer.addChild(plus);
 
     // Right slot
     this.addSlotOrValue(this.tipContainer, second, L.tipSlot2X, L.tipY, L.tipSlotW, L.tipSlotH);
 
-    // Equals sign
+    // Equals sign — same reduced size
     const equa   = new PIXI.Sprite(this.ctx.assets.GetTexture('equa.png'));
-    equa.width   = L.tipSlotW; equa.height = L.tipSlotH;
-    equa.x       = L.tipEquaX; equa.y      = L.tipY;
+    equa.width   = symW; equa.height = symH;
+    equa.x       = L.tipEquaX + symDX; equa.y = L.tipY + symDY;
     this.tipContainer.addChild(equa);
 
     // Target number (may be 1 or 2 digits)
@@ -457,8 +470,8 @@ export class Header extends PIXI.Container {
   ): void {
     if (value === null) {
       const g = new PIXI.Graphics();
-      g.lineStyle(3, 0xBBBBBB, 1);
-      g.beginFill(0xF0F0F0, 1);
+      g.lineStyle(2, 0xC4A068, 0.8);   // warm gold border, matches header palette
+      g.beginFill(0xF5E8C8, 1);         // warm cream fill
       g.drawRoundedRect(x, y, w, h, 10);
       g.endFill();
       // Question mark: drawn programmatically, replacing the original PIXI.Text('?')
@@ -502,12 +515,15 @@ export class Header extends PIXI.Container {
     this.clockFaceSprite.height  = L.clockSize;
     this.clockContainer.addChild(this.clockFaceSprite);
 
-    // Hand: pivot at top-centre, placed at the clock face centre
-    const r = L.clockSize / 2;
+    // Hand: pivot at top-centre, placed at the clock face centre.
+    // Width ≈ 6.3% of clockSize, height ≈ 35% of clockSize (reaches ~70% of face radius).
+    const r     = L.clockSize / 2;
+    const handW = Math.round(L.clockSize * 0.063);
+    const handH = Math.round(L.clockSize * 0.350);
     this.clockHandSprite           = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
-    this.clockHandSprite.width     = 6;
-    this.clockHandSprite.height    = 33;
-    this.clockHandSprite.pivot.set(3, 0);
+    this.clockHandSprite.width     = handW;
+    this.clockHandSprite.height    = handH;
+    this.clockHandSprite.pivot.set(handW / 2, 0);
     this.clockHandSprite.x        = r;
     this.clockHandSprite.y        = r;
     this.clockHandSprite.rotation = Math.PI; // 12 o'clock position

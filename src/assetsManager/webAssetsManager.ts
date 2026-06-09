@@ -9,7 +9,10 @@ import dailyPngUrl   from '../assets/daily_challenge_icon.png';
 import starPngUrl    from '../assets/star.png';
 import trophyPngUrl  from '../assets/trophy.png';
 import firePngUrl    from '../assets/fire.png';
-import musicPngUrl   from '../assets/music.png';
+import musicPngUrl       from '../assets/music.png';
+import decoPencilUrl    from '../assets/deco_pencil.png';
+import decoEraserUrl    from '../assets/deco_eraser.png';
+import decoPaperclipUrl from '../assets/deco_paperclip.png';
 import { IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -18,8 +21,10 @@ import {
   drawCell, drawCellSelected,
   drawClockFace, drawClockHand,
   drawPlus, drawEquals,
+  drawButtonBackground,
   drawRetryIcon, drawNextIcon, drawSettingsIcon, drawLobbyIcon,
   drawLetterS,
+  drawComboGlow,
 } from '../game/graphicsFactory';
 
 /** Number of random gloss variants generated per palette colour. */
@@ -62,9 +67,9 @@ const DIGIT_H   = 160;
 const DIGIT_GAP = 10;
 
 const CELL_BASE      = 120;
-const CLOCK_RADIUS   = 40;
-const CLOCK_HAND_LEN = 26;
-const CLOCK_HAND_W   = 6;
+const CLOCK_RADIUS   = 80;  // 160×160 texture — matches ~158px portrait display size 1:1
+const CLOCK_HAND_LEN = 64;  // hand texture length (display height driven by header layout)
+const CLOCK_HAND_W   = 12;  // hand texture width
 const SYMBOL_W       = 80;
 const SYMBOL_H_PLUS  = 80;
 const SYMBOL_H_EQ    = 60;
@@ -87,6 +92,7 @@ export class WebAssetsManager implements IAssetsManager {
       ['trophy',     () => this.loadTrophy()],
       ['fire',       () => this.loadFire()],
       ['music',      () => this.loadMusic()],
+      ['deco',       () => this.loadDecos()],
     ];
 
     const total = tasks.length;
@@ -129,6 +135,17 @@ export class WebAssetsManager implements IAssetsManager {
   private async loadMusic(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(musicPngUrl));
     this.textures['music.png'] = new PIXI.Texture(base);
+  }
+
+  private async loadDecos(): Promise<void> {
+    const [pb, eb, cb] = await Promise.all([
+      this.waitForBase(PIXI.BaseTexture.from(decoPencilUrl)),
+      this.waitForBase(PIXI.BaseTexture.from(decoEraserUrl)),
+      this.waitForBase(PIXI.BaseTexture.from(decoPaperclipUrl)),
+    ]);
+    this.textures['deco_pencil.png']    = new PIXI.Texture(pb);
+    this.textures['deco_eraser.png']    = new PIXI.Texture(eb);
+    this.textures['deco_paperclip.png'] = new PIXI.Texture(cb);
   }
 
   private async loadDigits(): Promise<void> {
@@ -204,14 +221,35 @@ export class WebAssetsManager implements IAssetsManager {
     this.textures['equa.png'] = makeTexture(
       renderer, g => drawEquals(g, SYMBOL_W, SYMBOL_H_EQ), SYMBOL_W, SYMBOL_H_EQ,
     );
-    this.textures['retry.png']    = makeTexture(renderer, g => drawRetryIcon(g,    BTN_SIZE),     BTN_SIZE);
-    this.textures['next.png']     = makeTexture(renderer, g => drawNextIcon(g,      BTN_SIZE),     BTN_SIZE);
-    this.textures['lobby.png']    = makeTexture(renderer, g => drawLobbyIcon(g,     BTN_SIZE),     BTN_SIZE);
-    this.textures['settings.png'] = makeTexture(renderer, g => drawSettingsIcon(g, SETTINGS_SIZE), SETTINGS_SIZE);
+    const btnPad  = Math.round(BTN_SIZE * 0.16);               // 32px icon inset
+    const btnIcon = BTN_SIZE - btnPad * 2;                      // 136px icon canvas
+    const setPad  = Math.round(SETTINGS_SIZE * 0.14);           // 11px icon inset
+    const setIcon = SETTINGS_SIZE - setPad * 2;                 // 58px icon canvas
+    this.textures['retry.png'] = makeTexture(renderer, g => {
+      drawButtonBackground(g, BTN_SIZE);
+      drawRetryIcon(g, btnIcon, btnPad, btnPad);
+    }, BTN_SIZE);
+    this.textures['next.png'] = makeTexture(renderer, g => {
+      drawButtonBackground(g, BTN_SIZE);
+      drawNextIcon(g, btnIcon, btnPad, btnPad);
+    }, BTN_SIZE);
+    this.textures['lobby.png'] = makeTexture(renderer, g => {
+      drawButtonBackground(g, BTN_SIZE);
+      drawLobbyIcon(g, btnIcon, btnPad, btnPad);
+    }, BTN_SIZE);
+    this.textures['settings.png'] = makeTexture(renderer, g => {
+      drawButtonBackground(g, SETTINGS_SIZE);
+      drawSettingsIcon(g, setIcon, setPad, setPad);
+    }, SETTINGS_SIZE);
 
     // Letter "s" (for the flying bonus animation), white outline; callers tint it
     const S_W = 50, S_H = 70;
     this.textures['s.png'] = makeTexture(renderer, g => drawLetterS(g, S_W, S_H), S_W, S_H);
+
+    // Combo glow overlay (concentric radial fade, callers tint gold or green)
+    this.textures['combo_glow.png'] = makeTexture(
+      renderer, g => drawComboGlow(g, CELL_BASE), CELL_BASE,
+    );
   }
 
   public GetTexture(key: string): PIXI.Texture {

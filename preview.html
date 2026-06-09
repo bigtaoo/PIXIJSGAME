@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { background: #222; margin: 0; display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+canvas { border: 1px solid #555; }
+h3 { color: #aaa; font: 14px sans-serif; margin: 4px 0; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+</style>
+</head>
+<body>
+<script>
+function darken(color, amount) {
+  const f = 1 - amount;
+  const r = Math.round(((color >> 16) & 0xFF) * f);
+  const g = Math.round(((color >> 8)  & 0xFF) * f);
+  const b = Math.round((color & 0xFF) * f);
+  return `rgb(${r},${g},${b})`;
+}
+function hex(c) {
+  return `#${c.toString(16).padStart(6,'0')}`;
+}
+
+const C = {
+  bgFill: 0xEDE8DC, bgLine: 0xCCCCCC,
+  cellSelFill: 0xFBF8EE, cellSelBorder: 0xEAB830,
+  nodeFill: 0xEEDFBD, nodeSelFill: 0xF5EAC8, nodeBorder: 0xC4A870,
+  panelFill: 0xFAFAF8, panelBorder: 0xE0DAD0,
+  clockFace: 0xFAFAF8, clockBorder: 0x5D4037, clockHand: 0x3E2723,
+  icon: 0x5D4037,
+};
+const CELL_PALETTE = [0xC5E8FA, 0xFFF3CC, 0xFFCCBC];
+
+// ── Background ─────────────────────────────────────────────────────────
+function drawBackground(ctx, w, h) {
+  ctx.fillStyle = hex(0xEDE8DC);
+  ctx.fillRect(0, 0, w, h);
+  const sp = 24;
+  for (let x = sp; x < w; x += sp) {
+    const isMajor = Math.round(x/sp)%4===0;
+    ctx.strokeStyle = `rgba(184,168,138,${isMajor?0.40:0.22})`;
+    ctx.lineWidth = isMajor ? 1.2 : 0.8;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+  }
+  for (let y = sp; y < h; y += sp) {
+    const isMajor = Math.round(y/sp)%4===0;
+    ctx.strokeStyle = `rgba(184,168,138,${isMajor?0.40:0.22})`;
+    ctx.lineWidth = isMajor ? 1.2 : 0.8;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+  for (let x = sp; x < w; x += sp) {
+    for (let y = sp; y < h; y += sp) {
+      const isMajorX = Math.round(x/sp)%4===0;
+      const isMajorY = Math.round(y/sp)%4===0;
+      if (!isMajorX && !isMajorY) {
+        ctx.fillStyle = 'rgba(184,168,138,0.28)';
+        ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  const vSize = Math.min(w,h)*0.12;
+  ctx.fillStyle = 'rgba(61,34,0,0.06)';
+  ctx.fillRect(0,0,w,vSize); ctx.fillRect(0,h-vSize,w,vSize);
+  ctx.fillRect(0,0,vSize,h); ctx.fillRect(w-vSize,0,vSize,h);
+}
+
+// ── Cell ──────────────────────────────────────────────────────────────
+function drawCell(ctx, x, y, size, fillColor, gloss) {
+  const r = Math.round(size*0.18);
+  const depth = Math.round(size*0.10);
+  const shadow = darken(fillColor, 0.28);
+  // shadow strip
+  ctx.fillStyle = shadow;
+  roundRect(ctx, x, y+depth, size, size-depth, r);
+  ctx.fill();
+  // main body
+  ctx.fillStyle = hex(fillColor);
+  roundRect(ctx, x, y, size, size-depth, r);
+  ctx.fill();
+  // gloss
+  if (gloss) {
+    const grd = ctx.createRadialGradient(x+size*0.31, y+size*0.19, 0, x+size*0.31, y+size*0.19, size*0.22);
+    grd.addColorStop(0, 'rgba(255,255,255,0.38)');
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.ellipse(x+size*0.31, y+size*0.19, size*0.19, size*0.10, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawCellSelected(ctx, x, y, size) {
+  const r = Math.round(size*0.18);
+  const depth = Math.round(size*0.10);
+  const bw = Math.max(5, Math.round(size*0.05));
+  ctx.fillStyle = darken(0xFBF8EE, 0.22);
+  roundRect(ctx, x, y+depth, size, size-depth, r);
+  ctx.fill();
+  ctx.strokeStyle = hex(0xEAB830); ctx.lineWidth = bw;
+  ctx.fillStyle = hex(0xFBF8EE);
+  roundRect(ctx, x+bw/2, y+bw/2, size-bw, size-depth-bw/2, r);
+  ctx.fill(); ctx.stroke();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+// ── Header bar ────────────────────────────────────────────────────────
+function drawHeaderBar(ctx, x, y, w, h) {
+  const r = 16;
+  ctx.fillStyle = 'rgba(61,34,0,0.18)';
+  roundRect(ctx, x+3, y+5, w-3, h, r); ctx.fill();
+  ctx.strokeStyle = 'rgba(196,160,104,0.55)'; ctx.lineWidth = 1.5;
+  ctx.fillStyle = hex(0xEAD5A8);
+  roundRect(ctx, x, y, w, h, r); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  roundRect(ctx, x+5, y+3, w-10, h*0.38, r-2); ctx.fill();
+}
+
+// ── Clock face ────────────────────────────────────────────────────────
+function drawClockFace(ctx, cx, cy, radius) {
+  const rOuter = radius-2;
+  const rRim = rOuter - Math.round(radius*0.10);
+  const rFace = rRim - Math.round(radius*0.07);
+  ctx.fillStyle = 'rgba(61,34,0,0.22)';
+  ctx.beginPath(); ctx.arc(cx+radius*0.04, cy+radius*0.06, rOuter, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = hex(0x7A5530);
+  ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = hex(0xE8C060);
+  ctx.beginPath(); ctx.arc(cx, cy, rRim, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = hex(0xFFF8F0);
+  ctx.beginPath(); ctx.arc(cx, cy, rFace, 0, Math.PI*2); ctx.fill();
+  const tickOuter = rFace - Math.round(radius*0.03);
+  for (let i = 0; i < 12; i++) {
+    const a = i*Math.PI/6 - Math.PI/2;
+    const isMajor = i%3===0;
+    const tickLen = Math.round(radius*(isMajor?0.22:0.13));
+    const lw = isMajor ? Math.round(radius*0.06) : Math.round(radius*0.04);
+    ctx.strokeStyle = `rgba(107,76,42,${isMajor?1.0:0.65})`; ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*(tickOuter-tickLen), cy+Math.sin(a)*(tickOuter-tickLen));
+    ctx.lineTo(cx+Math.cos(a)*tickOuter, cy+Math.sin(a)*tickOuter);
+    ctx.stroke();
+  }
+  ctx.fillStyle = hex(0x6B4C2A);
+  ctx.beginPath(); ctx.arc(cx, cy, Math.round(radius*0.09), 0, Math.PI*2); ctx.fill();
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────
+function drawPanel(ctx, x, y, w, h) {
+  const r = 20;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  roundRect(ctx, x+4, y+4, w, h, r); ctx.fill();
+  ctx.strokeStyle = 'rgba(224,218,208,0.7)'; ctx.lineWidth = 1.5;
+  ctx.fillStyle = hex(0xFAFAF8);
+  roundRect(ctx, x, y, w, h, r); ctx.fill(); ctx.stroke();
+}
+
+// ── Button icons ──────────────────────────────────────────────────────
+function drawNextIcon(ctx, x, y, size) {
+  const pad = size*0.22;
+  ctx.fillStyle = hex(C.icon);
+  ctx.beginPath();
+  ctx.moveTo(x+pad, y+pad);
+  ctx.lineTo(x+size-pad, y+size/2);
+  ctx.lineTo(x+pad, y+size-pad);
+  ctx.closePath(); ctx.fill();
+}
+function drawRetryIcon(ctx, x, y, size) {
+  const cx=x+size/2, cy=y+size/2, r=size*0.33, sw=Math.max(5,Math.round(size*0.1));
+  ctx.strokeStyle = hex(C.icon); ctx.lineWidth = sw; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI*0.75,Math.PI*0.67); ctx.stroke();
+  const endA=Math.PI*0.67;
+  const ax=cx+Math.cos(endA)*r, ay=cy+Math.sin(endA)*r;
+  const tA=endA+Math.PI/2, ah=sw*2.5, hw=sw*1.3, perpA=tA+Math.PI/2;
+  const bx=ax-Math.cos(tA)*3, by=ay-Math.sin(tA)*3;
+  ctx.fillStyle=hex(C.icon);
+  ctx.beginPath();
+  ctx.moveTo(bx+Math.cos(tA)*ah, by+Math.sin(tA)*ah);
+  ctx.lineTo(bx+Math.cos(perpA)*hw, by+Math.sin(perpA)*hw);
+  ctx.lineTo(bx-Math.cos(perpA)*hw, by-Math.sin(perpA)*hw);
+  ctx.closePath(); ctx.fill();
+}
+function drawLobbyIcon(ctx, x, y, size) {
+  const pad=size*0.18, gap=size*0.1, sq=(size-pad*2-gap)/2;
+  ctx.fillStyle=hex(C.icon);
+  for(let row=0;row<2;row++) for(let col=0;col<2;col++) {
+    roundRect(ctx, x+pad+col*(sq+gap), y+pad+row*(sq+gap), sq, sq, 4); ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RENDER PANELS
+// ═══════════════════════════════════════════════════════════════════════
+
+// Panel 1: Game background + cells grid
+const c1 = document.createElement('canvas');
+c1.width = 360; c1.height = 560;
+const g1 = c1.getContext('2d');
+// bg
+drawBackground(g1, 360, 560);
+// header bar
+drawHeaderBar(g1, 10, 10, 340, 80);
+// clock
+drawClockFace(g1, 60, 50, 28);
+// cells grid (4 cols × 5 rows, small numbers tier)
+const cellSize = 72, cellPad = 6;
+const gridX = 18, gridY = 110;
+for (let row=0; row<5; row++) for (let col=0; col<4; col++) {
+  const tier = (row*4+col) % 3;
+  const isSelected = (row===2 && col===1);
+  if (isSelected) drawCellSelected(g1, gridX+col*(cellSize+cellPad), gridY+row*(cellSize+cellPad), cellSize);
+  else drawCell(g1, gridX+col*(cellSize+cellPad), gridY+row*(cellSize+cellPad), cellSize, CELL_PALETTE[tier], true);
+}
+
+// Panel 2: Result overlay
+const c2 = document.createElement('canvas');
+c2.width = 360; c2.height = 300;
+const g2 = c2.getContext('2d');
+drawBackground(g2, 360, 300);
+drawPanel(g2, 30, 30, 300, 220);
+// stars row
+for (let i=0;i<3;i++) {
+  g2.fillStyle = i<2 ? hex(0xEAB830) : 'rgba(136,136,136,0.35)';
+  g2.beginPath();
+  const sx=110+i*50, sy=75;
+  for(let j=0;j<5;j++){
+    const a=j*Math.PI*2/5-Math.PI/2;
+    const a2=a+Math.PI/5;
+    const r=18, ri=7;
+    if(j===0) g2.moveTo(sx+Math.cos(a)*r, sy+Math.sin(a)*r);
+    else g2.lineTo(sx+Math.cos(a)*r, sy+Math.sin(a)*r);
+    g2.lineTo(sx+Math.cos(a2)*ri, sy+Math.sin(a2)*ri);
+  }
+  g2.closePath(); g2.fill();
+}
+// buttons (retry left, lobby right) — just icons, no background
+drawRetryIcon(g2, 55, 140, 80);
+drawNextIcon(g2, 225, 140, 80);
+drawLobbyIcon(g2, 140, 140, 80);
+
+// Panel 3: Cell tier colors
+const c3 = document.createElement('canvas');
+c3.width = 360; c3.height = 160;
+const g3 = c3.getContext('2d');
+g3.fillStyle = '#f5f0e8'; g3.fillRect(0,0,360,160);
+const tierNames=['Tier 0 (small)','Tier 1 (mid)','Tier 2 (large)'];
+CELL_PALETTE.forEach((color, i) => {
+  drawCell(g3, 20+i*115, 20, 100, color, true);
+  g3.fillStyle='#555'; g3.font='11px sans-serif';
+  g3.fillText(tierNames[i], 20+i*115, 140);
+});
+
+// ─── Render to page ───────────────────────────────────────────────────
+const cols = [
+  {label:'Game scene (cells + header)', canvas:c1},
+  {label:'Result overlay', canvas:c2},
+  {label:'Cell tier colours', canvas:c3},
+];
+cols.forEach(({label, canvas}) => {
+  const div = document.createElement('div');
+  div.className = 'col';
+  const h = document.createElement('h3');
+  h.textContent = label;
+  div.appendChild(h);
+  div.appendChild(canvas);
+  document.body.appendChild(div);
+});
+</script>
+</body>
+</html>

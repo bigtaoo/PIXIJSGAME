@@ -22,12 +22,26 @@ interface Ripple {
 
 // ── EffectManager ──────────────────────────────────────────────────────────
 
+// ── ComboGlow ──────────────────────────────────────────────────────────────
+
+const GLOW_DURATION = 400; // ms
+const GLOW_COLOR_2  = 0xFFD700; // combo ×2 — gold
+const GLOW_COLOR_3  = 0x76FF03; // combo ×3+ — green
+
+interface ComboGlow {
+  spr:     PIXI.Sprite;
+  elapsed: number;
+  active:  boolean;
+}
+
 export class EffectManager extends PIXI.Container {
   private readonly explosion: ExplosionSystem;
   private flyingBonuses: FlyingBonus[] = [];
 
   /** Object pool for combo ripple rings. */
   private readonly ripples: Ripple[] = [];
+  /** Object pool for combo glow overlays. */
+  private readonly glows: ComboGlow[] = [];
 
   /**
    * Separate container for flying-bonus labels.
@@ -58,6 +72,7 @@ export class EffectManager extends PIXI.Container {
     this.explosion.play(cx, cy, isCombo, this.screen.gridSize);
     if (isCombo) {
       this.spawnRipple(cx, cy, comboCount >= 3 ? RIPPLE_COLOR_3 : RIPPLE_COLOR_2);
+      this.spawnGlow(cx, cy, comboCount >= 3 ? GLOW_COLOR_3 : GLOW_COLOR_2);
     }
   }
 
@@ -77,6 +92,45 @@ export class EffectManager extends PIXI.Container {
     r.color   = color;
     r.elapsed = 0;
     r.active  = true;
+  }
+
+  private spawnGlow(cx: number, cy: number, color: number): void {
+    // Skip if the asset isn't loaded yet (during development / missing file).
+    let tex: PIXI.Texture | null = null;
+    try { tex = this.ctx.assets.GetTexture('combo_glow.png'); } catch { return; }
+
+    let g = this.glows.find(p => !p.active);
+    if (!g) {
+      const spr = new PIXI.Sprite();
+      spr.anchor.set(0.5);
+      spr.blendMode = PIXI.BLEND_MODES.ADD;
+      this.addChild(spr);
+      g = { spr, elapsed: 0, active: false };
+      this.glows.push(g);
+    }
+    g.spr.texture = tex;
+    g.spr.tint    = color;
+    g.spr.x       = cx;
+    g.spr.y       = cy;
+    g.spr.alpha   = 1;
+    // Scale so glow matches cell size
+    const s = this.screen.gridSize / tex.width;
+    g.spr.scale.set(s * 1.4); // slightly larger than cell for soft bloom
+    g.elapsed = 0;
+    g.active  = true;
+  }
+
+  private updateGlows(deltaMs: number): void {
+    for (const g of this.glows) {
+      if (!g.active) continue;
+      g.elapsed += deltaMs;
+      const t = Math.min(g.elapsed / GLOW_DURATION, 1);
+      g.spr.alpha = 1 - t;
+      if (t >= 1) {
+        g.spr.alpha = 0;
+        g.active = false;
+      }
+    }
   }
 
   private updateRipples(deltaMs: number): void {
@@ -140,6 +194,7 @@ export class EffectManager extends PIXI.Container {
   public update(deltaMs: number): void {
     this.explosion.update(deltaMs);
     this.updateRipples(deltaMs);
+    this.updateGlows(deltaMs);
 
     this.flyingBonuses = this.flyingBonuses.filter((fb) => {
       fb.update(deltaMs);
