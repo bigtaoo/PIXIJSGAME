@@ -2,9 +2,9 @@ import * as PIXI from 'pixi.js-legacy';
 import { IAssetsManager } from './IAssetsManager';
 
 // ── digits.png parameters ─────────────────────────────────────────────────────
-const DIGIT_W   = 120;
+const DIGIT_W   = 100;
 const DIGIT_H   = 160;
-const DIGIT_GAP = 10;
+const DIGIT_GAP = 0;
 
 export class WechatAssetsManager implements IAssetsManager {
   private textures: Record<string, PIXI.Texture> = {};

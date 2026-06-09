@@ -62,9 +62,9 @@ function makeGlossEllipses(): GlossEllipse[] {
   }
 }
 
-const DIGIT_W   = 120;
+const DIGIT_W   = 100;
 const DIGIT_H   = 160;
-const DIGIT_GAP = 10;
+const DIGIT_GAP = 0;
 
 const CELL_BASE      = 120;
 const CLOCK_RADIUS   = 80;  // 160×160 texture — matches ~158px portrait display size 1:1
