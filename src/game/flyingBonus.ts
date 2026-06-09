@@ -4,33 +4,39 @@ import { AppContext } from './appContext';
 /**
  * A "+Xs" animation that flies from the tapped cell to the clock icon.
  *
- * Three phases:
- *   Phase 1 (0-100 ms)  : pop in at click position, scale 0 → 2
- *   Phase 2 (100-200 ms): hold at click position at scale 2
- *   Phase 3 (200-300 ms): fly to clock, shrink and fade
+ * Phases:
+ *   Phase 1 (0–160 ms)  : pop in at click position, scale 0 → 1 with overshoot
+ *   Phase 2 (160–360 ms): hold at click position
+ *   Phase 3 (360–700 ms): fly along Bézier arc to clock, shrink + fade + slight rotation
  *
- * Visual: [plus.png] [digit sprite(s)] [s.png], all tinted gold (normal) or green (combo).
+ * Visual: amber pill background + white [+] [digit(s)] [s].
  */
 export class FlyingBonus extends PIXI.Container {
   private elapsed = 0;
   private _isDone = false;
 
   private callbackFired = false;
-  private static readonly CALLBACK_TIME = 250;
+  private static readonly CALLBACK_TIME = 500;
 
   private static readonly PHASE_GROW = 100;
-  private static readonly PHASE_HOLD = 100;
-  private static readonly PHASE_FLY  = 100;
-  public  static readonly DURATION   = 300;
+  private static readonly PHASE_HOLD = 200;
+  private static readonly PHASE_FLY  = 300;
 
-  // Sprite dimensions at scale=1
-  private static readonly SPRITE_H    = 80;
-  private static readonly SPRITE_W    = Math.round(80 * 120 / 160); // 60, digits proportional
-  private static readonly PLUS_W      = 40;
-  private static readonly PLUS_H      = 40;
-  private static readonly S_W         = 20;
-  private static readonly S_H         = 30;
-  private static readonly GAP         = -8;
+  // Native sprite sizes — no scale multiplier needed
+  private static readonly SPRITE_H = 80;
+  private static readonly SPRITE_W = Math.round(80 * 120 / 160); // 60
+  private static readonly PLUS_W   = 44;
+  private static readonly PLUS_H   = 44;
+  private static readonly S_W      = 24;
+  private static readonly S_H      = 34;
+  private static readonly GAP      = -2;
+  private static readonly PAD_X    = 20;
+  private static readonly PAD_Y    = 14;
+
+  // Pill colours
+  private static readonly PILL_FILL   = 0xD4840A; // warm amber
+  private static readonly PILL_BORDER = 0xFFB830; // bright gold rim
+  private static readonly PILL_COMBO  = 0x2E8A00; // deep green for combo
 
   constructor(
     private readonly sx: number,
@@ -41,12 +47,13 @@ export class FlyingBonus extends PIXI.Container {
     isCombo: boolean,
     private readonly onReached: () => void,
     ctx: AppContext,
-    /** Set to false to omit the trailing "s" unit (e.g. for score displays). */
     showUnit = true,
   ) {
     super();
 
-    const color = isCombo ? 0x76FF03 : 0xFFD700;
+    const pillFill   = isCombo ? FlyingBonus.PILL_COMBO  : FlyingBonus.PILL_FILL;
+    const pillBorder = isCombo ? 0x76FF03               : FlyingBonus.PILL_BORDER;
+
     const H     = FlyingBonus.SPRITE_H;
     const DW    = FlyingBonus.SPRITE_W;
     const PW    = FlyingBonus.PLUS_W;
@@ -54,44 +61,66 @@ export class FlyingBonus extends PIXI.Container {
     const SW    = FlyingBonus.S_W;
     const SH    = FlyingBonus.S_H;
     const GAP   = FlyingBonus.GAP;
+    const PAD_X = FlyingBonus.PAD_X;
+    const PAD_Y = FlyingBonus.PAD_Y;
 
-    const digits = bonusSeconds.toString().split('');
-    const totalW  = PW + GAP + digits.length * DW + GAP + SW;
-    const startX  = -totalW / 2;  // centred at (0, 0)
+    const digits  = bonusSeconds.toString().split('');
+    const unitW   = showUnit ? SW + GAP : 0;
+    const innerW  = PW + GAP + digits.length * DW + unitW;
+    const pillW   = innerW + PAD_X * 2;
+    const pillH   = H + PAD_Y * 2;
+    const r       = pillH / 2;
 
-    let curX = startX;
+    // ── Pill ────────────────────────────────────────────────────────────────
+    const pill = new PIXI.Graphics();
+    // Drop shadow
+    pill.lineStyle(0);
+    pill.beginFill(0x000000, 0.22);
+    pill.drawRoundedRect(-pillW / 2 + 3, -pillH / 2 + 4, pillW, pillH, r);
+    pill.endFill();
+    // Main fill
+    pill.lineStyle(3, pillBorder, 1);
+    pill.beginFill(pillFill);
+    pill.drawRoundedRect(-pillW / 2, -pillH / 2, pillW, pillH, r);
+    pill.endFill();
+    // Top highlight
+    pill.lineStyle(0);
+    pill.beginFill(0xFFFFFF, 0.18);
+    pill.drawRoundedRect(-pillW / 2 + 4, -pillH / 2 + 4, pillW - 8, pillH * 0.40, r - 2);
+    pill.endFill();
+    this.addChild(pill);
 
-    // Plus sign
-    const plus = new PIXI.Sprite(ctx.assets.GetTexture('plus.png'));
-    plus.width  = PW;
-    plus.height = PH;
-    plus.x      = curX;
-    plus.y      = -(PH / 2);
-    plus.tint   = color;
+    // ── Sprites (white tint for max contrast on coloured pill) ────────────
+    let curX = -innerW / 2;
+
+    const plus   = new PIXI.Sprite(ctx.assets.GetTexture('plus.png'));
+    plus.width   = PW;
+    plus.height  = PH;
+    plus.x       = curX;
+    plus.y       = -(PH / 2);
+    plus.tint    = 0xFFFFFF;
     this.addChild(plus);
     curX += PW + GAP;
 
-    // Digits (may be 1 or 2 digits)
     for (const ch of digits) {
-      const d = new PIXI.Sprite(ctx.assets.GetTexture(`${ch}.png`));
-      d.width  = DW;
-      d.height = H;
-      d.x      = curX;
-      d.y      = -(H / 2);
-      d.tint   = color;
+      const d   = new PIXI.Sprite(ctx.assets.GetTexture(`${ch}.png`));
+      d.width   = DW;
+      d.height  = H;
+      d.x       = curX;
+      d.y       = -(H / 2);
+      d.tint    = 0xFFFFFF;
       this.addChild(d);
       curX += DW;
     }
     curX += GAP;
 
-    // Letter "s" (optional unit suffix)
     if (showUnit) {
-      const s = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
-      s.width  = SW;
-      s.height = SH;
-      s.x      = curX;
-      s.y      = -(SH / 2) + 7;
-      s.tint   = color;
+      const s   = new PIXI.Sprite(ctx.assets.GetTexture('s.png'));
+      s.width   = SW;
+      s.height  = SH;
+      s.x       = curX;
+      s.y       = -(SH / 2) + 6;
+      s.tint    = 0xFFFFFF;
       this.addChild(s);
     }
 
@@ -118,33 +147,39 @@ export class FlyingBonus extends PIXI.Container {
     const FLY  = FlyingBonus.PHASE_FLY;
 
     if (this.elapsed < GROW) {
+      // Overshoot pop-in: 0 → 1.12 → 1.0
       const t = this.elapsed / GROW;
-      const s = (t < 0.75) ? (t / 0.75 * 2.2) : (2.2 - (t - 0.75) / 0.25 * 0.2);
+      const s = t < 0.75
+        ? (t / 0.75) * 1.12
+        : 1.12 - (t - 0.75) / 0.25 * 0.12;
       this.scale.set(Math.max(0, s));
-      this.x = this.sx;
-      this.y = this.sy;
-      this.alpha = 1;
+      this.x        = this.sx;
+      this.y        = this.sy;
+      this.alpha    = 1;
+      this.rotation = 0;
+
     } else if (this.elapsed < GROW + HOLD) {
-      this.scale.set(2);
-      this.x = this.sx;
-      this.y = this.sy;
-      this.alpha = 1;
+      this.scale.set(1);
+      this.x        = this.sx;
+      this.y        = this.sy;
+      this.alpha    = 1;
+      this.rotation = 0;
+
     } else if (this.elapsed < GROW + HOLD + FLY) {
       const raw = (this.elapsed - GROW - HOLD) / FLY;
-      // Quadratic Bézier arc: control point is above the start point so the
-      // label rises before curving down to the clock.
-      const t  = raw * raw;           // ease-in along the arc
-      const mt = 1 - t;
-      // Control point: midpoint between start and end, shifted upward by 200px
-      const cx = (this.sx + this.ex) / 2;
-      const cy = Math.min(this.sy, this.ey) - 200;
-      this.x = mt * mt * this.sx + 2 * mt * t * cx + t * t * this.ex;
-      this.y = mt * mt * this.sy + 2 * mt * t * cy + t * t * this.ey;
-      this.scale.set(2 * (1 - raw * 0.9));
-      this.alpha = (raw < 0.4) ? 1 : (1 - raw) / 0.6;
+      const t   = raw * raw;
+      const mt  = 1 - t;
+      const cx  = (this.sx + this.ex) / 2;
+      const cy  = Math.min(this.sy, this.ey) - 220;
+      this.x    = mt * mt * this.sx + 2 * mt * t * cx + t * t * this.ex;
+      this.y    = mt * mt * this.sy + 2 * mt * t * cy + t * t * this.ey;
+      this.scale.set(1 - raw * 0.65);
+      this.alpha    = raw < 0.55 ? 1 : (1 - raw) / 0.45;
+      this.rotation = raw * 0.22;
+
     } else {
-      this._isDone = true;
-      this.visible = false;
+      this._isDone  = true;
+      this.visible  = false;
     }
   }
 }

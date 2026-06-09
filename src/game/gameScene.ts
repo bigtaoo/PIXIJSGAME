@@ -53,7 +53,7 @@ export class GameScene extends PIXI.Container {
   private _celebrationDone: (() => void) | null = null;
   /** Elapsed ms since the celebration started. */
   private _celebrationElapsed = 0;
-  private static readonly CELEBRATION_DURATION_MS = 2000;
+  private static readonly CELEBRATION_DURATION_MS = 1800;
 
   /** How many ms have elapsed since the player selected the first tile. −1 = inactive. */
   private hintTimerMs = -1;
@@ -334,8 +334,8 @@ export class GameScene extends PIXI.Container {
 
     const cols       = this.screen.gridCountW;
     const rows       = this.screen.gridCountH;
-    const SPREAD_MS  = 1600;
-    const BURST      = Math.min(30, cols * rows);
+    const SPREAD_MS  = GameScene.CELEBRATION_DURATION_MS - 300;
+    const BURST      = 50; // positions repeat freely across the grid
 
     // Pre-schedule random effect times within the first SPREAD_MS
     const schedule: Array<{ t: number; idx: number }> = [];
