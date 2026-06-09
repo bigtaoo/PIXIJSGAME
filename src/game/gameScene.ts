@@ -335,7 +335,7 @@ export class GameScene extends PIXI.Container {
     const cols       = this.screen.gridCountW;
     const rows       = this.screen.gridCountH;
     const SPREAD_MS  = 1600;
-    const BURST      = Math.min(12, cols * rows);
+    const BURST      = Math.min(30, cols * rows);
 
     // Pre-schedule random effect times within the first SPREAD_MS
     const schedule: Array<{ t: number; idx: number }> = [];
@@ -348,8 +348,8 @@ export class GameScene extends PIXI.Container {
 
     let elapsed = 0;
     let next    = 0;
-    const fireFn = (deltaMs: number): void => {
-      elapsed += deltaMs;
+    const fireFn = (): void => {
+      elapsed += PIXI.Ticker.shared.elapsedMS;
       while (next < schedule.length && schedule[next].t <= elapsed) {
         this.effectLayer.playEffect(schedule[next].idx, true, 3);
         next++;
