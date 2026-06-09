@@ -42,9 +42,9 @@ export class GameScene extends PIXI.Container {
   private lastEliminationGameTime = -Infinity;
   private gameTimeMs = 0;
 
-  /** Full-screen edge glow shown on combo ≥ 3 (programmatic vignette). */
+  /** Full-screen edge glow shown on combo >= 3 (programmatic vignette). */
   private comboVignette!: PIXI.Graphics;
-  /** Tracks vignette fade state: alpha 0–1, decays in update(). */
+  /** Tracks vignette fade state: alpha 0-1, decays in update(). */
   private vignetteAlpha = 0;
   /** Combo colour used for the current vignette (gold or green). */
   private vignetteColor = 0xFFD700;
@@ -55,7 +55,7 @@ export class GameScene extends PIXI.Container {
   private _celebrationElapsed = 0;
   private static readonly CELEBRATION_DURATION_MS = 1800;
 
-  /** How many ms have elapsed since the player selected the first tile. −1 = inactive. */
+  /** How many ms have elapsed since the player selected the first tile. -1 = inactive. */
   private hintTimerMs = -1;
   /** Threshold for the next hint fire: HINT_DELAY_MS on first fire, HINT_REPEAT_MS afterwards. */
   private hintThreshold = 0;
@@ -84,7 +84,7 @@ export class GameScene extends PIXI.Container {
     this.logic  = new Logic();
   }
 
-  // ── Public API ─────────────────────────────────────────────────────
+  // -- Public API -------------------------------------------------------------
 
   /**
    * Safety-net: re-persist win progress if the stage was completed but for
@@ -92,7 +92,7 @@ export class GameScene extends PIXI.Container {
    * exception was thrown after removeNumber but before recordComplete, or the
    * call order was disrupted by an unusual platform event).
    *
-   * Safe to call multiple times — StarManager.saveStars and
+   * Safe to call multiple times -- StarManager.saveStars and
    * StageManager.recordComplete are both idempotent.
    */
   public persistWinIfComplete(): void {
@@ -136,7 +136,7 @@ export class GameScene extends PIXI.Container {
       this.redrawVignette(this.screen.width, this.screen.height);
 
       if (this.screen.isLocked) {
-        // Layout is locked (game in progress) — do NOT reconfigure the grid.
+        // Layout is locked (game in progress) -- do NOT reconfigure the grid.
         // Instead, scale gameContainer to fit the available area proportionally.
         this.updateGameContainerTransform();
       } else {
@@ -161,6 +161,10 @@ export class GameScene extends PIXI.Container {
     this.header.update(deltaMs);
     // Keep hint flash animations running even while paused/ended
     this.numberLayer.update(deltaMs);
+    // Cell bounce + idle shimmer
+    this.gridLayer.update(deltaMs);
+    // Star reveal animation (runs whenever the result overlay is visible)
+    if (this.resultOverlay.visible) this.resultOverlay.update(deltaMs);
 
     // Fade out combo vignette (~400ms)
     if (this.vignetteAlpha > 0) {
@@ -191,7 +195,7 @@ export class GameScene extends PIXI.Container {
       this.onTimeUp();
     }
 
-    // ── Hint timer ──────────────────────────────────────────────────────
+    // -- Hint timer -----------------------------------------------------------
     if (this.hintTimerMs >= 0) {
       this.hintTimerMs += deltaMs;
       if (this.hintTimerMs >= this.hintThreshold) {
@@ -203,7 +207,7 @@ export class GameScene extends PIXI.Container {
     }
   }
 
-  // ── Scene construction ─────────────────────────────────────────────
+  // -- Scene construction -----------------------------------------------------
 
   private buildScene(): void {
     this.bg = new PIXI.Graphics();
@@ -263,7 +267,7 @@ export class GameScene extends PIXI.Container {
     this.startCurrentTarget();
   }
 
-  // ── Target flow ────────────────────────────────────────────────────
+  // -- Target flow ------------------------------------------------------------
 
   private startCurrentTarget(): void {
     const target = this.stage.targets[this.currentTargetIdx];
@@ -307,7 +311,7 @@ export class GameScene extends PIXI.Container {
   private onTargetCleared(): void {
     this.currentTargetIdx++;
     if (this.currentTargetIdx >= this.stage.targets.length) {
-      // All targets cleared — persist progress and star rating immediately,
+      // All targets cleared -- persist progress and star rating immediately,
       // so the lobby reflects the new unlock even if the player taps "lobby"
       // instead of "next".
       this.state.isGameEnd = true;
@@ -368,7 +372,7 @@ export class GameScene extends PIXI.Container {
     const livesSnapshot = this.lives;
     this.header.triggerHeartLost(lostIdx, () => this.header.updateLives(livesSnapshot));
     if (this.lives > 0) {
-      // Keep the board intact — just clear the selection and refill the time
+      // Keep the board intact -- just clear the selection and refill the time
       // pool so the player continues from exactly where they were.
       this.selectedIndex = -1;
       this.gridLayer.hideSelection();
@@ -386,7 +390,7 @@ export class GameScene extends PIXI.Container {
 
   /**
    * Attempt to grant one extra life via a rewarded ad.
-   * Limited to one attempt per stage load — once used the flag is never
+   * Limited to one attempt per stage load -- once used the flag is never
    * reset within the same attempt, preventing infinite chaining.
    * If the platform doesn't support rewarded ads, or the player declines /
    * the ad errors, the normal game-over overlay is shown instead.
@@ -439,7 +443,7 @@ export class GameScene extends PIXI.Container {
     this.startCurrentTarget();
   }
 
-  // ── Cell click ─────────────────────────────────────────────────────
+  // -- Cell click -------------------------------------------------------------
 
   private onCellClick(index: number): void {
     if (this.state.isGameEnd || this.state.isPause) return;
@@ -449,7 +453,7 @@ export class GameScene extends PIXI.Container {
     this.ctx.audio.playClick();
 
     if (this.selectedIndex === -1) {
-      // First selection — start the hint countdown
+      // First selection -- start the hint countdown
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
       this.header.setFirstSelected(this.logic.getNumberByIndex(index));
@@ -458,7 +462,7 @@ export class GameScene extends PIXI.Container {
     }
 
     if (this.selectedIndex === index) {
-      // Tap the same cell again → deselect
+      // Tap the same cell again -> deselect
       this.selectedIndex = -1;
       this.gridLayer.hideSelection();
       this.header.resetTip();
@@ -473,7 +477,7 @@ export class GameScene extends PIXI.Container {
     if (a + b === target) {
       this.eliminatePair(this.selectedIndex, index, a, b);
     } else {
-      // Wrong second choice — switch selection to the newly tapped cell
+      // Wrong second choice -- switch selection to the newly tapped cell
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
       this.header.setFirstSelected(b);
@@ -482,7 +486,7 @@ export class GameScene extends PIXI.Container {
   }
 
   private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
-    this.resetHintTimer();   // pair found — cancel any pending hint
+    this.resetHintTimer();   // pair found -- cancel any pending hint
     this.header.showMatchResult(a, b);
     this.gridLayer.hideSelection();
     this.gridLayer.hideCell(idxA);
@@ -490,7 +494,7 @@ export class GameScene extends PIXI.Container {
     this.numberLayer.hideNumber(idxA);
     this.numberLayer.hideNumber(idxB);
 
-    // ── Combo logic (computed before effects so isCombo is available) ─
+    // -- Combo logic (computed before effects so isCombo is available) --------
     const elapsed = this.gameTimeMs - this.lastEliminationGameTime;
     if (elapsed <= GameScene.COMBO_WINDOW_MS) {
       this.comboCount++;
@@ -519,7 +523,7 @@ export class GameScene extends PIXI.Container {
     this.state.addTime(bonusSec * 1000);
     this.ctx.audio.playAddTime();
 
-    // Flying bonus animation — bursts from the centre of the last-tapped cell (idxB).
+    // Flying bonus animation -- bursts from the centre of the last-tapped cell (idxB).
     // indexToPos() returns coordinates in gameContainer local space; transform to
     // scene space so the label travels correctly to the clock (which is in scene space).
     const half  = this.screen.gridSize / 2;
@@ -541,7 +545,7 @@ export class GameScene extends PIXI.Container {
     }
   }
 
-  // ── Hint system ────────────────────────────────────────────────────────
+  // -- Hint system ------------------------------------------------------------
 
   private resetHintTimer(): void {
     this.hintTimerMs  = -1;
@@ -565,26 +569,26 @@ export class GameScene extends PIXI.Container {
     }
   }
 
-  // ── gameContainer transform ────────────────────────────────────────────
+  // -- gameContainer transform -----------------------------------------------
 
   /**
    * Scale and position gameContainer so that the locked play area fits within
    * the current screen while preserving its aspect ratio.
    *
    * When the layout is not locked (scene just built, game not yet started)
-   * the container sits at (0, 0) with scale 1 — the normal state.
+   * the container sits at (0, 0) with scale 1 -- the normal state.
    *
    * After lock the play area (everything below the header) is scaled to fill
-   * as much of screen.height − OFFSET_Y as possible.  The container is
+   * as much of screen.height - OFFSET_Y as possible.  The container is
    * shifted horizontally to remain centered and vertically so that the cell
    * rows (which have OFFSET_Y baked into their y-coordinates) still start
    * immediately below the header.
    *
    *   s = min( screen.width  / lockedLogicalW,
-   *            (screen.height − OFFSET_Y) / (lockedLogicalH − OFFSET_Y) )
+   *            (screen.height - OFFSET_Y) / (lockedLogicalH - OFFSET_Y) )
    *
-   *   gameContainer.x = (screen.width − lockedLogicalW · s) / 2
-   *   gameContainer.y = OFFSET_Y · (1 − s)   // cancels the scaled offsetY
+   *   gameContainer.x = (screen.width - lockedLogicalW * s) / 2
+   *   gameContainer.y = OFFSET_Y * (1 - s)   // cancels the scaled offsetY
    */
   private updateGameContainerTransform(): void {
     if (!this.screen.isLocked) {
@@ -610,7 +614,7 @@ export class GameScene extends PIXI.Container {
     this.gameContainer.y = offsetY * (1 - s);
   }
 
-  // ── Background decorations §4.2 ────────────────────────────────────────
+  // -- Background decorations ------------------------------------------------
 
   private buildBackgroundDecos(): void {
     const w = this.screen.width;
@@ -645,7 +649,7 @@ export class GameScene extends PIXI.Container {
     }
   }
 
-  // ── Combo vignette §10 ──────────────────────────────────────────────────
+  // -- Combo vignette --------------------------------------------------------
 
   private redrawVignette(w: number, h: number): void {
     const g = this.comboVignette;

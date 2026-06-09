@@ -6,13 +6,13 @@ import { ScreenConfig } from './screenConfig';
 import { Orientation } from './enums';
 import { GAME_WIDTH } from './consts';
 
-// ── Star row dimensions (fixed, identical in both orientations) ───────────────
+// -- Star row dimensions (fixed, identical in both orientations) ---------------
 
 const STAR_SIZE    = 72;
 const STAR_GAP     = 8;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
-// ── Layout ────────────────────────────────────────────────────────────────────
+// -- Layout -------------------------------------------------------------------
 
 interface GameResultLayout {
   panelW:    number;
@@ -63,7 +63,25 @@ function getLayout(screen: ScreenConfig): GameResultLayout {
     : portraitLayout(screen.height);
 }
 
-// ── GameResultOverlay ─────────────────────────────────────────────────────────
+// -- Star reveal animation ----------------------------------------------------
+
+/** Delay before each star pops in (ms). Star i starts at i * STAR_DELAY. */
+const STAR_DELAY    = 150;
+/** Duration of the scale pop for each star (ms). */
+const STAR_POP_DUR  = 220;
+/** Peak scale overshoot before settling at 1.0. */
+const STAR_PEAK     = 1.25;
+
+interface StarAnim {
+  /** Index into starSprites (0-2). */
+  starIndex: number;
+  /** Total elapsed since show() was called (ms). */
+  elapsed:   number;
+  /** Whether this star should be filled (gold) or empty (grey). */
+  filled:    boolean;
+}
+
+// -- GameResultOverlay --------------------------------------------------------
 
 export class GameResultOverlay extends PIXI.Container {
   private readonly bg:          PIXI.Graphics;
@@ -75,6 +93,9 @@ export class GameResultOverlay extends PIXI.Container {
   private lastPanelW = 0;
   private lastPanelH = 0;
   private _lastLayout: GameResultLayout = portraitLayout(0);
+
+  /** Running star animations; empty when all done. */
+  private starAnims: StarAnim[] = [];
 
   constructor(
     private readonly ctx: AppContext,
@@ -118,7 +139,7 @@ export class GameResultOverlay extends PIXI.Container {
     this.applyLayout(portraitLayout(1920));
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // -- Public API -------------------------------------------------------------
 
   public resize(screen: ScreenConfig): void {
     this.applyLayout(getLayout(screen));
@@ -140,22 +161,69 @@ export class GameResultOverlay extends PIXI.Container {
     }
 
     const filled = success ? (stars ?? 0) : 0;
+
+    // Reset all stars to hidden initial state; animations will reveal them.
+    this.starAnims = [];
     for (let i = 0; i < 3; i++) {
-      if (i < filled) {
-        this.starSprites[i].tint  = 0xEAB830;
-        this.starSprites[i].alpha = 1.0;
-      } else {
-        this.starSprites[i].tint  = 0x888888;
-        this.starSprites[i].alpha = 0.35;
-      }
+      this.starSprites[i].scale.set(0);
+      this.starSprites[i].alpha = 1;
+      this.starSprites[i].tint  = i < filled ? 0xEAB830 : 0x888888;
+      this.starAnims.push({ starIndex: i, elapsed: 0, filled: i < filled });
     }
 
     this.visible = true;
   }
 
-  public hide(): void { this.visible = false; }
+  public hide(): void {
+    this.starAnims = [];
+    this.visible = false;
+  }
 
-  // ── Private ────────────────────────────────────────────────────────────────
+  /**
+   * Advance star reveal animations. Call once per frame from GameScene.update()
+   * whenever the overlay is visible.
+   */
+  public update(deltaMs: number): void {
+    if (this.starAnims.length === 0) return;
+
+    for (const anim of this.starAnims) {
+      anim.elapsed += deltaMs;
+
+      // Each star starts after its staggered delay.
+      const localT = anim.elapsed - anim.starIndex * STAR_DELAY;
+      if (localT <= 0) continue;
+
+      const sprite = this.starSprites[anim.starIndex];
+      if (localT >= STAR_POP_DUR) {
+        // Animation finished - snap to final state.
+        sprite.scale.set(1);
+        sprite.alpha = anim.filled ? 1.0 : 0.35;
+      } else {
+        // Pop-in: scale 0 -> STAR_PEAK -> 1.0, alpha ramps up quickly.
+        const t = localT / STAR_POP_DUR; // 0..1
+        let scale: number;
+        if (t < 0.6) {
+          // Phase 1: spring up to peak
+          scale = (t / 0.6) * STAR_PEAK;
+        } else {
+          // Phase 2: settle back to 1.0
+          scale = STAR_PEAK - (STAR_PEAK - 1.0) * ((t - 0.6) / 0.4);
+        }
+        sprite.scale.set(scale);
+        sprite.alpha = Math.min(1, t * 3);
+        // For unfilled stars, blend to lower final alpha
+        if (!anim.filled && t >= 1) sprite.alpha = 0.35;
+      }
+    }
+
+    // Purge completed anims
+    const allDone = this.starAnims.every(
+      (a) => a.elapsed - a.starIndex * STAR_DELAY >= STAR_POP_DUR,
+    );
+    if (allDone) this.starAnims = [];
+  }
+
+  // -- Private ----------------------------------------------------------------
 
   private applyLayout(L: GameResultLayout): void {
     this._lastLayout = L;

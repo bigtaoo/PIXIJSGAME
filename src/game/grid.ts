@@ -4,12 +4,34 @@ import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
 
 const GLOSS_PER_COLOR = 6; // must match webAssetsManager constant
+const CELL_GAP        = 5; // must match reconfigure() GAP
+
+// -- Selection bounce ---------------------------------------------------------
+const BOUNCE_DURATION = 120; // ms - total duration of the scale pop
+const BOUNCE_PEAK     = 1.12; // max scale overshoot
+
+// -- Idle shimmer -------------------------------------------------------------
+const IDLE_INTERVAL   = 1600;
+const IDLE_PULSE_DUR  = 500;
+const IDLE_MIN_ALPHA  = 0.78;
+const IDLE_MAX_ACTIVE = 2;
+
+interface IdlePulse {
+  sprite:  PIXI.Sprite;
+  elapsed: number;
+}
 
 export class Grid extends PIXI.Container {
   private cells:         Map<number, PIXI.Sprite> = new Map();
-  private cellGlossIdx:  Map<number, number>       = new Map(); // random 0–5, persistent
-  private cellTier:      Map<number, 0|1|2>        = new Map(); // set by GameScene
+  private cellGlossIdx:  Map<number, number>       = new Map();
+  private cellTier:      Map<number, 0|1|2>        = new Map();
   private selectionHighlight: PIXI.Sprite | undefined;
+
+  private bounceElapsed  = -1;
+  private bounceSprite:  PIXI.Sprite | null = null;
+
+  private idleTimer  = IDLE_INTERVAL;
+  private idlePulses: IdlePulse[] = [];
 
   constructor(
     private readonly ctx: AppContext,
@@ -18,8 +40,6 @@ export class Grid extends PIXI.Container {
   ) {
     super();
   }
-
-  // ── Texture key helpers ────────────────────────────────────────────────────
 
   private getGlossIdx(idx: number): number {
     if (!this.cellGlossIdx.has(idx)) {
@@ -34,12 +54,6 @@ export class Grid extends PIXI.Container {
     return `cell_t${tier}_g${gloss}.png`;
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
-
-  /**
-   * Assign a tier colour (0 = small / 1 = mid / 2 = large) to a cell.
-   * Called by GameScene after numbers are placed so colours reflect values.
-   */
   public setCellTier(idx: number, tier: 0|1|2): void {
     this.cellTier.set(idx, tier);
     const sprite = this.cells.get(idx);
@@ -48,7 +62,6 @@ export class Grid extends PIXI.Container {
     }
   }
 
-  /** Compute the tier index for a number value given the current target. */
   public static tierForValue(value: number, target: number): 0|1|2 {
     const maxVal = target - 1;
     if (value <= maxVal / 3)       return 0;
@@ -59,6 +72,7 @@ export class Grid extends PIXI.Container {
   public reconfigure(): void {
     const { gridCountW: w, gridCountH: h, gridSize, offsetX, offsetY } = this.screen;
     const activeIndices = new Set<number>();
+    const GAP = CELL_GAP;
 
     for (let col = 0; col < w; ++col) {
       for (let row = 0; row < h; ++row) {
@@ -82,7 +96,6 @@ export class Grid extends PIXI.Container {
           );
         }
 
-        const GAP = 5;
         sprite.x       = col * gridSize + offsetX;
         sprite.y       = row * gridSize + offsetY;
         sprite.width   = gridSize - GAP;
@@ -96,8 +109,8 @@ export class Grid extends PIXI.Container {
     }
 
     if (this.selectionHighlight) {
-      this.selectionHighlight.width  = gridSize;
-      this.selectionHighlight.height = gridSize;
+      this.selectionHighlight.width  = gridSize - CELL_GAP;
+      this.selectionHighlight.height = gridSize - CELL_GAP;
     }
 
     this.hideSelection();
@@ -105,13 +118,16 @@ export class Grid extends PIXI.Container {
 
   public showSelection(index: number): void {
     const { gridSize } = this.screen;
+    const sz = gridSize - CELL_GAP;
 
     if (!this.selectionHighlight) {
       this.selectionHighlight = new PIXI.Sprite(this.ctx.assets.GetTexture('cell_selected.png'));
-      this.selectionHighlight.width  = gridSize;
-      this.selectionHighlight.height = gridSize;
+      this.selectionHighlight.width  = sz;
+      this.selectionHighlight.height = sz;
       this.addChild(this.selectionHighlight);
     } else {
+      this.selectionHighlight.width  = sz;
+      this.selectionHighlight.height = sz;
       this.setChildIndex(this.selectionHighlight, this.children.length - 1);
     }
 
@@ -119,14 +135,98 @@ export class Grid extends PIXI.Container {
     this.selectionHighlight.x       = x;
     this.selectionHighlight.y       = y;
     this.selectionHighlight.visible = true;
+
+    this.bounceElapsed = 0;
+    this.bounceSprite  = this.selectionHighlight;
   }
 
   public hideSelection(): void {
     if (this.selectionHighlight) this.selectionHighlight.visible = false;
+    if (this.bounceSprite) {
+      this.bounceSprite.scale.set(1);
+      this.bounceSprite = null;
+    }
+    this.bounceElapsed = -1;
   }
 
   public hideCell(index: number): void {
     const cell = this.cells.get(index);
-    if (cell) cell.visible = false;
+    if (cell) {
+      cell.visible = false;
+      this.idlePulses = this.idlePulses.filter((p) => {
+        if (p.sprite === cell) { p.sprite.alpha = 1; return false; }
+        return true;
+      });
+    }
+  }
+
+  public update(deltaMs: number): void {
+    this.updateBounce(deltaMs);
+    this.updateIdle(deltaMs);
+  }
+
+  private updateBounce(deltaMs: number): void {
+    if (this.bounceElapsed < 0 || !this.bounceSprite) return;
+    this.bounceElapsed += deltaMs;
+    const t = Math.min(this.bounceElapsed / BOUNCE_DURATION, 1);
+
+    const sz = this.screen.gridSize - CELL_GAP;
+    let factor: number;
+    if (t < 0.5) {
+      factor = 1 + (BOUNCE_PEAK - 1) * (t / 0.5);
+    } else {
+      factor = BOUNCE_PEAK - (BOUNCE_PEAK - 1) * ((t - 0.5) / 0.5);
+    }
+    this.bounceSprite.width  = sz * factor;
+    this.bounceSprite.height = sz * factor;
+
+    if (t >= 1) {
+      this.bounceSprite.width  = sz;
+      this.bounceSprite.height = sz;
+      this.bounceSprite  = null;
+      this.bounceElapsed = -1;
+    }
+  }
+
+  private updateIdle(deltaMs: number): void {
+    this.idleTimer -= deltaMs;
+    if (this.idleTimer <= 0 && this.idlePulses.length < IDLE_MAX_ACTIVE) {
+      this.spawnIdlePulse();
+      this.idleTimer = IDLE_INTERVAL * (0.75 + Math.random() * 0.5);
+    }
+
+    for (let i = this.idlePulses.length - 1; i >= 0; i--) {
+      const p = this.idlePulses[i]!;
+      if (!p.sprite.visible) { this.idlePulses.splice(i, 1); continue; }
+
+      p.elapsed += deltaMs;
+      const half = IDLE_PULSE_DUR / 2;
+
+      let alpha: number;
+      if (p.elapsed < half) {
+        alpha = 1 - (1 - IDLE_MIN_ALPHA) * (p.elapsed / half);
+      } else if (p.elapsed < IDLE_PULSE_DUR) {
+        alpha = IDLE_MIN_ALPHA + (1 - IDLE_MIN_ALPHA) * ((p.elapsed - half) / half);
+      } else {
+        alpha = 1;
+      }
+      p.sprite.alpha = alpha;
+
+      if (p.elapsed >= IDLE_PULSE_DUR) {
+        p.sprite.alpha = 1;
+        this.idlePulses.splice(i, 1);
+      }
+    }
+  }
+
+  private spawnIdlePulse(): void {
+    const candidates: PIXI.Sprite[] = [];
+    for (const [, sprite] of this.cells) {
+      if (sprite.visible && sprite.alpha === 1) candidates.push(sprite);
+    }
+    if (candidates.length === 0) return;
+
+    const sprite = candidates[Math.floor(Math.random() * candidates.length)]!;
+    this.idlePulses.push({ sprite, elapsed: 0 });
   }
 }

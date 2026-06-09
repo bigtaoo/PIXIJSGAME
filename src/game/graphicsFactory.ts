@@ -113,16 +113,25 @@ export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
     }
   }
 
-  // ── Vignette: subtle dark overlay at the four edges ───────────────────────
-  // Drawn as four thin dark rectangles to simulate a soft shadow border.
-  const vStrength = 0.06;
-  const vSize     = Math.min(w, h) * 0.12;
-  g.beginFill(0x3D2200, vStrength);
-  g.drawRect(0, 0, w, vSize);          // top
-  g.drawRect(0, h - vSize, w, vSize);  // bottom
-  g.drawRect(0, 0, vSize, h);          // left
-  g.drawRect(w - vSize, 0, vSize, h);  // right
-  g.endFill();
+  // ── Vignette: multi-layer gradient-style dark overlay at four edges ──
+  // Eight progressively inset strips per edge; quadratic alpha fall-off
+  // produces a smooth gradient without a shader.
+  const vLayers = 8;
+  const vDepth  = Math.min(w, h) * 0.18;
+  g.lineStyle(0);
+  for (let i = 0; i < vLayers; i++) {
+    const frac  = (vLayers - i) / vLayers;   // 1 → 1/vLayers (outermost darkest)
+    const alpha = 0.05 * frac * frac;
+    const d0    = (i / vLayers) * vDepth;    // outer edge of this strip
+    const d1    = ((i + 1) / vLayers) * vDepth; // inner edge
+    const thick = d1 - d0;
+    g.beginFill(0x3D2200, alpha);
+    g.drawRect(0,         d0,         w,     thick); // top
+    g.drawRect(0,         h - d1,     w,     thick); // bottom
+    g.drawRect(d0,        vDepth,     thick, h - vDepth * 2); // left
+    g.drawRect(w - d1,    vDepth,     thick, h - vDepth * 2); // right
+    g.endFill();
+  }
 }
 
 // ─── Cell ─────────────────────────────────────────────────────────────────────
@@ -564,17 +573,22 @@ export function drawLetterS(g: PIXI.Graphics, w: number, h: number): void {
 /**
  * Combo glow overlay for a single cell: concentric filled circles fading outward.
  * Drawing region (0, 0, size, size). Callers tint the sprite gold or green.
- * Uses concentric rings at decreasing alpha to simulate a radial gradient.
+ * Uses 16 concentric rings with a cubic ease-out alpha curve for a smooth
+ * radial gradient appearance.
  */
 export function drawComboGlow(g: PIXI.Graphics, size: number): void {
-  const cx = size / 2;
-  const cy = size / 2;
+  const cx   = size / 2;
+  const cy   = size / 2;
   const maxR = size / 2;
-  const steps = 8;
+  const steps = 16;
   g.lineStyle(0);
+  // Draw from outermost inward so inner rings paint over outer (correct blending).
   for (let i = steps; i >= 1; i--) {
-    const r = maxR * (i / steps);
-    const a = 0.18 * (1 - i / steps);
+    const r    = maxR * (i / steps);
+    // Cubic ease-out: alpha peaks near the centre, falls quickly outward.
+    const norm = i / steps;                  // 1 at centre, 1/steps at edge
+    const a    = 0.22 * (1 - norm) * (1 - norm) * (1 - norm * 0.5);
+    if (a <= 0) continue;
     g.beginFill(0xFFFFFF, a);
     g.drawCircle(cx, cy, r);
     g.endFill();

@@ -588,7 +588,13 @@ export class LobbyScene extends PIXI.Container {
     }
   }
 
-  /** Draw a dashed line on the Graphics from (x1,y1) to (x2,y2). */
+  /**
+   * Draw a dashed line on the Graphics from (x1,y1) to (x2,y2).
+   *
+   * Each dash endpoint gets a small, seeded perpendicular jitter (±3px) to
+   * simulate a hand-drawn pencil line.  The jitter is deterministic (based on
+   * the segment index) so the path looks consistent across redraws.
+   */
   private drawDashedLine(
     g: PIXI.Graphics,
     x1: number, y1: number,
@@ -600,16 +606,33 @@ export class LobbyScene extends PIXI.Container {
     if (len === 0) return;
     const nx = dx / len;
     const ny = dy / len;
+    // Perpendicular unit vector for jitter
+    const px = -ny;
+    const py =  nx;
+
     let traveled = 0;
     let drawing  = true;
+    let segIdx   = 0;
+
     while (traveled < len) {
       const seg = Math.min(drawing ? PATH_DASH : PATH_GAP, len - traveled);
       if (drawing) {
-        g.moveTo(x1 + nx * traveled,          y1 + ny * traveled);
-        g.lineTo(x1 + nx * (traveled + seg),   y1 + ny * (traveled + seg));
+        // Deterministic pseudo-random jitter per segment endpoint.
+        // sin(prime * segIdx) maps to a stable value in [-1, 1].
+        const j0 = Math.sin(segIdx * 7.3) * 3;          // jitter at dash start
+        const j1 = Math.sin((segIdx + 1) * 7.3) * 3;   // jitter at dash end
+        g.moveTo(
+          x1 + nx * traveled         + px * j0,
+          y1 + ny * traveled         + py * j0,
+        );
+        g.lineTo(
+          x1 + nx * (traveled + seg) + px * j1,
+          y1 + ny * (traveled + seg) + py * j1,
+        );
       }
       traveled += seg;
       drawing   = !drawing;
+      segIdx++;
     }
   }
 
