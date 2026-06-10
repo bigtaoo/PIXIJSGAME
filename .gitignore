@@ -5,3 +5,7 @@ wechatgame/project.config.json
 /dist
 /crazygames
 
+
+# Sensitive files
+*.kdbx
+*.7z

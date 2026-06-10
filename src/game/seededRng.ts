@@ -32,11 +32,11 @@ export function dateStringToSeed(dateStr: string): number {
   return hash;
 }
 
-/** Return today's date as "YYYY-MM-DD". */
+/** Return today's date as "YYYY-MM-DD" (UTC, so all timezones get the same value). */
 export function todayString(): string {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }

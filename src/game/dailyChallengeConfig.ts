@@ -16,8 +16,8 @@ export const DAILY_DURATION_MS = 90_000;
 /** Compute today's target number (20–50, repeats every 31 days). */
 export function getDailyTarget(): number {
   const now   = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((now.getTime() - start.getTime()) / 86_400_000);
+  const start = Date.UTC(now.getUTCFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - start) / 86_400_000);
   return (dayOfYear % 31) + 20;
 }
 
