@@ -143,8 +143,8 @@ export class ScreenConfig {
     if (this._locked && this._lockedGridSize !== null) return this._lockedGridSize;
     const barW =
       this.orientation === Orientation.Landscape
-        ? this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE
-        : this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT;
+        ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
+        : (this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT);
     const playH = this.height - this.offsetY;
     return Math.floor(Math.min(barW / this.gridCountW, playH / this.gridCountH));
   }
@@ -158,12 +158,12 @@ export class ScreenConfig {
     if (this._locked && this._lockedOffsetX !== null) return this._lockedOffsetX;
     const headerX =
       this.orientation === Orientation.Landscape
-        ? this._headerXLandscape ?? HEADER_X_LANDSCAPE
-        : this._headerXPortrait ?? HEADER_X_PORTRAIT;
+        ? (this._headerXLandscape ?? HEADER_X_LANDSCAPE)
+        : (this._headerXPortrait ?? HEADER_X_PORTRAIT);
     const barW =
       this.orientation === Orientation.Landscape
-        ? this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE
-        : this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT;
+        ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
+        : (this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT);
     return Math.floor(headerX + (barW - this.gridCountW * this.gridSize) / 2);
   }
 

@@ -270,6 +270,7 @@ export class LobbyScene extends PIXI.Container {
     const NODE_R = 160; // keep-out radius around each stage node centre
     const PANEL_R = 200; // keep-out radius around the daily-challenge panel centre
     const MARGIN = 50; // minimum distance from canvas edge
+    const MARGIN_RIGHT = 240; // larger right keep-out so center-anchored decos never clip the edge
 
     const cw = this.screen.width;
     const ch = this.screen.height;
@@ -283,7 +284,7 @@ export class LobbyScene extends PIXI.Container {
     while (placed < COUNT && attempt < 400) {
       attempt++;
 
-      const x = MARGIN + rng() * (cw - MARGIN * 2);
+      const x = MARGIN + rng() * (cw - MARGIN - MARGIN_RIGHT);
       const y = MARGIN + rng() * (ch - MARGIN * 2);
 
       // Reject if too close to any stage node

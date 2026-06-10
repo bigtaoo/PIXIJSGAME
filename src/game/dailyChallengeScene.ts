@@ -72,7 +72,10 @@ export class DailyChallengeScene extends PIXI.Container {
   private pendingTarget = 0;
   private pendingSeed = 0;
 
-  constructor(private readonly ctx: AppContext, private readonly onGoLobby: () => void) {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly onGoLobby: () => void
+  ) {
     super();
     this.screen = new ScreenConfig();
     this.state = new GameState();

@@ -140,7 +140,7 @@ export class GameResultOverlay extends BaseResultOverlay {
       this.lobbyBtn.x = L.btnRightX;
     }
 
-    const filled = success ? stars ?? 0 : 0;
+    const filled = success ? (stars ?? 0) : 0;
 
     this.starAnims = [];
     for (let i = 0; i < 3; i++) {

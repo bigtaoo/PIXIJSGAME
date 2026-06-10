@@ -49,7 +49,10 @@ export class EffectManager extends PIXI.Container {
    */
   public readonly flyingLayer = new PIXI.Container();
 
-  constructor(private readonly ctx: AppContext, private readonly screen: ScreenConfig) {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly screen: ScreenConfig
+  ) {
     super();
     this.explosion = new ExplosionSystem(this, ctx.assets);
   }

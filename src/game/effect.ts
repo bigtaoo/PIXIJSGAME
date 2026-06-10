@@ -48,7 +48,10 @@ export class ExplosionSystem {
   /** False if explosion textures failed to load (e.g. on WeChat). */
   private ready = false;
 
-  constructor(private readonly container: PIXI.Container, assets: IAssetsManager) {
+  constructor(
+    private readonly container: PIXI.Container,
+    assets: IAssetsManager
+  ) {
     try {
       for (let i = 0; i < 3; i++) this.largeTextures.push(assets.GetTexture(`large_${i}`));
       for (let i = 0; i < 3; i++) this.mediumTextures.push(assets.GetTexture(`medium_${i}`));

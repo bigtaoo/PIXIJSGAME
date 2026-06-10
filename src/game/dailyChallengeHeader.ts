@@ -230,7 +230,11 @@ export class DailyChallengeHeader extends BaseHeader {
   private dcIconSprite!: PIXI.Sprite;
   private layout: DCHeaderLayout;
 
-  constructor(ctx: AppContext, private readonly onGoLobby: () => void, screen: ScreenConfig) {
+  constructor(
+    ctx: AppContext,
+    private readonly onGoLobby: () => void,
+    screen: ScreenConfig
+  ) {
     super(ctx);
 
     // Grey slot style (DC mode)

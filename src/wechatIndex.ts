@@ -31,7 +31,7 @@ function setupPixiWechatAdapter(mainCanvas: HTMLCanvasElement) {
     },
     getCanvasRenderingContext2D: () => CanvasRenderingContext2D as any,
     getWebGLRenderingContext: () => WebGLRenderingContext as any,
-    getNavigator: () => ({ userAgent: '' } as Navigator),
+    getNavigator: () => ({ userAgent: '' }) as Navigator,
     getBaseUrl: () => '',
     getFontFaceSet: () => undefined as any,
     fetch: (url: RequestInfo, init?: RequestInit) => fetch(url as string, init),

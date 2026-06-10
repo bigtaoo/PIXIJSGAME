@@ -33,7 +33,10 @@ export class NumberLayer extends PIXI.Container {
   /** Active hint pulse animations (at most one at a time in practice). */
   private hintAnimations: HintAnimation[] = [];
 
-  constructor(private readonly ctx: AppContext, private readonly screen: ScreenConfig) {
+  constructor(
+    private readonly ctx: AppContext,
+    private readonly screen: ScreenConfig
+  ) {
     super();
   }
 
