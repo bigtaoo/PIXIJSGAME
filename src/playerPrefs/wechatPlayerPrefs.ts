@@ -1,10 +1,5 @@
 import { IPlayerPrefs } from './IPlayerPrefs';
 
-// wx sync-storage APIs are missing from the official TypeScript declarations;
-// cast to any to bypass the type checker.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const wxStorage = wx as any;
-
 /**
  * wx.storage-backed PlayerPrefs implementation for WeChat mini games.
  *
@@ -61,7 +56,7 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
 
   deleteKey(key: string): void {
     try {
-      wxStorage.removeStorageSync(this.k(key));
+      wx.removeStorageSync(this.k(key));
     } catch (e) {
       console.warn('[WechatPlayerPrefs] deleteKey failed:', e);
     }
@@ -69,11 +64,11 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
 
   deleteAll(): void {
     try {
-      const info = wxStorage.getStorageInfoSync();
-      const toRemove = (info.keys as string[]).filter((k) => k.startsWith(this.prefix));
+      const info = wx.getStorageInfoSync();
+      const toRemove = info.keys.filter((k) => k.startsWith(this.prefix));
       toRemove.forEach((k) => {
         try {
-          wxStorage.removeStorageSync(k);
+          wx.removeStorageSync(k);
         } catch (_e) {
           /* ignore */
         }
@@ -88,7 +83,7 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
 
   private write(key: string, value: string): void {
     try {
-      wxStorage.setStorageSync(key, value);
+      wx.setStorageSync(key, value);
     } catch (e) {
       console.warn('[WechatPlayerPrefs] write failed:', e);
     }
@@ -97,7 +92,7 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
   private read(key: string): string | null {
     try {
       // wx.getStorageSync returns '' when the key is not found (not null)
-      const val: string = wxStorage.getStorageSync(key);
+      const val: string = wx.getStorageSync(key);
       return val === '' ? null : val;
     } catch (_e) {
       return null;

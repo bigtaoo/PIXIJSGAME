@@ -4,7 +4,7 @@ import heartPngUrl from '../assets/heart.png';
 import heartEmptyUrl from '../assets/heart_empty.png';
 import explosionJsonUrl from '../assets/explosion.json';
 import explosionPngUrl from '../assets/explosion.png';
-import bgPngUrl from '../assets/lobby_bg.png';
+import bgPngUrl from '../assets/lobby_bg.webp';
 import dailyPngUrl from '../assets/daily_challenge_icon.png';
 import starPngUrl from '../assets/star.png';
 import trophyPngUrl from '../assets/trophy.png';
@@ -12,7 +12,7 @@ import musicPngUrl from '../assets/music.png';
 import decoPencilUrl from '../assets/deco_pencil.png';
 import decoEraserUrl from '../assets/deco_eraser.png';
 import decoPaperclipUrl from '../assets/deco_paperclip.png';
-import { IAssetsManager } from './IAssetsManager';
+import { AtlasJson, IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
   CELL_PALETTE,
@@ -190,7 +190,7 @@ export class WebAssetsManager implements IAssetsManager {
     });
   }
 
-  private parseAtlas(atlas: any, base: PIXI.BaseTexture): void {
+  private parseAtlas(atlas: AtlasJson, base: PIXI.BaseTexture): void {
     for (const key in atlas.frames) {
       const f = atlas.frames[key].frame;
       this.textures[key] = new PIXI.Texture(base, new PIXI.Rectangle(f.x, f.y, f.w, f.h));

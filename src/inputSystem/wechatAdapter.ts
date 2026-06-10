@@ -13,7 +13,6 @@ export function setupWeChatInput(input: InputManager) {
 
   wx.onTouchEnd((res) => {
     const t = res.changedTouches[0];
-    // console.log('wechat touch end x: ', t.clientX, ' y: ', t.clientY);
     input.emit({
       x: t.clientX,
       y: t.clientY,

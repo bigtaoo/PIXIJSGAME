@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js-legacy';
-import { IAssetsManager } from './IAssetsManager';
+import { AtlasJson, IAssetsManager } from './IAssetsManager';
 
 // ── digits.png parameters ─────────────────────────────────────────────────────
 const DIGIT_W = 100;
@@ -9,7 +9,7 @@ const DIGIT_GAP = 0;
 export class WechatAssetsManager implements IAssetsManager {
   private textures: Record<string, PIXI.Texture> = {};
 
-  private loadImageWX(src: string): Promise<any> {
+  private loadImageWX(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = wx.createImage();
       img.onload = () => resolve(img);
@@ -18,8 +18,10 @@ export class WechatAssetsManager implements IAssetsManager {
     });
   }
 
-  private imageToBaseTexture(img: any): PIXI.BaseTexture {
-    const resource = new PIXI.CanvasResource(img);
+  private imageToBaseTexture(img: HTMLImageElement): PIXI.BaseTexture {
+    // WeChat images are canvas-like sources; CanvasResource handles them at
+    // runtime but its constructor signature only accepts ICanvas.
+    const resource = new PIXI.CanvasResource(img as unknown as HTMLCanvasElement);
     return new PIXI.BaseTexture(resource);
   }
 
@@ -70,10 +72,10 @@ export class WechatAssetsManager implements IAssetsManager {
   private async loadExplosionAtlasWX(): Promise<void> {
     const [img, json] = await Promise.all([
       this.loadImageWX('assets/explosion.png'),
-      new Promise<any>((resolve, reject) => {
+      new Promise<AtlasJson>((resolve, reject) => {
         wx.request({
           url: 'assets/explosion.json',
-          success: (res: any) =>
+          success: (res: { data: string | AtlasJson }) =>
             resolve(typeof res.data === 'string' ? JSON.parse(res.data) : res.data),
           fail: reject,
         });

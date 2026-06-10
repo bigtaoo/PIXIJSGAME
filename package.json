@@ -8,7 +8,7 @@
     "test": "vitest run",
     "start": "webpack serve --mode development --open --port 8888",
     "build:web": "webpack --mode production --env TARGET=web",
-    "build:wechat": "rollup -c && node -e \"const fs=require('fs'),path=require('path');const src='src/assets',dst='wechatgame/assets';if(fs.existsSync(dst))fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dst,f)));console.log('assets copied')\"",
+    "build:wechat": "rollup -c && node -e \"const fs=require('fs'),path=require('path');const src='src/assets',dst='wechatgame/assets';if(fs.existsSync(dst))fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).filter(f=>!f.endsWith('.webp')).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dst,f)));console.log('assets copied')\"",
     "build:crazygames": "webpack --mode production --env TARGET=crazygames",
     "format": "prettier --write .",
     "build:mobile": "webpack --mode production --env TARGET=mobile",
@@ -41,7 +41,7 @@
     "eslint-plugin-prettier": "^5.5.6",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.6",
-    "prettier": "^2.8.8",
+    "prettier": "^3.8.4",
     "rollup": "^4.60.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-polyfill-node": "^0.13.0",
@@ -54,15 +54,15 @@
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.3",
     "@eslint/js": "^10.0.1",
-    "globals": "^17.6.0"
+    "globals": "^17.6.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "canvas": "^3.2.3"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
     "@pixi/unsafe-eval": "^7.4.3",
-    "@rollup/plugin-json": "^6.1.0",
-    "canvas": "^3.2.3",
     "pixi.js-legacy": "^7.4.3"
   }
 }

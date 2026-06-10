@@ -27,4 +27,9 @@ module.exports = [
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Ambient declaration files describe loosely-typed external APIs (wx, SDKs)
+    files: ['**/*.d.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
 ];

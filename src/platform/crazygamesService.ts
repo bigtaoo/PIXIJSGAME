@@ -30,6 +30,13 @@ export class CrazyGamesService {
   private _initialized = false;
   private _lastInterstitialMs = -Infinity;
 
+  /** Dev-only logging - stripped from production builds. */
+  private log(msg: string): void {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[CrazyGames]', msg);
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────
 
   async init(): Promise<void> {
@@ -40,7 +47,7 @@ export class CrazyGamesService {
     await window.CrazyGames.SDK.init();
     this.sdk = window.CrazyGames.SDK;
     this._initialized = true;
-    console.log('[CrazyGames] SDK initialized.');
+    this.log('SDK initialized.');
   }
 
   get isAvailable(): boolean {
@@ -91,14 +98,14 @@ export class CrazyGamesService {
       }
       this.sdk.ad.requestAd('interstitial', {
         adStarted: () => {
-          console.log('[CrazyGames] Interstitial ad started.');
+          this.log('Interstitial ad started.');
         },
         adError: (err) => {
           console.warn('[CrazyGames] Interstitial ad error:', err);
           resolve();
         },
         adFinished: () => {
-          console.log('[CrazyGames] Interstitial ad finished.');
+          this.log('Interstitial ad finished.');
           resolve();
         },
       });
@@ -134,14 +141,14 @@ export class CrazyGamesService {
       let finished = false;
       this.sdk.ad.requestAd('rewarded', {
         adStarted: () => {
-          console.log('[CrazyGames] Rewarded ad started.');
+          this.log('Rewarded ad started.');
         },
         adError: (err) => {
           console.warn('[CrazyGames] Rewarded ad error:', err);
           resolve(false);
         },
         adFinished: () => {
-          console.log('[CrazyGames] Rewarded ad finished.');
+          this.log('Rewarded ad finished.');
           finished = true;
           resolve(true);
         },

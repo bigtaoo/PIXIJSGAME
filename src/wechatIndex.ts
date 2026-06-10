@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- WeChat runtime shims; see inline comments */
 import * as PIXI from 'pixi.js-legacy';
 import { WechatAssetsManager } from './assetsManager/wechatAssetsManager';
 import { InputManager } from './inputSystem/inputManager';
@@ -85,7 +86,7 @@ async function Init() {
     () => {
       audio.playBgMusic();
     },
-    { once: true } as any
+    { once: true }
   );
 
   const coordinator = new SceneCoordinator(ctx);

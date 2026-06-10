@@ -316,6 +316,13 @@ declare namespace wx {
 
   function createCanvas(): HTMLCanvasElement;
   function createImage(): HTMLImageElement;
+
+  // ── Storage (sync) ─────────────────────────────────────────────────────────
+  function setStorageSync(key: string, data: string): void;
+  /** Returns '' when the key does not exist. */
+  function getStorageSync(key: string): string;
+  function removeStorageSync(key: string): void;
+  function getStorageInfoSync(): { keys: string[]; currentSize: number; limitSize: number };
   function request(opts: any): void;
 
   function onShow(

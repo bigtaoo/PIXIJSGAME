@@ -117,7 +117,9 @@ window.onload = async () => {
   // Kept for debugging; submitDailyScore handles auth on-demand.
   if (crazyGames.isUserAccountAvailable) {
     crazyGames.onAuthChange((user) => {
-      console.log('[CrazyGames] Auth state changed:', user?.username ?? 'logged out');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[CrazyGames] Auth state changed:', user?.username ?? 'logged out');
+      }
     });
   }
 };

@@ -1,4 +1,5 @@
 declare module '*.png';
+declare module '*.webp';
 declare module '*.ogg';
 
 declare module '*.json' {
