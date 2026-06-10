@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "start": "webpack serve --mode development --open --port 8888",
     "build:web": "webpack --mode production --env TARGET=web",
     "build:wechat": "rollup -c && node -e \"const fs=require('fs'),path=require('path');const src='src/assets',dst='wechatgame/assets';if(fs.existsSync(dst))fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dst,f)));console.log('assets copied')\"",
@@ -14,7 +14,8 @@
     "deploy:ios": "npm run build:mobile && cap sync ios",
     "deploy:android": "npm run build:mobile && cap sync android",
     "cap:open:ios": "cap open ios",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -47,6 +48,7 @@
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
     "webpack": "^5.105.4",
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.3"

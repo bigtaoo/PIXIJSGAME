@@ -5,12 +5,11 @@
  */
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
-import { UIElement } from '../inputSystem/uiElement';
-import { drawPanel } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 import { GAME_WIDTH } from './consts';
 import { DigitDisplay } from './digitDisplay';
 import { ScreenConfig } from './screenConfig';
+import { BaseResultOverlay } from './baseResultOverlay';
 
 // ── CrazyGames leaderboard (optional) ─────────────────────────────────────────
 const ENCRYPTION_KEY = '';   // TODO: set before going live
@@ -29,7 +28,10 @@ async function encryptScore(score: number, key: string): Promise<string> {
 }
 
 function submitScoreToCrazyGames(score: number): void {
-  if (!ENCRYPTION_KEY) return;
+  if (!ENCRYPTION_KEY) {
+    console.warn('[DailyChallengeResult] ENCRYPTION_KEY not set — leaderboard score not submitted.');
+    return;
+  }
   const sdk = (window as unknown as Record<string, unknown>)['CrazyGames'];
   if (!sdk) return;
   encryptScore(score, ENCRYPTION_KEY)
@@ -74,49 +76,31 @@ function getLayout(screen: ScreenConfig): DailyChallengeResultLayout {
 
 // ── DailyChallengeResult ───────────────────────────────────────────────────────
 
-export class DailyChallengeResult extends PIXI.Container {
-  private readonly bg:           PIXI.Graphics;
+export class DailyChallengeResult extends BaseResultOverlay {
   private readonly scoreDisplay: DigitDisplay;
-  private readonly retryBtn:     PIXI.Sprite;
-  private readonly lobbyBtn:     PIXI.Sprite;
 
-  // Assigned during buildIconRows() called in constructor — non-readonly intentionally
   private bestDisplay!:   DigitDisplay;
   private streakDisplay!: DigitDisplay;
   private bestRow!:       PIXI.Container;
   private streakRow!:     PIXI.Container;
 
-  private layout:     DailyChallengeResultLayout;
-  private lastPanelW = 0;
-  private lastPanelH = 0;
+  private layout: DailyChallengeResultLayout;
 
   constructor(
-    private readonly ctx: AppContext,
+    ctx: AppContext,
     private readonly onPlayAgain: () => void,
-    private readonly onLobby:     () => void,
+    private readonly onLobby_:    () => void,
   ) {
-    super();
-    this.visible = false;
+    super(ctx, onPlayAgain, onLobby_, 25);
 
     const L = buildLayout(GAME_WIDTH, Math.round(GAME_WIDTH * 16 / 9));
     this.layout = L;
-
-    this.bg = new PIXI.Graphics();
-    this.addChild(this.bg);
 
     this.scoreDisplay = new DigitDisplay(ctx, L.scoreDigitW, L.scoreDigitH);
     this.scoreDisplay.update(0);
     this.addChild(this.scoreDisplay);
 
     this.buildIconRows(L);
-
-    this.retryBtn = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
-    this.addChild(this.retryBtn);
-    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: this.retryBtn, onTap: this.onPlayAgain }));
-
-    this.lobbyBtn = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
-    this.addChild(this.lobbyBtn);
-    ctx.input.registerUI(new UIElement({ zIndex: 25, sprite: this.lobbyBtn, onTap: this.onLobby }));
 
     this.applyLayout(L);
   }
@@ -157,11 +141,10 @@ export class DailyChallengeResult extends PIXI.Container {
     this.visible = true;
   }
 
-  public hide(): void { this.visible = false; }
+  // hide() inherited from BaseResultOverlay
 
   // ── Private ────────────────────────────────────────────────────────────────
 
-  /** Build the trophy row + fire row and assign to bestRow / streakRow / bestDisplay / streakDisplay. */
   private buildIconRows(L: DailyChallengeResultLayout): void {
     // Best score row
     const bestCont  = new PIXI.Container();
@@ -189,15 +172,9 @@ export class DailyChallengeResult extends PIXI.Container {
   }
 
   private applyLayout(L: DailyChallengeResultLayout): void {
-    if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
-      this.bg.clear();
-      drawPanel(this.bg, L.panelW, L.panelH);
-      this.lastPanelW = L.panelW; this.lastPanelH = L.panelH;
-    }
-    this.bg.x = L.panelX; this.bg.y = L.panelY;
+    this.redrawPanel(L.panelW, L.panelH, L.panelX, L.panelY);
 
     this.scoreDisplay.y = L.scoreY;
-    // scoreDisplay.x is set in show() based on content width
 
     this.bestRow.y   = L.bestRowY;
     this.streakRow.y = L.streakRowY;

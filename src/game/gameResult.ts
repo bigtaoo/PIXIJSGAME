@@ -1,10 +1,10 @@
 import * as PIXI from 'pixi.js-legacy';
 import { AppContext } from './appContext';
 import { UIElement } from '../inputSystem/uiElement';
-import { drawPanel } from './graphicsFactory';
 import { ScreenConfig } from './screenConfig';
 import { Orientation } from './enums';
 import { GAME_WIDTH } from './consts';
+import { BaseResultOverlay } from './baseResultOverlay';
 
 // -- Star row dimensions (fixed, identical in both orientations) ---------------
 
@@ -65,61 +65,37 @@ function getLayout(screen: ScreenConfig): GameResultLayout {
 
 // -- Star reveal animation ----------------------------------------------------
 
-/** Delay before each star pops in (ms). Star i starts at i * STAR_DELAY. */
 const STAR_DELAY    = 150;
-/** Duration of the scale pop for each star (ms). */
 const STAR_POP_DUR  = 220;
-/** Peak scale overshoot before settling at 1.0. */
 const STAR_PEAK     = 1.25;
 
 interface StarAnim {
-  /** Index into starSprites (0-2). */
   starIndex: number;
-  /** Total elapsed since show() was called (ms). */
   elapsed:   number;
-  /** Whether this star should be filled (gold) or empty (grey). */
   filled:    boolean;
 }
 
 // -- GameResultOverlay --------------------------------------------------------
 
-export class GameResultOverlay extends PIXI.Container {
-  private readonly bg:          PIXI.Graphics;
-  private readonly retryBtn:    PIXI.Sprite;
+export class GameResultOverlay extends BaseResultOverlay {
   private readonly nextBtn:     PIXI.Sprite;
-  private readonly lobbyBtn:    PIXI.Sprite;
   private readonly starRow:     PIXI.Container;
   private readonly starSprites: PIXI.Sprite[] = [];
-  private lastPanelW = 0;
-  private lastPanelH = 0;
   private _lastLayout: GameResultLayout = portraitLayout(0);
 
-  /** Running star animations; empty when all done. */
   private starAnims: StarAnim[] = [];
 
   constructor(
-    private readonly ctx: AppContext,
+    ctx: AppContext,
     onRetry: () => void,
     onNext:  () => void,
     onLobby: () => void,
   ) {
-    super();
-    this.visible = false;
-
-    this.bg = new PIXI.Graphics();
-    this.addChild(this.bg);
-
-    this.retryBtn = new PIXI.Sprite(ctx.assets.GetTexture('retry.png'));
-    this.addChild(this.retryBtn);
-    ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.retryBtn, onTap: onRetry }));
+    super(ctx, onRetry, onLobby, 20);
 
     this.nextBtn = new PIXI.Sprite(ctx.assets.GetTexture('next.png'));
     this.addChild(this.nextBtn);
     ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.nextBtn, onTap: onNext }));
-
-    this.lobbyBtn = new PIXI.Sprite(ctx.assets.GetTexture('lobby.png'));
-    this.addChild(this.lobbyBtn);
-    ctx.input.registerUI(new UIElement({ zIndex: 20, sprite: this.lobbyBtn, onTap: onLobby }));
 
     // Build star row (3 stars, repositioned in applyLayout)
     this.starRow = new PIXI.Container();
@@ -135,7 +111,6 @@ export class GameResultOverlay extends PIXI.Container {
     }
     this.addChild(this.starRow);
 
-    // Placeholder layout; resize() must be called with the real ScreenConfig before show().
     this.applyLayout(portraitLayout(1920));
   }
 
@@ -149,8 +124,6 @@ export class GameResultOverlay extends PIXI.Container {
     this.retryBtn.visible = !success;
     this.nextBtn.visible  = success;
 
-    // On success:  [lobby | next]  (left | right)
-    // On failure:  [retry | lobby] (left | right)
     const L = this._lastLayout;
     if (success) {
       this.lobbyBtn.x = L.btnLeftX;
@@ -162,7 +135,6 @@ export class GameResultOverlay extends PIXI.Container {
 
     const filled = success ? (stars ?? 0) : 0;
 
-    // Reset all stars to hidden initial state; animations will reveal them.
     this.starAnims = [];
     for (let i = 0; i < 3; i++) {
       this.starSprites[i].scale.set(0);
@@ -174,49 +146,35 @@ export class GameResultOverlay extends PIXI.Container {
     this.visible = true;
   }
 
-  public hide(): void {
-    this.starAnims = [];
-    this.visible = false;
-  }
+  // hide() inherited from BaseResultOverlay
 
-  /**
-   * Advance star reveal animations. Call once per frame from GameScene.update()
-   * whenever the overlay is visible.
-   */
   public update(deltaMs: number): void {
     if (this.starAnims.length === 0) return;
 
     for (const anim of this.starAnims) {
       anim.elapsed += deltaMs;
 
-      // Each star starts after its staggered delay.
       const localT = anim.elapsed - anim.starIndex * STAR_DELAY;
       if (localT <= 0) continue;
 
       const sprite = this.starSprites[anim.starIndex];
       if (localT >= STAR_POP_DUR) {
-        // Animation finished - snap to final state.
         sprite.scale.set(1);
         sprite.alpha = anim.filled ? 1.0 : 0.35;
       } else {
-        // Pop-in: scale 0 -> STAR_PEAK -> 1.0, alpha ramps up quickly.
-        const t = localT / STAR_POP_DUR; // 0..1
+        const t = localT / STAR_POP_DUR;
         let scale: number;
         if (t < 0.6) {
-          // Phase 1: spring up to peak
           scale = (t / 0.6) * STAR_PEAK;
         } else {
-          // Phase 2: settle back to 1.0
           scale = STAR_PEAK - (STAR_PEAK - 1.0) * ((t - 0.6) / 0.4);
         }
         sprite.scale.set(scale);
         sprite.alpha = Math.min(1, t * 3);
-        // For unfilled stars, blend to lower final alpha
         if (!anim.filled && t >= 1) sprite.alpha = 0.35;
       }
     }
 
-    // Purge completed anims
     const allDone = this.starAnims.every(
       (a) => a.elapsed - a.starIndex * STAR_DELAY >= STAR_POP_DUR,
     );
@@ -227,13 +185,7 @@ export class GameResultOverlay extends PIXI.Container {
 
   private applyLayout(L: GameResultLayout): void {
     this._lastLayout = L;
-    if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
-      this.bg.clear();
-      drawPanel(this.bg, L.panelW, L.panelH);
-      this.lastPanelW = L.panelW;
-      this.lastPanelH = L.panelH;
-    }
-    this.bg.x = L.panelX; this.bg.y = L.panelY;
+    this.redrawPanel(L.panelW, L.panelH, L.panelX, L.panelY);
 
     this.retryBtn.width  = L.btnSize; this.retryBtn.height = L.btnSize;
     this.retryBtn.x = L.btnLeftX;    this.retryBtn.y = L.btnY;
