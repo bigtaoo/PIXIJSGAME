@@ -6,13 +6,13 @@ import { StageManager } from './stageManager';
 import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
-import { drawCircleCell, drawCircleCellSelected, makeTexture } from './graphicsFactory';
+import { drawCircleCell, drawCircleCellSelected, makeTexture, drawButtonBackground } from './graphicsFactory';
 import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
 import { getLobbyLayout, LobbyLayout } from './lobbyLayout';
 import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
 
-// ── Node star dimensions ──────────────────────────────────────────────────────
+// ── Node star dimensions ─────────────────────────────────────────────────────
 const STAR_SIZE    = 22;
 const STAR_GAP     = 3;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
@@ -21,6 +21,11 @@ const STAR_PAD_X   = 6;
 const STAR_PAD_Y   = 4;
 
 // ── Adventure path ────────────────────────────────────────────────────────────
+// Roadbed: solid polyline drawn UNDER the dashed progress line.
+// Replaces the painted trail formerly baked into lobby_bg.png (art.md 8.3).
+const ROADBED_COLOR     = 0xC19A6B; // warm sandy tan
+const ROADBED_ALPHA     = 0.45;
+const ROADBED_WIDTH     = 22;
 const PATH_COLOR_DONE   = 0x6D4C41; // dark brown, completed segment
 const PATH_COLOR_LOCKED = 0x8B6E47; // mid warm-brown, locked segment
 const PATH_WIDTH        = 6;        // line width (logical pixels)
@@ -70,6 +75,21 @@ interface DailyChallengeEntry {
 }
 
 const MUSIC_BTN_SIZE = 109;  // 56 × 1.5 × 1.3
+// Icon inset within the parchment button frame (matches art.md 9.3: size × 0.16)
+const MUSIC_ICON_PAD = Math.round(MUSIC_BTN_SIZE * 0.16);
+
+// ── Daily challenge / music button panel (warm parchment, header-bar family) ──
+const PANEL_FILL          = 0xEAD5A8; // warm parchment (= header bar body)
+const PANEL_FILL_ALPHA    = 0.85;     // slightly translucent so the map shows through
+const PANEL_BORDER        = 0xC4A068; // warm gold (= header bar border)
+const PANEL_BORDER_ALPHA  = 0.55;
+const PANEL_BORDER_WIDTH  = 1.5;
+const PANEL_SHADOW        = 0x3D2200;
+const PANEL_SHADOW_ALPHA  = 0.18;
+const PANEL_SHADOW_OFF_Y  = 5;
+const PANEL_RADIUS        = 24;
+const PANEL_HILIGHT_H     = 48;       // top highlight strip height
+const PANEL_HILIGHT_ALPHA = 0.18;
 
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
@@ -81,7 +101,10 @@ export class LobbyScene extends PIXI.Container {
 
   private nodeEntries: NodeEntry[]         = [];
   private dailyEntry!: DailyChallengeEntry;
-  private musicBtn!:   PIXI.Sprite;
+  private musicBtn!:      PIXI.Sprite;
+  private musicBtnBg!:    PIXI.Graphics;
+  private musicOffSlash!: PIXI.Graphics;
+  private musicBtnHit!:   PIXI.Sprite;
 
   // Parallel arrays kept for refresh()
   private stageCards:         PIXI.Sprite[]    = [];
@@ -422,19 +445,31 @@ export class LobbyScene extends PIXI.Container {
 
   // ── Resize helpers ──────────────────────────────────────────────────────────
 
+  /**
+   * Cover-scale the background over the logical canvas.
+   *
+   * The texture is authored in landscape (1920×1080, art.md 8.2).  In portrait
+   * it is rotated 90° clockwise, so the effective cover dimensions are swapped.
+   * Anchor is centred so rotation and centring compose trivially.
+   */
   private updateBgSize(): void {
     if (!this.bg) return;
-    const canvasW = this.screen.width;
-    const canvasH = this.screen.height;
-    const texW    = this.bg.texture.width;
-    const texH    = this.bg.texture.height;
-    const scale   = Math.max(canvasW / texW, canvasH / texH);
-    const dispW   = texW * scale;
-    const dispH   = texH * scale;
-    this.bg.width  = dispW;
-    this.bg.height = dispH;
-    this.bg.x      = (canvasW - dispW) / 2;
-    this.bg.y      = (canvasH - dispH) / 2;
+    const canvasW  = this.screen.width;
+    const canvasH  = this.screen.height;
+    const texW     = this.bg.texture.width;
+    const texH     = this.bg.texture.height;
+    const portrait = this.screen.orientation === Orientation.Portrait;
+
+    const effW  = portrait ? texH : texW;
+    const effH  = portrait ? texW : texH;
+    const scale = Math.max(canvasW / effW, canvasH / effH);
+
+    this.bg.anchor.set(0.5);
+    this.bg.rotation = portrait ? Math.PI / 2 : 0;
+    this.bg.width    = texW * scale;
+    this.bg.height   = texH * scale;
+    this.bg.x        = canvasW / 2;
+    this.bg.y        = canvasH / 2;
   }
 
   /**
@@ -480,8 +515,16 @@ export class LobbyScene extends PIXI.Container {
     if (this.musicBtn) {
       const { x, y } = layout.dailyChallengePos;
       const dr = LobbyScene.DAILY_SIZE / 2;
-      this.musicBtn.x = x - MUSIC_BTN_SIZE / 2;
-      this.musicBtn.y = y - dr - MUSIC_BTN_SIZE - 10;
+      const bx = x - MUSIC_BTN_SIZE / 2;
+      const by = y - dr - MUSIC_BTN_SIZE - 10;
+      this.musicBtnBg.x    = bx;
+      this.musicBtnBg.y    = by;
+      this.musicBtn.x      = bx + MUSIC_ICON_PAD;
+      this.musicBtn.y      = by + MUSIC_ICON_PAD;
+      this.musicOffSlash.x = bx + MUSIC_ICON_PAD;
+      this.musicOffSlash.y = by + MUSIC_ICON_PAD;
+      this.musicBtnHit.x   = bx;
+      this.musicBtnHit.y   = by;
     }
 
     const { x: pcx, y: pcy } = layout.dailyChallengePos;
@@ -508,22 +551,43 @@ export class LobbyScene extends PIXI.Container {
   private buildPanel(): void {
     const layout = getLobbyLayout(this.screen);
     const { x: cx, y: cy } = layout.dailyChallengePos;
-    const { x, y, w, h } = this.getPanelBounds(cx, cy);
 
     this.panelGraphics = new PIXI.Graphics();
-    this.panelGraphics.beginFill(0x1A0F00, 0.55);
-    this.panelGraphics.drawRoundedRect(x, y, w, h, 24);
-    this.panelGraphics.endFill();
+    this.drawPanelShape(cx, cy);
     this.addChild(this.panelGraphics);
   }
 
   private redrawPanel(cx: number, cy: number): void {
     if (!this.panelGraphics) return;
+    this.drawPanelShape(cx, cy);
+  }
+
+  /**
+   * Warm parchment panel, same visual family as the in-game header bar
+   * (art.md 7.1.1): drop shadow + parchment body with gold border + top highlight.
+   */
+  private drawPanelShape(cx: number, cy: number): void {
     const { x, y, w, h } = this.getPanelBounds(cx, cy);
-    this.panelGraphics.clear();
-    this.panelGraphics.beginFill(0x1A0F00, 0.55);
-    this.panelGraphics.drawRoundedRect(x, y, w, h, 24);
-    this.panelGraphics.endFill();
+    const g = this.panelGraphics;
+    g.clear();
+
+    // Drop shadow (lifted-panel feel)
+    g.lineStyle(0);
+    g.beginFill(PANEL_SHADOW, PANEL_SHADOW_ALPHA);
+    g.drawRoundedRect(x, y + PANEL_SHADOW_OFF_Y, w, h, PANEL_RADIUS);
+    g.endFill();
+
+    // Main body
+    g.lineStyle(PANEL_BORDER_WIDTH, PANEL_BORDER, PANEL_BORDER_ALPHA);
+    g.beginFill(PANEL_FILL, PANEL_FILL_ALPHA);
+    g.drawRoundedRect(x, y, w, h, PANEL_RADIUS);
+    g.endFill();
+
+    // Top highlight strip
+    g.lineStyle(0);
+    g.beginFill(0xFFFFFF, PANEL_HILIGHT_ALPHA);
+    g.drawRoundedRect(x + 3, y + 3, w - 6, PANEL_HILIGHT_H, PANEL_RADIUS - 3);
+    g.endFill();
   }
 
   // ── Music button ────────────────────────────────────────────────────────────
@@ -532,31 +596,64 @@ export class LobbyScene extends PIXI.Container {
     const layout = getLobbyLayout(this.screen);
     const { x, y } = layout.dailyChallengePos;
     const dr = LobbyScene.DAILY_SIZE / 2;
+    const bx = x - MUSIC_BTN_SIZE / 2;
+    const by = y - dr - MUSIC_BTN_SIZE - 10;
 
+    // Parchment button frame — same family as the in-game buttons (art.md 9.3)
+    const bg = new PIXI.Graphics();
+    drawButtonBackground(bg, MUSIC_BTN_SIZE);
+    bg.x = bx;
+    bg.y = by;
+    this.addChild(bg);
+    this.musicBtnBg = bg;
+
+    const iconSize = MUSIC_BTN_SIZE - MUSIC_ICON_PAD * 2;
     const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
-    btn.width  = MUSIC_BTN_SIZE;
-    btn.height = MUSIC_BTN_SIZE;
-    btn.x      = x - MUSIC_BTN_SIZE / 2;
-    btn.y      = y - dr - MUSIC_BTN_SIZE - 10;
-
-    this.applyMusicBtnTint(btn);
+    btn.width  = iconSize;
+    btn.height = iconSize;
+    btn.x      = bx + MUSIC_ICON_PAD;
+    btn.y      = by + MUSIC_ICON_PAD;
     this.addChild(btn);
     this.musicBtn = btn;
+
+    // Diagonal slash shown when music is off (replaces the old grey tint)
+    const slash = new PIXI.Graphics();
+    slash.lineStyle(8, 0x6D4C41, 0.9);
+    slash.moveTo(iconSize, 0);
+    slash.lineTo(0, iconSize);
+    slash.x = bx + MUSIC_ICON_PAD;
+    slash.y = by + MUSIC_ICON_PAD;
+    this.addChild(slash);
+    this.musicOffSlash = slash;
+
+    // Invisible full-frame hit target so the tap area covers the whole button
+    const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    hit.width  = MUSIC_BTN_SIZE;
+    hit.height = MUSIC_BTN_SIZE;
+    hit.x      = bx;
+    hit.y      = by;
+    this.addChild(hit);
+    this.musicBtnHit = hit;
+
+    this.applyMusicBtnState();
 
     this.ctx.input.registerUI(
       new UIElement({
         zIndex: 10,
-        sprite: btn,
+        sprite: hit,
         onTap: () => {
           this.ctx.audio.toggleMusic();
-          this.applyMusicBtnTint(btn);
+          this.applyMusicBtnState();
         },
       }),
     );
   }
 
-  private applyMusicBtnTint(sprite: PIXI.Sprite): void {
-    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
+  private applyMusicBtnState(): void {
+    const on = this.ctx.audio.isMusicEnabled();
+    this.musicBtn.tint        = on ? 0xFFFFFF : 0x999999;
+    this.musicBtn.alpha       = on ? 1 : 0.55;
+    this.musicOffSlash.visible = !on;
   }
 
   // ── Adventure path ────────────────────────────────────────────────────────────
@@ -577,6 +674,23 @@ export class LobbyScene extends PIXI.Container {
     const positions   = [...layout.nodePositions].sort((a, b) => a.stageIndex - b.stageIndex);
     const maxCompleted = StageManager.getMaxCompleted();
 
+    // Layer 1: solid roadbed — one continuous polyline through all node centres,
+    // round caps/joins so corners look hand-painted rather than mitered.
+    if (positions.length > 1) {
+      this.pathGraphics.lineStyle({
+        width: ROADBED_WIDTH,
+        color: ROADBED_COLOR,
+        alpha: ROADBED_ALPHA,
+        cap:   PIXI.LINE_CAP.ROUND,
+        join:  PIXI.LINE_JOIN.ROUND,
+      });
+      this.pathGraphics.moveTo(positions[0]!.x, positions[0]!.y);
+      for (let i = 1; i < positions.length; i++) {
+        this.pathGraphics.lineTo(positions[i]!.x, positions[i]!.y);
+      }
+    }
+
+    // Layer 2: dashed progress line on top of the roadbed.
     for (let i = 0; i < positions.length - 1; i++) {
       const a     = positions[i]!;
       const b     = positions[i + 1]!;

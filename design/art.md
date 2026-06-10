@@ -1,6 +1,6 @@
 # 数字消除游戏 美术文档
 
-**版本：** v1.5  
+**版本：** v1.6  
 **日期：** 2026年6月  
 **关联文档：** 策划文档 v1.0
 
@@ -337,7 +337,26 @@ Header 定位为浮于格子纸背景之上的独立面板，采用暖羊皮纸�
 
 ### 8.2 背景图
 
-背景为一张覆盖整个屏幕的静态图片（`lobby_bg.png`），宽高与游戏画布一致。
+背景为覆盖整个屏幕的静态图片，**仅一张横屏图**，竖屏时整图旋转 90° 复用（v1.6 修订）：
+
+| 素材 | 尺寸（@1x） | 比例 |
+|------|------------|------|
+| `lobby_bg.png` | 1920 × 1080 | 16:9 |
+
+**横竖屏规则** ✅（v1.6 已实现，`lobbyScene.ts` `updateBgSize()`：中心锚点 + 竖屏 `rotation = π/2` + 旋转后等效尺寸做 cover）
+
+- 横屏：直接使用，cover 缩放（`max(canvasW/texW, canvasH/texH)`）铺满逻辑画布，居中裁剪。
+- 竖屏：将图片**顺时针旋转 90°**（等效得到 1080 × 1920），再按相同 cover 规则铺满。分辨率与专门出竖屏图完全等效。
+- 素材比例与目标画布一致，标准 16:9 / 9:16 屏幕下缩放系数 ≈ 1，**无明显放大与裁剪**；仅非标准比例屏幕（超宽屏、刘海屏）有少量边缘裁切，属预期行为。
+
+**构图约束（旋转复用的前提）**
+
+- **背景图不含路径**（v1.6 最终方案）：路基与进度虚线均由代码绘制（见 8.3 节），节点布局无需与背景图对齐，非标准比例屏幕的 cover 裁剪也不会造成错位。生成模型对路径的形态（实线/虚线/标线/长度/走向）控制太差，多次尝试后放弃图内路径。
+- **方向性元素不画进图**：直立树木、旗帜、文字等旋转后会横躺，一律排除。文具装饰（铅笔、别针、橡皮擦）复用游戏场景现有精灵（`deco_pencil.png` / `deco_paperclip.png` / `deco_eraser.png`），由代码按横竖屏分别摆放（`buildLobbyDecos()`），旋转方向始终正确。
+- **无方向点缀直接生成进图**：石头、对称涂鸦、墨点晕染等旋转后不违和的元素。注意水彩渍要选圆形/对称形态，下滴状颜料痕旋转后会横流。
+- 纹理、暗角保持四向对称；点缀不进入四边 10% 区域（非 16:9 屏幕的 cover 裁剪带）。
+
+> **历史问题（v1.5 及之前）**：旧版仅有一张 1024×1024 正方形 `lobby_bg.png`，横屏下被 cover 放大约 1.875 倍并裁掉上下 44%，导致分辨率明显不足。v1.6 起按上表重新出图。
 
 **底色与纸张感**
 
@@ -363,23 +382,57 @@ Header 定位为浮于格子纸背景之上的独立面板，采用暖羊皮纸�
 
 **AI 图片生成参考 Prompt**
 
+生成工具：**Leonardo.ai**（app.leonardo.ai）。注意 Leonardo 不识别 Midjourney 语法（`--ar` / `--no` / `--style`），参数全部通过 UI 设置。
+
+**UI 设置**
+
+| 设置项 | 值 |
+|--------|----|
+| Aspect Ratio | 16:9（或 Custom 填 1920 × 1080） |
+| Negative Prompt | Advanced Settings 中打开开关，填入下方 Negative Prompt 内容 |
+
+**Prompt（正文，只写想要的内容）**
+
 ```
-A hand-drawn adventure map illustration on warm beige kraft paper (#F5EDD6),
-featuring a winding dirt path connecting 19 numbered stops,
-surrounded by simple sketch-style decorations: small trees, bushes, rocks, hills,
-and scattered math symbols (+, =, ?).
+A warm beige aged kraft paper texture background,
+mostly clean empty paper surface.
+Lightly scattered subtle decorations:
+about a dozen small gray rocks in loose clusters,
+several soft round watercolor stains, scattered tiny ink dots.
 Warm brown, olive green, and earthy yellow palette.
-Watercolor pencil style, soft edges, slight paper grain texture.
-Vertical composition, 9:16 aspect ratio.
-No characters, no text labels. Transparent decorations, clean path line.
---ar 9:16 --v 6 --style raw
+Watercolor pencil style, soft edges, slight paper grain texture, subtle vignette.
 ```
+
+> 点缀密度基准：石头约 12 颗 + 水彩渍若干 + 墨点散布，以大面积留白为主——节点、路径、面板会占据画面大部分。
+
+**Negative Prompt（填入独立输入框）**
+
+```
+road, path, trail, dirt road, lines, dashed line, dotted line,
+text, letters, words, labels, numbers, writing, trees, forest, flags, banners,
+compass, compass rose, map border, frame, legend, stars, starbursts,
+buildings, animals, characters, icons, arrows, pencils, stationery,
+X marks, crosses, footprints, paint drips
+```
+
+> **Prompt 写法要点（v1.6 教训）**：
+> 1. 排除项写在正文里（"no trees, no text"）会让模型反而画出来，必须放 Negative Prompt 独立输入框。
+> 2. Negative Prompt 是软约束，顽固元素（如指南针、小树）多 roll 几次挑一张。
+> 3. 比例必须在 UI 里选 16:9，写进 prompt 无效（会出 1:1）。
+> 4. 曾尝试把路径生成进图，但模型对线条形态控制太差（反复出现虚线、公路标线、长度不足、自我交叉），最终改为代码绘制（8.3 节）。正文已去掉 map / trail 字样，避免诱导地图元素。
 
 ---
 
 ### 8.3 探险小路
 
-小路是连接所有关卡节点的视觉主线，采用手绘虚线风格（类似铅笔描绘的点划线），宽约 12–16px，颜色为深棕 `#6D4C41`，透明度 80%。
+小路**完全由代码绘制**（v1.6 最终方案，`refreshPath()`），双层结构：
+
+| 层 | 视觉 | 参数 |
+|----|------|------|
+| 路基 | 连续实线折线，连接全部节点中心 | 暖沙棕 `#C19A6B`，宽 22px，alpha 0.45，圆头端点 + 圆角拐点（`LINE_CAP.ROUND` / `LINE_JOIN.ROUND`） |
+| 状态虚线 | 手绘抖动虚线，叠加在路基上 | 宽 6px，已通过段深棕 `#6D4C41` alpha 0.8，未解锁段暖棕 `#8B6E47` alpha 0.55 |
+
+两层均按 `lobbyLayout` 节点坐标绘制，横竖屏自动适配，与背景图无对齐依赖。
 
 路径分两段状态显示：
 
@@ -468,6 +521,31 @@ centered on 260x260 canvas. Hand-drawn adventure map aesthetic. --ar 1:1 --v 6 -
 
 ---
 
+### 8.5.1 功能面板与音乐按钮 ✅（v1.6 新增）
+
+每日挑战图标、统计行与音乐按钮共同坐落于一块**暖羊皮纸功能面板**上，视觉上与游戏内 Header 背景条（7.1.1）同族。
+
+**面板（`lobbyScene.ts` `drawPanelShape`）**
+
+| 层 | 内容 | 参数 |
+|----|------|------|
+| 底部阴影 | 深棕 `#3D2200`，alpha 0.18，向下偏移 5px | 悬浮感 |
+| 主体 | 暖羊皮纸 `#EAD5A8`，alpha 0.85（半透明，透出地图纸纹），边框暖金 `#C4A068`（alpha 0.55，1.5px） | 与 Header 背景条同配色 |
+| 顶部高光 | 白色 alpha 0.18，高度 48px | 轻微凸起感 |
+| 圆角 | 24px | — |
+
+> **历史问题（v1.5 及之前）**：面板曾为深色半透明 `#1A0F00` alpha 0.55，与牛皮纸手绘地图风格冲突，v1.6 起改为上表规格。
+
+**音乐按钮**
+
+| 属性 | 规格 |
+|------|------|
+| 背景框 | 复用 `drawButtonBackground()`（9.3 节规格：暖皮纸 `#EEDFBD` + 暖金边框 + 圆角 20% + 投影 + 顶部高光） |
+| 尺寸 | 109 × 109px（逻辑像素） |
+| 图标 | `music.png`，四边内缩 `size × 0.16`（≈ 17px），有效区约 75 × 75px |
+| 关闭态 | 图标 tint `#999999` + alpha 0.55，叠加深棕 `#6D4C41` 斜杠线（宽 8px，alpha 0.9，右上 → 左下）；**不再对整个按钮做灰色 tint** |
+| 点击区域 | 覆盖整个 109px 背景框（透明 hit 精灵） |
+
 ### 8.6 标题区域
 
 大厅顶部（关卡 19 上方）放置游戏 Logo，使用 `logo.png`，居中显示，宽度约为画布宽的 60%。✅（`lobbyScene.ts` `buildLogo`）
@@ -481,7 +559,8 @@ z 层级（从底到顶）
 ├── 背景层：手绘地图大图（随滚动位移）
 ├── 路径层：探险小路（静态，已通过段 / 未解锁段）
 ├── 节点层：关卡圆形节点 + 数字精灵
-├── 特殊节点层：每日挑战入口圆形图标 + 文字标签
+├── 面板层：每日挑战功能面板（暖羊皮纸，见 8.5.1）
+├── 特殊节点层：每日挑战入口圆形图标 + 音乐按钮 + 文字标签
 ├── 状态层：勾 / 锁 / 脉冲光圈 / 每日挑战呼吸光晕
 └── UI 层：顶部 Logo 横幅 / 底部固定导航栏（如有）
 ```
@@ -521,7 +600,7 @@ z 层级（从底到顶）
 | `heart.png` | 命数图标·满（见下方规格） | 160 × 160 |
 | `heart_empty.png` | 命数图标·空（见下方规格） | 160 × 160 |
 | `explosion.png` + `explosion.json` | 消除粒子图集，用于数字消除时的碎裂特效 | 各帧不超过 64 × 64 |
-| `lobby_bg.png` | 大厅手绘地图背景（见第 8 节） | 与画布等宽等高（9:16） |
+| `lobby_bg.png` | 大厅地图背景（纯纸纹 + 无方向点缀，不含路径），竖屏时旋转 90° 复用（见 8.2 节） | 1920 × 1080（16:9） |
 | `logo.png` | 游戏 Logo（见 8.6 节） | — |
 | `daily_challenge_icon.png` | 每日挑战入口图标（见 8.5 节） | 260 × 260 |
 | `star.png` | 星星图标（关卡大厅星级显示） | — |
