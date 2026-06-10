@@ -1,13 +1,16 @@
 import { Orientation } from './enums';
 import {
-  GAME_WIDTH, OFFSET_Y,
-  HEADER_X_PORTRAIT, HEADER_BAR_W_PORTRAIT,
-  HEADER_X_LANDSCAPE, HEADER_BAR_W_LANDSCAPE,
+  GAME_WIDTH,
+  OFFSET_Y,
+  HEADER_X_PORTRAIT,
+  HEADER_BAR_W_PORTRAIT,
+  HEADER_X_LANDSCAPE,
+  HEADER_BAR_W_LANDSCAPE,
 } from './consts';
 
 export class ScreenConfig {
   public width: number = GAME_WIDTH;
-  public height: number = GAME_WIDTH * 16 / 9;
+  public height: number = (GAME_WIDTH * 16) / 9;
   public scale: number = 1;
   public orientation: Orientation = Orientation.Portrait;
 
@@ -15,9 +18,9 @@ export class ScreenConfig {
 
   // Per-scene header bounds override (null = use consts defaults).
   // Set by each scene via setGridBounds() to align the grid with its own header bar.
-  private _headerXPortrait:    number | null = null;
+  private _headerXPortrait: number | null = null;
   private _headerBarWPortrait: number | null = null;
-  private _headerXLandscape:   number | null = null;
+  private _headerXLandscape: number | null = null;
   private _headerBarWLandscape: number | null = null;
 
   /**
@@ -31,12 +34,14 @@ export class ScreenConfig {
    * @param landscapeBarW  Header bar width in landscape (logical px)
    */
   public setGridBounds(
-    portraitX: number, portraitBarW: number,
-    landscapeX: number, landscapeBarW: number,
+    portraitX: number,
+    portraitBarW: number,
+    landscapeX: number,
+    landscapeBarW: number
   ): void {
-    this._headerXPortrait     = portraitX;
-    this._headerBarWPortrait  = portraitBarW;
-    this._headerXLandscape    = landscapeX;
+    this._headerXPortrait = portraitX;
+    this._headerBarWPortrait = portraitBarW;
+    this._headerXLandscape = landscapeX;
     this._headerBarWLandscape = landscapeBarW;
   }
 
@@ -52,15 +57,17 @@ export class ScreenConfig {
   private _locked = false;
   private _lockedGridCountW: number | null = null;
   private _lockedGridCountH: number | null = null;
-  private _lockedGridSize:   number | null = null;
-  private _lockedOffsetX:    number | null = null;
+  private _lockedGridSize: number | null = null;
+  private _lockedOffsetX: number | null = null;
 
   /** Full logical canvas size captured at lock time. Used by GameScene to
    *  compute the gameContainer scale factor on subsequent resize events. */
   public lockedLogicalW = 0;
   public lockedLogicalH = 0;
 
-  public get isLocked(): boolean { return this._locked; }
+  public get isLocked(): boolean {
+    return this._locked;
+  }
 
   /**
    * Freeze the grid layout.  Must be called after logic.initialize() and
@@ -70,21 +77,21 @@ export class ScreenConfig {
   public lockLayout(): void {
     this._lockedGridCountW = this.gridCountW;
     this._lockedGridCountH = this.gridCountH;
-    this._lockedGridSize   = this.gridSize;
-    this._lockedOffsetX    = this.offsetX;
-    this.lockedLogicalW    = this.width;
-    this.lockedLogicalH    = this.height;
+    this._lockedGridSize = this.gridSize;
+    this._lockedOffsetX = this.offsetX;
+    this.lockedLogicalW = this.width;
+    this.lockedLogicalH = this.height;
     this._locked = true;
   }
 
   /** Release the layout lock so the next reconfigure() uses the real
    *  (possibly rotated) screen dimensions. */
   public unlockLayout(): void {
-    this._locked           = false;
+    this._locked = false;
     this._lockedGridCountW = null;
     this._lockedGridCountH = null;
-    this._lockedGridSize   = null;
-    this._lockedOffsetX    = null;
+    this._lockedGridSize = null;
+    this._lockedOffsetX = null;
   }
   // ──────────────────────────────────────────────────────────────────────
 
@@ -134,9 +141,10 @@ export class ScreenConfig {
    */
   public get gridSize(): number {
     if (this._locked && this._lockedGridSize !== null) return this._lockedGridSize;
-    const barW  = this.orientation === Orientation.Landscape
-      ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
-      : (this._headerBarWPortrait  ?? HEADER_BAR_W_PORTRAIT);
+    const barW =
+      this.orientation === Orientation.Landscape
+        ? this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE
+        : this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT;
     const playH = this.height - this.offsetY;
     return Math.floor(Math.min(barW / this.gridCountW, playH / this.gridCountH));
   }
@@ -148,12 +156,14 @@ export class ScreenConfig {
    */
   public get offsetX(): number {
     if (this._locked && this._lockedOffsetX !== null) return this._lockedOffsetX;
-    const headerX = this.orientation === Orientation.Landscape
-      ? (this._headerXLandscape ?? HEADER_X_LANDSCAPE)
-      : (this._headerXPortrait  ?? HEADER_X_PORTRAIT);
-    const barW = this.orientation === Orientation.Landscape
-      ? (this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE)
-      : (this._headerBarWPortrait  ?? HEADER_BAR_W_PORTRAIT);
+    const headerX =
+      this.orientation === Orientation.Landscape
+        ? this._headerXLandscape ?? HEADER_X_LANDSCAPE
+        : this._headerXPortrait ?? HEADER_X_PORTRAIT;
+    const barW =
+      this.orientation === Orientation.Landscape
+        ? this._headerBarWLandscape ?? HEADER_BAR_W_LANDSCAPE
+        : this._headerBarWPortrait ?? HEADER_BAR_W_PORTRAIT;
     return Math.floor(headerX + (barW - this.gridCountW * this.gridSize) / 2);
   }
 
@@ -194,13 +204,13 @@ export class ScreenConfig {
   public update(windowWidth: number, windowHeight: number): void {
     if (windowWidth > windowHeight) {
       this.orientation = Orientation.Landscape;
-      this.scale  = windowHeight / GAME_WIDTH;
+      this.scale = windowHeight / GAME_WIDTH;
       this.height = GAME_WIDTH;
-      this.width  = Math.round(windowWidth / this.scale);
+      this.width = Math.round(windowWidth / this.scale);
     } else {
       this.orientation = Orientation.Portrait;
-      this.scale  = windowWidth / GAME_WIDTH;
-      this.width  = GAME_WIDTH;
+      this.scale = windowWidth / GAME_WIDTH;
+      this.width = GAME_WIDTH;
       this.height = Math.round(windowHeight / this.scale);
     }
   }

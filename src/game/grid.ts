@@ -4,39 +4,39 @@ import { ScreenConfig } from './screenConfig';
 import { UIElement } from '../inputSystem/uiElement';
 
 const GLOSS_PER_COLOR = 6; // must match webAssetsManager constant
-const CELL_GAP        = 5; // must match reconfigure() GAP
+const CELL_GAP = 5; // must match reconfigure() GAP
 
 // -- Selection bounce ---------------------------------------------------------
 const BOUNCE_DURATION = 120; // ms - total duration of the scale pop
-const BOUNCE_PEAK     = 1.12; // max scale overshoot
+const BOUNCE_PEAK = 1.12; // max scale overshoot
 
 // -- Idle shimmer -------------------------------------------------------------
-const IDLE_INTERVAL   = 1600;
-const IDLE_PULSE_DUR  = 500;
-const IDLE_MIN_ALPHA  = 0.78;
+const IDLE_INTERVAL = 1600;
+const IDLE_PULSE_DUR = 500;
+const IDLE_MIN_ALPHA = 0.78;
 const IDLE_MAX_ACTIVE = 2;
 
 interface IdlePulse {
-  sprite:  PIXI.Sprite;
+  sprite: PIXI.Sprite;
   elapsed: number;
 }
 
 export class Grid extends PIXI.Container {
-  private cells:         Map<number, PIXI.Sprite> = new Map();
-  private cellGlossIdx:  Map<number, number>       = new Map();
-  private cellTier:      Map<number, 0|1|2>        = new Map();
+  private cells: Map<number, PIXI.Sprite> = new Map();
+  private cellGlossIdx: Map<number, number> = new Map();
+  private cellTier: Map<number, 0 | 1 | 2> = new Map();
   private selectionHighlight: PIXI.Sprite | undefined;
 
-  private bounceElapsed  = -1;
-  private bounceSprite:  PIXI.Sprite | null = null;
+  private bounceElapsed = -1;
+  private bounceSprite: PIXI.Sprite | null = null;
 
-  private idleTimer  = IDLE_INTERVAL;
+  private idleTimer = IDLE_INTERVAL;
   private idlePulses: IdlePulse[] = [];
 
   constructor(
     private readonly ctx: AppContext,
     private readonly screen: ScreenConfig,
-    private readonly onCellClick: (index: number) => void,
+    private readonly onCellClick: (index: number) => void
   ) {
     super();
   }
@@ -49,12 +49,12 @@ export class Grid extends PIXI.Container {
   }
 
   private textureKey(idx: number): string {
-    const tier  = this.cellTier.get(idx) ?? 0;
+    const tier = this.cellTier.get(idx) ?? 0;
     const gloss = this.getGlossIdx(idx);
     return `cell_t${tier}_g${gloss}.png`;
   }
 
-  public setCellTier(idx: number, tier: 0|1|2): void {
+  public setCellTier(idx: number, tier: 0 | 1 | 2): void {
     this.cellTier.set(idx, tier);
     const sprite = this.cells.get(idx);
     if (sprite) {
@@ -62,9 +62,9 @@ export class Grid extends PIXI.Container {
     }
   }
 
-  public static tierForValue(value: number, target: number): 0|1|2 {
+  public static tierForValue(value: number, target: number): 0 | 1 | 2 {
     const maxVal = target - 1;
-    if (value <= maxVal / 3)       return 0;
+    if (value <= maxVal / 3) return 0;
     if (value <= (maxVal * 2) / 3) return 1;
     return 2;
   }
@@ -92,14 +92,14 @@ export class Grid extends PIXI.Container {
               zIndex: 10,
               sprite,
               onTap: () => this.onCellClick(capturedIdx),
-            }),
+            })
           );
         }
 
-        sprite.x       = col * gridSize + offsetX;
-        sprite.y       = row * gridSize + offsetY;
-        sprite.width   = gridSize - GAP;
-        sprite.height  = gridSize - GAP;
+        sprite.x = col * gridSize + offsetX;
+        sprite.y = row * gridSize + offsetY;
+        sprite.width = gridSize - GAP;
+        sprite.height = gridSize - GAP;
         sprite.visible = true;
       }
     }
@@ -109,7 +109,7 @@ export class Grid extends PIXI.Container {
     }
 
     if (this.selectionHighlight) {
-      this.selectionHighlight.width  = gridSize - CELL_GAP;
+      this.selectionHighlight.width = gridSize - CELL_GAP;
       this.selectionHighlight.height = gridSize - CELL_GAP;
     }
 
@@ -122,22 +122,22 @@ export class Grid extends PIXI.Container {
 
     if (!this.selectionHighlight) {
       this.selectionHighlight = new PIXI.Sprite(this.ctx.assets.GetTexture('cell_selected.png'));
-      this.selectionHighlight.width  = sz;
+      this.selectionHighlight.width = sz;
       this.selectionHighlight.height = sz;
       this.addChild(this.selectionHighlight);
     } else {
-      this.selectionHighlight.width  = sz;
+      this.selectionHighlight.width = sz;
       this.selectionHighlight.height = sz;
       this.setChildIndex(this.selectionHighlight, this.children.length - 1);
     }
 
     const { x, y } = this.screen.indexToPos(index);
-    this.selectionHighlight.x       = x;
-    this.selectionHighlight.y       = y;
+    this.selectionHighlight.x = x;
+    this.selectionHighlight.y = y;
     this.selectionHighlight.visible = true;
 
     this.bounceElapsed = 0;
-    this.bounceSprite  = this.selectionHighlight;
+    this.bounceSprite = this.selectionHighlight;
   }
 
   public hideSelection(): void {
@@ -154,7 +154,10 @@ export class Grid extends PIXI.Container {
     if (cell) {
       cell.visible = false;
       this.idlePulses = this.idlePulses.filter((p) => {
-        if (p.sprite === cell) { p.sprite.alpha = 1; return false; }
+        if (p.sprite === cell) {
+          p.sprite.alpha = 1;
+          return false;
+        }
         return true;
       });
     }
@@ -177,13 +180,13 @@ export class Grid extends PIXI.Container {
     } else {
       factor = BOUNCE_PEAK - (BOUNCE_PEAK - 1) * ((t - 0.5) / 0.5);
     }
-    this.bounceSprite.width  = sz * factor;
+    this.bounceSprite.width = sz * factor;
     this.bounceSprite.height = sz * factor;
 
     if (t >= 1) {
-      this.bounceSprite.width  = sz;
+      this.bounceSprite.width = sz;
       this.bounceSprite.height = sz;
-      this.bounceSprite  = null;
+      this.bounceSprite = null;
       this.bounceElapsed = -1;
     }
   }
@@ -197,7 +200,10 @@ export class Grid extends PIXI.Container {
 
     for (let i = this.idlePulses.length - 1; i >= 0; i--) {
       const p = this.idlePulses[i]!;
-      if (!p.sprite.visible) { this.idlePulses.splice(i, 1); continue; }
+      if (!p.sprite.visible) {
+        this.idlePulses.splice(i, 1);
+        continue;
+      }
 
       p.elapsed += deltaMs;
       const half = IDLE_PULSE_DUR / 2;

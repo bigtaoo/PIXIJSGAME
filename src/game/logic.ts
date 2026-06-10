@@ -18,7 +18,7 @@ export class Logic {
       // Full range: first ∈ [1, target-1], second = target - first.
       // Both values are valid (≥1) and may be single- or two-digit;
       // NumberLayer handles two-digit rendering via the 70%-scaled pair layout.
-      const first  = 1 + Math.floor(Math.random() * (target - 1));
+      const first = 1 + Math.floor(Math.random() * (target - 1));
       const second = target - first;
       pairs.push(first, second);
     }
@@ -67,7 +67,9 @@ export class Logic {
   protected shuffle(arr: number[]): void {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
     }
   }
 }

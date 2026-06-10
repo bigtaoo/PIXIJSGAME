@@ -25,75 +25,85 @@ import { DailyChallengeLogic } from './dailyChallengeLogic';
 import { DailyChallengeResult } from './dailyChallengeResult';
 import { DailyChallengeHeader } from './dailyChallengeHeader';
 import { drawBackground } from './graphicsFactory';
-import { getDailyTarget, getDailySeed, DAILY_GRID_W, DAILY_GRID_H, DAILY_DURATION_MS } from './dailyChallengeConfig';
 import {
-  DC_HEADER_X_PORTRAIT, DC_HEADER_BAR_W_PORTRAIT,
-  DC_HEADER_X_LANDSCAPE, DC_HEADER_BAR_W_LANDSCAPE,
+  getDailyTarget,
+  getDailySeed,
+  DAILY_GRID_W,
+  DAILY_GRID_H,
+  DAILY_DURATION_MS,
+} from './dailyChallengeConfig';
+import {
+  DC_HEADER_X_PORTRAIT,
+  DC_HEADER_BAR_W_PORTRAIT,
+  DC_HEADER_X_LANDSCAPE,
+  DC_HEADER_BAR_W_LANDSCAPE,
 } from './dailyChallengeHeader';
 import { saveDailyScore, recordDailyPlay } from './dailyChallengeStore';
 import { makeRng } from './seededRng';
 
-const COMBO_WINDOW_MS  = 3_000;
-const HINT_DELAY_MS    = 3_000;
-const HINT_REPEAT_MS   = 2_000;
+const COMBO_WINDOW_MS = 3_000;
+const HINT_DELAY_MS = 3_000;
+const HINT_REPEAT_MS = 2_000;
 
 export class DailyChallengeScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
-  private readonly state:  GameState;
-  private readonly logic:  DailyChallengeLogic;
+  private readonly state: GameState;
+  private readonly logic: DailyChallengeLogic;
 
-  private bg!:            PIXI.Graphics;
-  private gridLayer!:     Grid;
-  private numberLayer!:   NumberLayer;
-  private effectLayer!:   EffectManager;
-  private header!:        DailyChallengeHeader;
+  private bg!: PIXI.Graphics;
+  private gridLayer!: Grid;
+  private numberLayer!: NumberLayer;
+  private effectLayer!: EffectManager;
+  private header!: DailyChallengeHeader;
   private resultOverlay!: DailyChallengeResult;
 
-  private selectedIndex    = -1;
-  private score            = 0;
-  private comboCount       = 0;
+  private selectedIndex = -1;
+  private score = 0;
+  private comboCount = 0;
   private lastElimGameTime = -Infinity;
-  private gameTimeMs       = 0;
-  private initialized      = false;
-  private playRecorded     = false;
+  private gameTimeMs = 0;
+  private initialized = false;
+  private playRecorded = false;
 
-  private hintTimerMs   = -1;
+  private hintTimerMs = -1;
   private hintThreshold = HINT_DELAY_MS;
 
   /** Stored so resize() can re-initialize the grid with the correct orientation dims. */
   private pendingTarget = 0;
-  private pendingSeed   = 0;
+  private pendingSeed = 0;
 
-  constructor(
-    private readonly ctx: AppContext,
-    private readonly onGoLobby: () => void,
-  ) {
+  constructor(private readonly ctx: AppContext, private readonly onGoLobby: () => void) {
     super();
     this.screen = new ScreenConfig();
-    this.state  = new GameState();
-    this.logic  = new DailyChallengeLogic();
+    this.state = new GameState();
+    this.logic = new DailyChallengeLogic();
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
   public start(): void {
-    this.score            = 0;
-    this.comboCount       = 0;
+    this.score = 0;
+    this.comboCount = 0;
     this.lastElimGameTime = -Infinity;
-    this.gameTimeMs       = 0;
-    this.selectedIndex    = -1;
-    this.playRecorded     = false;
+    this.gameTimeMs = 0;
+    this.selectedIndex = -1;
+    this.playRecorded = false;
     this.resetHintTimer();
 
     this.state.reset();
     this.state.addTime(DAILY_DURATION_MS);
 
     this.pendingTarget = getDailyTarget();
-    this.pendingSeed   = getDailySeed();
+    this.pendingSeed = getDailySeed();
 
     if (this.initialized) {
       // Screen orientation already known — initialize with correct dims immediately.
-      this.logic.initializeSeeded(this.pendingTarget, makeRng(this.pendingSeed), this.screen.gridCountW, this.screen.gridCountH);
+      this.logic.initializeSeeded(
+        this.pendingTarget,
+        makeRng(this.pendingSeed),
+        this.screen.gridCountW,
+        this.screen.gridCountH
+      );
       this.resultOverlay.hide();
       this.header.setScore(0);
       this.header.setTimer(this.state.remainingSeconds);
@@ -113,8 +123,10 @@ export class DailyChallengeScene extends PIXI.Container {
     // Align the grid to the DC header bar (which is wider/positioned differently
     // from the standard game header tracked by the HEADER_X/BAR_W consts).
     this.screen.setGridBounds(
-      DC_HEADER_X_PORTRAIT,   DC_HEADER_BAR_W_PORTRAIT,
-      DC_HEADER_X_LANDSCAPE,  DC_HEADER_BAR_W_LANDSCAPE,
+      DC_HEADER_X_PORTRAIT,
+      DC_HEADER_BAR_W_PORTRAIT,
+      DC_HEADER_X_LANDSCAPE,
+      DC_HEADER_BAR_W_LANDSCAPE
     );
   }
 
@@ -125,7 +137,12 @@ export class DailyChallengeScene extends PIXI.Container {
     if (!this.initialized) {
       // Now that screen orientation is set, initialize the grid with correct dims.
       if (this.pendingTarget > 0) {
-        this.logic.initializeSeeded(this.pendingTarget, makeRng(this.pendingSeed), this.screen.gridCountW, this.screen.gridCountH);
+        this.logic.initializeSeeded(
+          this.pendingTarget,
+          makeRng(this.pendingSeed),
+          this.screen.gridCountW,
+          this.screen.gridCountH
+        );
       }
       this.buildScene();
       this.initialized = true;
@@ -167,7 +184,7 @@ export class DailyChallengeScene extends PIXI.Container {
       this.hintTimerMs += deltaMs;
       if (this.hintTimerMs >= this.hintThreshold) {
         this.triggerHint();
-        this.hintTimerMs  = 0;
+        this.hintTimerMs = 0;
         this.hintThreshold = HINT_REPEAT_MS;
       }
     }
@@ -182,16 +199,29 @@ export class DailyChallengeScene extends PIXI.Container {
     drawBackground(this.bg, this.screen.width, this.screen.height);
     this.addChild(this.bg);
 
-    this.gridLayer   = new Grid(this.ctx, this.screen, idx => this.onCellClick(idx));
+    this.gridLayer = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
     this.numberLayer = new NumberLayer(this.ctx, this.screen);
     this.effectLayer = new EffectManager(this.ctx, this.screen);
     const audio = this.ctx.audio;
-    this.header      = new DailyChallengeHeader(this.ctx, () => { audio.playClick(); this.onGoLobby(); }, this.screen);
+    this.header = new DailyChallengeHeader(
+      this.ctx,
+      () => {
+        audio.playClick();
+        this.onGoLobby();
+      },
+      this.screen
+    );
 
     this.resultOverlay = new DailyChallengeResult(
       this.ctx,
-      () => { audio.playClick(); this.start(); },
-      () => { audio.playClick(); this.onGoLobby(); },
+      () => {
+        audio.playClick();
+        this.start();
+      },
+      () => {
+        audio.playClick();
+        this.onGoLobby();
+      }
     );
 
     this.addChild(this.gridLayer);
@@ -256,8 +286,8 @@ export class DailyChallengeScene extends PIXI.Container {
       return;
     }
 
-    const a      = this.logic.getNumberByIndex(this.selectedIndex);
-    const b      = this.logic.getNumberByIndex(index);
+    const a = this.logic.getNumberByIndex(this.selectedIndex);
+    const b = this.logic.getNumberByIndex(index);
     const target = getDailyTarget();
 
     if (a + b === target) {
@@ -301,22 +331,23 @@ export class DailyChallengeScene extends PIXI.Container {
     this.selectedIndex = -1;
 
     // +2 / +3 / +4 / +5 (capped at 4th combo)
-    const points = this.comboCount === 1 ? 2
-                 : this.comboCount === 2 ? 3
-                 : this.comboCount === 3 ? 4
-                 :                         5;
+    const points =
+      this.comboCount === 1 ? 2 : this.comboCount === 2 ? 3 : this.comboCount === 3 ? 4 : 5;
     this.score += points;
     this.header.setScore(this.score);
 
     // Flying score animation: "+N" pops from the last-tapped cell and flies
     // to the score display area in the header.
-    const half     = this.screen.gridSize / 2;
-    const posB     = this.screen.indexToPos(idxB);
+    const half = this.screen.gridSize / 2;
+    const posB = this.screen.indexToPos(idxB);
     const scorePos = this.header.getScoreCenterPos();
     this.effectLayer.playFlyingScore(
-      posB.x + half, posB.y + half,
-      scorePos.x, scorePos.y,
-      points, this.comboCount > 1,
+      posB.x + half,
+      posB.y + half,
+      scorePos.x,
+      scorePos.y,
+      points,
+      this.comboCount > 1
     );
 
     // ── Row collapse ────────────────────────────────────────────────────────
@@ -330,12 +361,12 @@ export class DailyChallengeScene extends PIXI.Container {
   // ── Hint system ────────────────────────────────────────────────────────────
 
   private resetHintTimer(): void {
-    this.hintTimerMs   = -1;
+    this.hintTimerMs = -1;
     this.hintThreshold = HINT_DELAY_MS;
   }
 
   private startHintTimer(): void {
-    this.hintTimerMs   = 0;
+    this.hintTimerMs = 0;
     this.hintThreshold = HINT_DELAY_MS;
   }
 
@@ -343,7 +374,7 @@ export class DailyChallengeScene extends PIXI.Container {
     if (this.selectedIndex === -1) return;
 
     const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
-    const pairIndices   = this.logic.findPairIndices(selectedValue, getDailyTarget());
+    const pairIndices = this.logic.findPairIndices(selectedValue, getDailyTarget());
     if (pairIndices.length > 0) {
       this.numberLayer.flashHint(pairIndices);
     }
@@ -353,7 +384,7 @@ export class DailyChallengeScene extends PIXI.Container {
 
   private onTimeUp(): void {
     this.state.isGameEnd = true;
-    this.selectedIndex   = -1;
+    this.selectedIndex = -1;
     this.gridLayer.hideSelection();
 
     if (!this.playRecorded) {

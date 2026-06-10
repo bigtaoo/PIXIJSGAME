@@ -68,10 +68,10 @@ window.onload = async () => {
     renderer: app.renderer as unknown as PIXI.Renderer,
     audio,
     platform: {
-      gameplayStart:        () => crazyGames.gameplayStart(),
-      gameplayStop:         () => crazyGames.gameplayStop(),
+      gameplayStart: () => crazyGames.gameplayStart(),
+      gameplayStop: () => crazyGames.gameplayStop(),
       requestInterstitialAd: () => crazyGames.showInterstitialAdThrottled(10 * 60 * 1000),
-      requestExtraLife:     () => crazyGames.showRewardedAd(),
+      requestExtraLife: () => crazyGames.showRewardedAd(),
       submitDailyScore: async (score: number) => {
         if (!crazyGames.isUserAccountAvailable) return;
         let user = await crazyGames.getUser();

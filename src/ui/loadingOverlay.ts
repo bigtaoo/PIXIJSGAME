@@ -20,7 +20,7 @@ export class LoadingOverlay {
     root.style.cssText = [
       'position:fixed',
       'inset:0',
-      'background:#F5EAC8',       // 米白色 — matches game art style
+      'background:#F5EAC8', // 米白色 — matches game art style
       'display:flex',
       'flex-direction:column',
       'align-items:center',
@@ -35,7 +35,7 @@ export class LoadingOverlay {
     track.style.cssText = [
       'width:200px',
       'height:6px',
-      'background:#D9C9A8',       // slightly darker cream for the unfilled track
+      'background:#D9C9A8', // slightly darker cream for the unfilled track
       'border-radius:3px',
       'overflow:hidden',
     ].join(';');
@@ -45,7 +45,7 @@ export class LoadingOverlay {
     fill.style.cssText = [
       'width:0%',
       'height:100%',
-      'background:#6D4C41',       // dark warm-brown — primary game colour
+      'background:#6D4C41', // dark warm-brown — primary game colour
       'border-radius:3px',
       'transition:width 0.15s ease',
     ].join(';');
@@ -73,9 +73,9 @@ export class LoadingOverlay {
     // Snap to full before fading so it never looks stuck at 99 %
     this.setProgress(1);
     // Brief pause so the full bar is visible, then fade
-    await new Promise<void>(r => setTimeout(r, 120));
+    await new Promise<void>((r) => setTimeout(r, 120));
     this.root.style.opacity = '0';
-    await new Promise<void>(r => setTimeout(r, 370));
+    await new Promise<void>((r) => setTimeout(r, 370));
     this.root.remove();
   }
 }

@@ -79,6 +79,15 @@
 ### ✅ 已修复 — 装饰文具太稀疏
 `lobbyScene.ts → rebuildDecos()`：原来只有 4 个固定四角的装饰，现改为基于画布尺寸的 seeded RNG 随机散布（12 个），横竖屏各自用当前 `screen.width/height` 范围随机，自动避开 stage node 中心（160px）和 daily challenge 面板（200px）。方向切换时在 `repositionAll()` 自动重建。
 
+### ✅ 已修复 — 大厅视觉升级（2026-06-10）
+`lobbyScene.ts` 保留以下改动：
+- **"You are here" 标记**：金色下箭头在当前关卡节点上方上下浮动（±5px, 700ms）
+
+已回滚（效果不佳）：
+- Vignette 暗角 — 地图整体太暗
+- 里程碑节点金环 — 视觉上太突兀
+- 移除面板 — 按钮直接在地图上反而更难看
+
 ### ✅ 已修复 — 大厅面板简化
 移除了 streak（🔥连续天数）显示，只保留最高分（🏆）。未打过每日挑战时不显示数字（显示 0 视觉上奇怪）。同步清理了 `fire.png` 的 import 和加载逻辑（`webAssetsManager.ts`）。
 

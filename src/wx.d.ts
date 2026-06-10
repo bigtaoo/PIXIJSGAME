@@ -3,8 +3,8 @@ declare const GameGlobal: {
   [key: string]: any;
 };
 
-declare module wx {
-  module cloud {
+declare namespace wx {
+  namespace cloud {
     function downloadFile(
       opts: Callback<{
         fileID: string;
@@ -19,7 +19,7 @@ declare module wx {
     function init(opts: { env: string; traceUser?: boolean }): void;
   }
 
-  module env {
+  namespace env {
     const USER_DATA_PATH: string;
   }
 
@@ -47,6 +47,7 @@ declare module wx {
     bottom: number;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface IVideo {}
 
   function createVideo(opts: {
@@ -202,21 +203,25 @@ declare module wx {
     }>
   ): void;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   function offTouchMove(fn: Function): void;
   function onTouchMove(
     opts: (opts: { touches: Touch[]; changedTouches: Touch[]; timeStamp: number }) => void
   ): void;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   function offTouchStart(fn: Function): void;
   function onTouchStart(
     opts: (opts: { touches: Touch[]; changedTouches: Touch[]; timeStamp: number }) => void
   ): void;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   function offTouchEnd(fn: Function): void;
   function onTouchEnd(
     opts: (opts: { touches: Touch[]; changedTouches: Touch[]; timeStamp: number }) => void
   ): void;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   function offTouchCancel(fn: Function): void;
   function onTouchCancel(
     opts: (opts: { touches: Touch[]; changedTouches: Touch[]; timeStamp: number }) => void
@@ -504,8 +509,12 @@ declare module wx {
 
   function loadFont(path: string): string;
 
-  function onWindowResize(cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void): void;
-  function offWindowResize(cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void): void;
+  function onWindowResize(
+    cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void
+  ): void;
+  function offWindowResize(
+    cb: (res: { size: { windowWidth: number; windowHeight: number } }) => void
+  ): void;
 
   type Callback<T> = T &
     Omit<

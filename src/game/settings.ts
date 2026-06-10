@@ -9,34 +9,50 @@ import { GAME_WIDTH } from './consts';
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 interface SettingsLayout {
-  panelW: number; panelH: number;
-  panelX: number; panelY: number;
-  btnSize: number; btnY: number;
-  btnLeftX: number; btnRightX: number;
+  panelW: number;
+  panelH: number;
+  panelX: number;
+  panelY: number;
+  btnSize: number;
+  btnY: number;
+  btnLeftX: number;
+  btnRightX: number;
 }
 
 function portraitLayout(): SettingsLayout {
-  const panelW = 700, panelH = 400;
+  const panelW = 700,
+    panelH = 400;
   const panelX = (GAME_WIDTH - panelW) / 2;
   const panelY = 760;
   const btnSize = 200;
   const btnY = panelY + panelH / 2 - btnSize / 2 + 20;
   return {
-    panelW, panelH, panelX, panelY, btnSize, btnY,
-    btnLeftX:  panelX + 80,
+    panelW,
+    panelH,
+    panelX,
+    panelY,
+    btnSize,
+    btnY,
+    btnLeftX: panelX + 80,
     btnRightX: panelX + panelW - 80 - btnSize,
   };
 }
 
 function landscapeLayout(screenW: number): SettingsLayout {
-  const panelW = 700, panelH = 400;
+  const panelW = 700,
+    panelH = 400;
   const panelX = Math.round((screenW - panelW) / 2);
   const panelY = 340;
   const btnSize = 200;
   const btnY = panelY + panelH / 2 - btnSize / 2 + 20;
   return {
-    panelW, panelH, panelX, panelY, btnSize, btnY,
-    btnLeftX:  panelX + 80,
+    panelW,
+    panelH,
+    panelX,
+    panelY,
+    btnSize,
+    btnY,
+    btnLeftX: panelX + 80,
     btnRightX: panelX + panelW - 80 - btnSize,
   };
 }
@@ -50,9 +66,9 @@ function getLayout(screen: ScreenConfig): SettingsLayout {
 // ── SettingsOverlay ───────────────────────────────────────────────────────────
 
 export class SettingsOverlay extends PIXI.Container {
-  private readonly bg:        PIXI.Graphics;
+  private readonly bg: PIXI.Graphics;
   private readonly resumeBtn: PIXI.Sprite;
-  private readonly lobbyBtn:  PIXI.Sprite;
+  private readonly lobbyBtn: PIXI.Sprite;
   private lastPanelW = 0;
   private lastPanelH = 0;
 
@@ -74,9 +90,15 @@ export class SettingsOverlay extends PIXI.Container {
     this.applyLayout(portraitLayout());
   }
 
-  public resize(screen: ScreenConfig): void { this.applyLayout(getLayout(screen)); }
-  public show(): void { this.visible = true; }
-  public hide(): void { this.visible = false; }
+  public resize(screen: ScreenConfig): void {
+    this.applyLayout(getLayout(screen));
+  }
+  public show(): void {
+    this.visible = true;
+  }
+  public hide(): void {
+    this.visible = false;
+  }
 
   private applyLayout(L: SettingsLayout): void {
     if (L.panelW !== this.lastPanelW || L.panelH !== this.lastPanelH) {
@@ -85,12 +107,17 @@ export class SettingsOverlay extends PIXI.Container {
       this.lastPanelW = L.panelW;
       this.lastPanelH = L.panelH;
     }
-    this.bg.x = L.panelX; this.bg.y = L.panelY;
+    this.bg.x = L.panelX;
+    this.bg.y = L.panelY;
 
-    this.resumeBtn.width  = L.btnSize; this.resumeBtn.height = L.btnSize;
-    this.resumeBtn.x = L.btnLeftX;    this.resumeBtn.y = L.btnY;
+    this.resumeBtn.width = L.btnSize;
+    this.resumeBtn.height = L.btnSize;
+    this.resumeBtn.x = L.btnLeftX;
+    this.resumeBtn.y = L.btnY;
 
-    this.lobbyBtn.width  = L.btnSize; this.lobbyBtn.height = L.btnSize;
-    this.lobbyBtn.x = L.btnRightX;   this.lobbyBtn.y = L.btnY;
+    this.lobbyBtn.width = L.btnSize;
+    this.lobbyBtn.height = L.btnSize;
+    this.lobbyBtn.x = L.btnRightX;
+    this.lobbyBtn.y = L.btnY;
   }
 }

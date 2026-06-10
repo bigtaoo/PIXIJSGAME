@@ -33,10 +33,7 @@ export class NumberLayer extends PIXI.Container {
   /** Active hint pulse animations (at most one at a time in practice). */
   private hintAnimations: HintAnimation[] = [];
 
-  constructor(
-    private readonly ctx: AppContext,
-    private readonly screen: ScreenConfig,
-  ) {
+  constructor(private readonly ctx: AppContext, private readonly screen: ScreenConfig) {
     super();
   }
 
@@ -118,7 +115,10 @@ export class NumberLayer extends PIXI.Container {
 
       for (const idx of anim.indices) {
         const cell = this.cells.get(idx);
-        if (cell) cell.slots.forEach((s) => { if (s.visible) s.alpha = alpha; });
+        if (cell)
+          cell.slots.forEach((s) => {
+            if (s.visible) s.alpha = alpha;
+          });
       }
 
       if (anim.elapsed >= HINT_DURATION_MS) {
@@ -142,7 +142,7 @@ export class NumberLayer extends PIXI.Container {
     const cellX = col * gridSize + offsetX + gridSize * 0.05;
     const cellY = row * gridSize + offsetY + gridSize * 0.05;
 
-    const str = n.toString();          // e.g. 15 -> "15", 7 -> "7"
+    const str = n.toString(); // e.g. 15 -> "15", 7 -> "7"
     const isTwoDigit = str.length >= 2;
 
     if (isTwoDigit) {
@@ -159,17 +159,17 @@ export class NumberLayer extends PIXI.Container {
     cellX: number,
     cellY: number,
     gs: number,
-    digit: string,
+    digit: string
   ): void {
     const cell = this.getOrCreateCell(idx, false);
     const s = cell.slots[0];
 
     s.texture = this.ctx.assets.GetTexture(`${digit}.png`);
-    s.width   = gs * 0.8;
-    s.height  = gs * 1.0;
-    s.x       = cellX + 5;
-    s.y       = cellY - 8;
-    s.alpha   = 1;
+    s.width = gs * 0.8;
+    s.height = gs * 1.0;
+    s.x = cellX + 5;
+    s.y = cellY - 8;
+    s.alpha = 1;
     s.visible = true;
 
     // Hide the tens slot if it exists
@@ -184,36 +184,36 @@ export class NumberLayer extends PIXI.Container {
     cellY: number,
     gs: number,
     tensChar: string,
-    unitsChar: string,
+    unitsChar: string
   ): void {
     const cell = this.getOrCreateCell(idx, true);
 
     // Scale the pair to 80% of the cell; each digit gets half the total width
-    const scale  = 1.0;
+    const scale = 1.0;
     const totalW = gs * scale;
-    const dw     = totalW / 2;              // width per digit
-    const dh     = gs * scale;              // height per digit
-    const marginX = (gs - totalW) / 2;      // horizontal centering offset
-    const marginY = (gs - dh) / 2 - 8;          // vertical centering offset
+    const dw = totalW / 2; // width per digit
+    const dh = gs * scale; // height per digit
+    const marginX = (gs - totalW) / 2; // horizontal centering offset
+    const marginY = (gs - dh) / 2 - 8; // vertical centering offset
 
     const digits = [tensChar, unitsChar];
 
     const s0 = cell.slots[0]!;
     s0.texture = this.ctx.assets.GetTexture(`${digits[0]}.png`);
-    s0.width   = dw;
-    s0.height  = dh;
-    s0.x       = cellX + marginX + 0 * dw;
-    s0.y       = cellY + marginY;
-    s0.alpha   = 1;
+    s0.width = dw;
+    s0.height = dh;
+    s0.x = cellX + marginX + 0 * dw;
+    s0.y = cellY + marginY;
+    s0.alpha = 1;
     s0.visible = true;
 
     const s1 = cell.slots[1]!;
     s1.texture = this.ctx.assets.GetTexture(`${digits[1]}.png`);
-    s1.width   = dw;
-    s1.height  = dh;
-    s1.x       = cellX + marginX + 1 * dw - 15;
-    s1.y       = cellY + marginY;
-    s1.alpha   = 1;
+    s1.width = dw;
+    s1.height = dh;
+    s1.x = cellX + marginX + 1 * dw - 15;
+    s1.y = cellY + marginY;
+    s1.alpha = 1;
     s1.visible = true;
   }
 

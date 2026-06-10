@@ -18,39 +18,39 @@ import { drawQuestionMark } from './graphicsFactory';
 
 /** Minimum layout info needed to render the hint-formula tip area. */
 export interface TipLayout {
-  tipY:          number;
-  tipSlotW:      number;
-  tipSlotH:      number;
-  tipSlot1X:     number;
-  tipPlusX:      number;
-  tipSlot2X:     number;
-  tipEquaX:      number;
-  tipTargetX:    number;
+  tipY: number;
+  tipSlotW: number;
+  tipSlotH: number;
+  tipSlot1X: number;
+  tipPlusX: number;
+  tipSlot2X: number;
+  tipEquaX: number;
+  tipTargetX: number;
   tipTargetStep: number;
 }
 
 export abstract class BaseHeader extends PIXI.Container {
   // ── Clock ──────────────────────────────────────────────────────────────────
   protected clockContainer!: PIXI.Container;
-  protected clockFace!:      PIXI.Sprite;
-  protected clockHand!:      PIXI.Sprite;
+  protected clockFace!: PIXI.Sprite;
+  protected clockHand!: PIXI.Sprite;
 
   // ── Tip formula ────────────────────────────────────────────────────────────
-  protected tipContainer!:    PIXI.Container;
+  protected tipContainer!: PIXI.Container;
   protected tipResultElapsed = -1;
 
   // ── Music ──────────────────────────────────────────────────────────────────
   protected musicSprite!: PIXI.Sprite;
 
   // ── Shared constants ───────────────────────────────────────────────────────
-  protected static readonly WARN_THRESHOLD    = 10;
+  protected static readonly WARN_THRESHOLD = 10;
   protected static readonly RESULT_DISPLAY_MS = 500;
 
   // ── Slot style (set in subclass constructor) ───────────────────────────────
-  protected emptySlotBorderColor = 0xBBBBBB;
+  protected emptySlotBorderColor = 0xbbbbbb;
   protected emptySlotBorderAlpha = 1;
   protected emptySlotBorderWidth = 2;
-  protected emptySlotFillColor   = 0xF0F0F0;
+  protected emptySlotFillColor = 0xf0f0f0;
 
   /**
    * true  → plus/equals signs use full slot dimensions (DailyChallengeHeader)
@@ -81,21 +81,21 @@ export abstract class BaseHeader extends PIXI.Container {
     this.clockContainer.x = x;
     this.clockContainer.y = y;
 
-    this.clockFace        = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_face.png'));
-    this.clockFace.width  = size;
+    this.clockFace = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_face.png'));
+    this.clockFace.width = size;
     this.clockFace.height = size;
     this.clockContainer.addChild(this.clockFace);
 
-    const r     = size / 2;
+    const r = size / 2;
     const handW = Math.round(size * 0.063);
-    const handH = Math.round(size * 0.350);
-    this.clockHand           = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
-    this.clockHand.width     = handW;
-    this.clockHand.height    = handH;
+    const handH = Math.round(size * 0.35);
+    this.clockHand = new PIXI.Sprite(this.ctx.assets.GetTexture('clock_hand.png'));
+    this.clockHand.width = handW;
+    this.clockHand.height = handH;
     this.clockHand.pivot.set(handW / 2, 0);
-    this.clockHand.x         = r;
-    this.clockHand.y         = r;
-    this.clockHand.rotation  = Math.PI;
+    this.clockHand.x = r;
+    this.clockHand.y = r;
+    this.clockHand.rotation = Math.PI;
     this.clockContainer.addChild(this.clockHand);
 
     this.addChild(this.clockContainer);
@@ -105,42 +105,44 @@ export abstract class BaseHeader extends PIXI.Container {
   protected resizeClock(x: number, y: number, size: number): void {
     this.clockContainer.x = x;
     this.clockContainer.y = y;
-    this.clockFace.width  = size;
+    this.clockFace.width = size;
     this.clockFace.height = size;
-    const r     = size / 2;
+    const r = size / 2;
     const handW = Math.round(size * 0.063);
-    const handH = Math.round(size * 0.350);
-    this.clockHand.width  = handW;
+    const handH = Math.round(size * 0.35);
+    this.clockHand.width = handW;
     this.clockHand.height = handH;
     this.clockHand.pivot.set(handW / 2, 0);
-    this.clockHand.x      = r;
-    this.clockHand.y      = r;
+    this.clockHand.x = r;
+    this.clockHand.y = r;
   }
 
   // ── Protected music helpers ────────────────────────────────────────────────
 
   /** Create, add, and register the music-toggle button. */
   protected buildMusicButton(x: number, y: number, size: number): void {
-    const btn  = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
-    btn.width  = size;
+    const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
+    btn.width = size;
     btn.height = size;
-    btn.x      = x;
-    btn.y      = y;
+    btn.x = x;
+    btn.y = y;
     this.applyMusicTint(btn);
     this.addChild(btn);
     this.musicSprite = btn;
-    this.ctx.input.registerUI(new UIElement({
-      zIndex: 15,
-      sprite: btn,
-      onTap: () => {
-        this.ctx.audio.toggleMusic();
-        this.applyMusicTint(btn);
-      },
-    }));
+    this.ctx.input.registerUI(
+      new UIElement({
+        zIndex: 15,
+        sprite: btn,
+        onTap: () => {
+          this.ctx.audio.toggleMusic();
+          this.applyMusicTint(btn);
+        },
+      })
+    );
   }
 
   protected applyMusicTint(sprite: PIXI.Sprite): void {
-    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xFFFFFF : 0x444444;
+    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xffffff : 0x444444;
   }
 
   // ── Protected tip helpers ──────────────────────────────────────────────────
@@ -152,11 +154,7 @@ export abstract class BaseHeader extends PIXI.Container {
    * @param second Right-slot value; null = empty slot
    * @param L      Tip-area layout values
    */
-  protected rebuildTipContainer(
-    first: number | null,
-    second: number | null,
-    L: TipLayout,
-  ): void {
+  protected rebuildTipContainer(first: number | null, second: number | null, L: TipLayout): void {
     if (this.tipContainer) {
       this.removeChild(this.tipContainer);
       this.tipContainer.destroy({ children: true });
@@ -164,18 +162,22 @@ export abstract class BaseHeader extends PIXI.Container {
     this.tipContainer = new PIXI.Container();
     const { tipY: Y, tipSlotW: W, tipSlotH: H } = L;
 
-    this.addSlotOrValue(this.tipContainer, first,  L.tipSlot1X, Y, W, H);
+    this.addSlotOrValue(this.tipContainer, first, L.tipSlot1X, Y, W, H);
     this.addTipSymbol('plus.png', L.tipPlusX, Y, W, H);
     this.addSlotOrValue(this.tipContainer, second, L.tipSlot2X, Y, W, H);
     this.addTipSymbol('equa.png', L.tipEquaX, Y, W, H);
 
-    this.getTarget().toString().split('').forEach((ch, i) => {
-      const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
-      s.width   = W; s.height = H;
-      s.x       = L.tipTargetX + i * L.tipTargetStep;
-      s.y       = Y;
-      this.tipContainer.addChild(s);
-    });
+    this.getTarget()
+      .toString()
+      .split('')
+      .forEach((ch, i) => {
+        const s = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+        s.width = W;
+        s.height = H;
+        s.x = L.tipTargetX + i * L.tipTargetStep;
+        s.y = Y;
+        this.tipContainer.addChild(s);
+      });
 
     this.addChild(this.tipContainer);
   }
@@ -196,7 +198,10 @@ export abstract class BaseHeader extends PIXI.Container {
   protected addSlotOrValue(
     container: PIXI.Container,
     value: number | null,
-    x: number, y: number, w: number, h: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number
   ): void {
     if (value === null) {
       const g = new PIXI.Graphics();
@@ -209,16 +214,20 @@ export abstract class BaseHeader extends PIXI.Container {
     } else {
       const digits = value.toString().split('');
       if (digits.length === 1) {
-        const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${digits[0]}.png`));
-        s.width   = w; s.height = h;
-        s.x       = x; s.y      = y;
+        const s = new PIXI.Sprite(this.ctx.assets.GetTexture(`${digits[0]}.png`));
+        s.width = w;
+        s.height = h;
+        s.x = x;
+        s.y = y;
         container.addChild(s);
       } else {
         const dw = Math.floor((w - 4) / 2);
         digits.forEach((ch, i) => {
-          const s   = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
-          s.width   = dw; s.height = h;
-          s.x       = x + i * (dw + 4); s.y = y;
+          const s = new PIXI.Sprite(this.ctx.assets.GetTexture(`${ch}.png`));
+          s.width = dw;
+          s.height = h;
+          s.x = x + i * (dw + 4);
+          s.y = y;
           container.addChild(s);
         });
       }
@@ -234,13 +243,17 @@ export abstract class BaseHeader extends PIXI.Container {
   private addTipSymbol(texture: string, x: number, y: number, w: number, h: number): void {
     const sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(texture));
     if (this.tipSymbolFullSize) {
-      sprite.width  = w; sprite.height = h;
-      sprite.x      = x; sprite.y      = y;
+      sprite.width = w;
+      sprite.height = h;
+      sprite.x = x;
+      sprite.y = y;
     } else {
-      const sW = Math.round(w * 2 / 3), sH = Math.round(h * 2 / 3);
-      sprite.width  = sW; sprite.height = sH;
-      sprite.x      = x + Math.round((w - sW) / 2);
-      sprite.y      = y + Math.round((h - sH) / 2);
+      const sW = Math.round((w * 2) / 3),
+        sH = Math.round((h * 2) / 3);
+      sprite.width = sW;
+      sprite.height = sH;
+      sprite.x = x + Math.round((w - sW) / 2);
+      sprite.y = y + Math.round((h - sH) / 2);
     }
     this.tipContainer.addChild(sprite);
   }

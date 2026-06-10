@@ -12,11 +12,11 @@
 import { IPlayerPrefs } from '../playerPrefs/IPlayerPrefs';
 import { IAudioManager } from './IAudioManager';
 
-import musicBgUrl   from '../assets/music_bg_web.ogg';
-import clickUrl     from '../assets/click.ogg';
-import addtimeUrl   from '../assets/addtime.ogg';
-import victoryUrl   from '../assets/victory.ogg';
-import gameoverUrl  from '../assets/gameover.ogg';
+import musicBgUrl from '../assets/music_bg_web.ogg';
+import clickUrl from '../assets/click.ogg';
+import addtimeUrl from '../assets/addtime.ogg';
+import victoryUrl from '../assets/victory.ogg';
+import gameoverUrl from '../assets/gameover.ogg';
 
 const PREF_KEY = 'music_enabled';
 
@@ -70,14 +70,20 @@ export class MobileAudioManager implements IAudioManager {
   // ── Background music ────────────────────────────────────────────────────────
 
   public playBgMusic(): void {
-    this.resume().then(() => this.ensureBuffer('bg', musicBgUrl)).then(buf => {
-      if (!buf || !this.musicEnabled) return;
-      this.startBgLoop(buf);
-    });
+    this.resume()
+      .then(() => this.ensureBuffer('bg', musicBgUrl))
+      .then((buf) => {
+        if (!buf || !this.musicEnabled) return;
+        this.startBgLoop(buf);
+      });
   }
 
   public stopBgMusic(): void {
-    try { this.bgSource?.stop(); } catch { /* already stopped */ }
+    try {
+      this.bgSource?.stop();
+    } catch {
+      /* already stopped */
+    }
     this.bgSource = null;
   }
 
@@ -99,7 +105,11 @@ export class MobileAudioManager implements IAudioManager {
   public toggleMusic(): boolean {
     this.musicEnabled = !this.musicEnabled;
     this.prefs.setInt(PREF_KEY, this.musicEnabled ? 1 : 0);
-    this.musicEnabled ? this.playBgMusic() : this.stopBgMusic();
+    if (this.musicEnabled) {
+      this.playBgMusic();
+    } else {
+      this.stopBgMusic();
+    }
     return this.musicEnabled;
   }
 
@@ -109,13 +119,21 @@ export class MobileAudioManager implements IAudioManager {
 
   // ── Sound effects ───────────────────────────────────────────────────────────
 
-  public playClick(): void    { this.playSfx('click',   clickUrl,   0.8); }
-  public playAddTime(): void  { this.playSfx('addtime', addtimeUrl, 0.8); }
-  public playVictory(): void  { this.playSfx('victory', victoryUrl, 0.8); }
-  public playGameOver(): void { this.playSfx('gameover',gameoverUrl,0.8); }
+  public playClick(): void {
+    this.playSfx('click', clickUrl, 0.8);
+  }
+  public playAddTime(): void {
+    this.playSfx('addtime', addtimeUrl, 0.8);
+  }
+  public playVictory(): void {
+    this.playSfx('victory', victoryUrl, 0.8);
+  }
+  public playGameOver(): void {
+    this.playSfx('gameover', gameoverUrl, 0.8);
+  }
 
   private playSfx(key: SfxKey, url: string, volume: number): void {
-    this.ensureBuffer(key, url).then(buf => {
+    this.ensureBuffer(key, url).then((buf) => {
       if (!buf) return;
       const ctx = this.context();
       if (ctx.state !== 'running') return;

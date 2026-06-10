@@ -7,17 +7,17 @@ import { ScreenConfig } from './screenConfig';
 // ── ComboRipple ────────────────────────────────────────────────────────────
 
 const RIPPLE_DURATION = 200; // ms
-const RIPPLE_COLOR_2  = 0xFFD700; // combo ×2 — gold
-const RIPPLE_COLOR_3  = 0x76FF03; // combo ×3+ — bright green
+const RIPPLE_COLOR_2 = 0xffd700; // combo ×2 — gold
+const RIPPLE_COLOR_3 = 0x76ff03; // combo ×3+ — bright green
 const RIPPLE_LINE_WIDTH = 3;
 
 interface Ripple {
-  gfx:      PIXI.Graphics;
-  cx:       number;
-  cy:       number;
-  color:    number;
-  elapsed:  number;
-  active:   boolean;
+  gfx: PIXI.Graphics;
+  cx: number;
+  cy: number;
+  color: number;
+  elapsed: number;
+  active: boolean;
 }
 
 // ── EffectManager ──────────────────────────────────────────────────────────
@@ -25,13 +25,13 @@ interface Ripple {
 // ── ComboGlow ──────────────────────────────────────────────────────────────
 
 const GLOW_DURATION = 400; // ms
-const GLOW_COLOR_2  = 0xFFD700; // combo ×2 — gold
-const GLOW_COLOR_3  = 0x76FF03; // combo ×3+ — green
+const GLOW_COLOR_2 = 0xffd700; // combo ×2 — gold
+const GLOW_COLOR_3 = 0x76ff03; // combo ×3+ — green
 
 interface ComboGlow {
-  spr:     PIXI.Sprite;
+  spr: PIXI.Sprite;
   elapsed: number;
-  active:  boolean;
+  active: boolean;
 }
 
 export class EffectManager extends PIXI.Container {
@@ -49,10 +49,7 @@ export class EffectManager extends PIXI.Container {
    */
   public readonly flyingLayer = new PIXI.Container();
 
-  constructor(
-    private readonly ctx: AppContext,
-    private readonly screen: ScreenConfig,
-  ) {
+  constructor(private readonly ctx: AppContext, private readonly screen: ScreenConfig) {
     super();
     this.explosion = new ExplosionSystem(this, ctx.assets);
   }
@@ -80,26 +77,30 @@ export class EffectManager extends PIXI.Container {
 
   private spawnRipple(cx: number, cy: number, color: number): void {
     // Reuse an inactive ripple from the pool, or create a new one.
-    let r = this.ripples.find(p => !p.active);
+    let r = this.ripples.find((p) => !p.active);
     if (!r) {
       const gfx = new PIXI.Graphics();
       this.addChild(gfx);
       r = { gfx, cx, cy, color, elapsed: 0, active: false };
       this.ripples.push(r);
     }
-    r.cx      = cx;
-    r.cy      = cy;
-    r.color   = color;
+    r.cx = cx;
+    r.cy = cy;
+    r.color = color;
     r.elapsed = 0;
-    r.active  = true;
+    r.active = true;
   }
 
   private spawnGlow(cx: number, cy: number, color: number): void {
     // Skip if the asset isn't loaded yet (during development / missing file).
     let tex: PIXI.Texture | null = null;
-    try { tex = this.ctx.assets.GetTexture('combo_glow.png'); } catch { return; }
+    try {
+      tex = this.ctx.assets.GetTexture('combo_glow.png');
+    } catch {
+      return;
+    }
 
-    let g = this.glows.find(p => !p.active);
+    let g = this.glows.find((p) => !p.active);
     if (!g) {
       const spr = new PIXI.Sprite();
       spr.anchor.set(0.5);
@@ -109,15 +110,15 @@ export class EffectManager extends PIXI.Container {
       this.glows.push(g);
     }
     g.spr.texture = tex;
-    g.spr.tint    = color;
-    g.spr.x       = cx;
-    g.spr.y       = cy;
-    g.spr.alpha   = 1;
+    g.spr.tint = color;
+    g.spr.x = cx;
+    g.spr.y = cy;
+    g.spr.alpha = 1;
     // Scale so glow matches cell size
     const s = this.screen.gridSize / tex.width;
     g.spr.scale.set(s * 1.4); // slightly larger than cell for soft bloom
     g.elapsed = 0;
-    g.active  = true;
+    g.active = true;
   }
 
   private updateGlows(deltaMs: number): void {
@@ -143,7 +144,7 @@ export class EffectManager extends PIXI.Container {
       r.elapsed += deltaMs;
       const t = Math.min(r.elapsed / RIPPLE_DURATION, 1);
       const radius = rMin + (rMax - rMin) * t;
-      const alpha  = 1 - t;
+      const alpha = 1 - t;
 
       r.gfx.clear();
       r.gfx.lineStyle(RIPPLE_LINE_WIDTH, r.color, alpha);
@@ -167,9 +168,18 @@ export class EffectManager extends PIXI.Container {
     endY: number,
     bonusSeconds: number,
     isCombo: boolean,
-    onReached: () => void,
+    onReached: () => void
   ): void {
-    const fb = new FlyingBonus(startX, startY, endX, endY, bonusSeconds, isCombo, onReached, this.ctx);
+    const fb = new FlyingBonus(
+      startX,
+      startY,
+      endX,
+      endY,
+      bonusSeconds,
+      isCombo,
+      onReached,
+      this.ctx
+    );
     this.flyingBonuses.push(fb);
     this.flyingLayer.addChild(fb);
   }
@@ -184,9 +194,19 @@ export class EffectManager extends PIXI.Container {
     endX: number,
     endY: number,
     points: number,
-    isCombo: boolean,
+    isCombo: boolean
   ): void {
-    const fb = new FlyingBonus(startX, startY, endX, endY, points, isCombo, () => {}, this.ctx, false);
+    const fb = new FlyingBonus(
+      startX,
+      startY,
+      endX,
+      endY,
+      points,
+      isCombo,
+      () => {},
+      this.ctx,
+      false
+    );
     this.flyingBonuses.push(fb);
     this.flyingLayer.addChild(fb);
   }

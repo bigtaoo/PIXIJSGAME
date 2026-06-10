@@ -11,10 +11,10 @@
 import { PlayerPrefs } from '../playerPrefs/playerPrefs';
 import { todayString } from './seededRng';
 
-const KEY_DATE   = 'dc_date';    // "YYYY-MM-DD" of last score submission
-const KEY_BEST   = 'dc_best';    // best score for KEY_DATE
-const KEY_STREAK = 'dc_streak';  // consecutive days played
-const KEY_LAST   = 'dc_last';    // "YYYY-MM-DD" of last play (for streak logic)
+const KEY_DATE = 'dc_date'; // "YYYY-MM-DD" of last score submission
+const KEY_BEST = 'dc_best'; // best score for KEY_DATE
+const KEY_STREAK = 'dc_streak'; // consecutive days played
+const KEY_LAST = 'dc_last'; // "YYYY-MM-DD" of last play (for streak logic)
 
 // ─── Score ─────────────────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ export function getDailyBestScore(): number {
  * Returns true when a new personal best was set.
  */
 export function saveDailyScore(score: number): boolean {
-  const today   = todayString();
+  const today = todayString();
   const isToday = PlayerPrefs.getString(KEY_DATE, '') === today;
   const current = isToday ? PlayerPrefs.getInt(KEY_BEST, 0) : 0;
 
@@ -61,13 +61,11 @@ export function getStreakDays(): number {
  */
 export function recordDailyPlay(): void {
   const today = todayString();
-  const last  = PlayerPrefs.getString(KEY_LAST, '');
+  const last = PlayerPrefs.getString(KEY_LAST, '');
 
   if (last === today) return; // already recorded today
 
-  const streak = last === yesterday()
-    ? PlayerPrefs.getInt(KEY_STREAK, 0) + 1
-    : 1;
+  const streak = last === yesterday() ? PlayerPrefs.getInt(KEY_STREAK, 0) + 1 : 1;
 
   PlayerPrefs.setInt(KEY_STREAK, streak);
   PlayerPrefs.setString(KEY_LAST, today);

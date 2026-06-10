@@ -16,7 +16,7 @@ function setupPixiWechatAdapter(mainCanvas: HTMLCanvasElement) {
   // Use the already-created main canvas to get its constructor — avoids
   // consuming the main canvas slot with a throwaway call to wx.createCanvas().
   (globalThis as any).HTMLCanvasElement = (mainCanvas as any).constructor;
-  (globalThis as any).HTMLImageElement  = wx.createImage().constructor;
+  (globalThis as any).HTMLImageElement = wx.createImage().constructor;
 
   // Override settings.ADAPTER so all internal PixiJS canvas creation
   // (Texture.WHITE, tinting, etc.) uses wx.createCanvas() instead of
@@ -24,17 +24,17 @@ function setupPixiWechatAdapter(mainCanvas: HTMLCanvasElement) {
   PIXI.settings.ADAPTER = {
     createCanvas: (width?: number, height?: number) => {
       const c = wx.createCanvas();
-      if (width  !== undefined) c.width  = width;
+      if (width !== undefined) c.width = width;
       if (height !== undefined) c.height = height;
       return c as unknown as HTMLCanvasElement;
     },
     getCanvasRenderingContext2D: () => CanvasRenderingContext2D as any,
-    getWebGLRenderingContext:    () => WebGLRenderingContext as any,
-    getNavigator:  () => ({ userAgent: '' } as Navigator),
-    getBaseUrl:    () => '',
+    getWebGLRenderingContext: () => WebGLRenderingContext as any,
+    getNavigator: () => ({ userAgent: '' } as Navigator),
+    getBaseUrl: () => '',
     getFontFaceSet: () => undefined as any,
-    fetch:     (url: RequestInfo, init?: RequestInit) => fetch(url as string, init),
-    parseXML:  () => null as any,
+    fetch: (url: RequestInfo, init?: RequestInit) => fetch(url as string, init),
+    parseXML: () => null as any,
   };
 }
 
@@ -71,11 +71,22 @@ async function Init() {
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
 
   const audio = new WechatAudioManager(prefs);
-  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
+  const ctx: AppContext = {
+    assets,
+    input,
+    renderer: app.renderer as unknown as PIXI.Renderer,
+    audio,
+  };
 
   // WeChat requires a user-gesture before audio can play.
   // Register a one-shot touchstart on the main canvas to unlock music.
-  canvas.addEventListener('touchstart', () => { audio.playBgMusic(); }, { once: true } as any);
+  canvas.addEventListener(
+    'touchstart',
+    () => {
+      audio.playBgMusic();
+    },
+    { once: true } as any
+  );
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);

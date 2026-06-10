@@ -34,8 +34,8 @@ export class DailyChallengeLogic extends Logic {
    */
   public initializeSeeded(target: number, rng: RngFn, w = DAILY_GRID_W, h = DAILY_GRID_H): void {
     this.target = target;
-    this.gridW  = w;
-    this.gridH  = h;
+    this.gridW = w;
+    this.gridH = h;
     this.numbers.clear();
 
     const pairs: number[] = [];
@@ -43,7 +43,7 @@ export class DailyChallengeLogic extends Logic {
 
     for (let i = 0; i < count; i++) {
       // first ∈ [1, target-1], second = target - first
-      const first  = 1 + Math.floor(rng() * (target - 1));
+      const first = 1 + Math.floor(rng() * (target - 1));
       const second = target - first;
       pairs.push(first, second);
     }
@@ -81,7 +81,10 @@ export class DailyChallengeLogic extends Logic {
     // Search from the bottom up; collapse the lowest empty row first.
     let emptyRow = -1;
     for (let row = h - 1; row >= 0; row--) {
-      if (this.isRowEmpty(row)) { emptyRow = row; break; }
+      if (this.isRowEmpty(row)) {
+        emptyRow = row;
+        break;
+      }
     }
     if (emptyRow === -1) return false;
 
@@ -118,7 +121,7 @@ export class DailyChallengeLogic extends Logic {
     const pairs: number[] = [];
 
     for (let i = 0; i < w / 2; i++) {
-      const first  = 1 + Math.floor(Math.random() * (this.target - 1));
+      const first = 1 + Math.floor(Math.random() * (this.target - 1));
       const second = this.target - first;
       pairs.push(first, second);
     }

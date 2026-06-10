@@ -10,10 +10,10 @@
  * All cell counts are even numbers to guarantee valid pairing.
  */
 export interface StageData {
-  readonly stageIndex: number;         // 1-based (1-19)
+  readonly stageIndex: number; // 1-based (1-19)
   readonly targets: readonly number[]; // target values to clear in order
-  readonly gridW: number;              // horizontal cell count
-  readonly gridH: number;              // vertical cell count
+  readonly gridW: number; // horizontal cell count
+  readonly gridH: number; // vertical cell count
 }
 
 function getGridDims(startTarget: number): [number, number] {

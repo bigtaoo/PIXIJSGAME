@@ -10,7 +10,7 @@ import { Header } from './header';
 import { GameResultOverlay } from './gameResult';
 import { SettingsOverlay } from './settings';
 import { StageData } from './stageConfig';
-import { drawBackground, drawPanel } from './graphicsFactory';
+import { drawBackground } from './graphicsFactory';
 import { StarManager } from './starManager';
 import { StageManager } from './stageManager';
 
@@ -47,7 +47,7 @@ export class GameScene extends PIXI.Container {
   /** Tracks vignette fade state: alpha 0-1, decays in update(). */
   private vignetteAlpha = 0;
   /** Combo colour used for the current vignette (gold or green). */
-  private vignetteColor = 0xFFD700;
+  private vignetteColor = 0xffd700;
 
   /** Callback invoked when the sub-target celebration finishes. null = not celebrating. */
   private _celebrationDone: (() => void) | null = null;
@@ -60,11 +60,11 @@ export class GameScene extends PIXI.Container {
   /** Threshold for the next hint fire: HINT_DELAY_MS on first fire, HINT_REPEAT_MS afterwards. */
   private hintThreshold = 0;
 
-  private static readonly COMBO_WINDOW_MS  = 3000;
+  private static readonly COMBO_WINDOW_MS = 3000;
   /** Initial delay before the first hint flash after a cell is selected. */
-  private static readonly HINT_DELAY_MS   = 3000;
+  private static readonly HINT_DELAY_MS = 3000;
   /** Repeat interval for subsequent hint flashes if the player still hasn't acted. */
-  private static readonly HINT_REPEAT_MS  = 2000;
+  private static readonly HINT_REPEAT_MS = 2000;
 
   /**
    * True if at least one life was lost during the current stage attempt.
@@ -76,12 +76,12 @@ export class GameScene extends PIXI.Container {
   constructor(
     private readonly ctx: AppContext,
     private readonly onStageComplete: (completedStage: StageData) => void,
-    private readonly onGoLobby: () => void,
+    private readonly onGoLobby: () => void
   ) {
     super();
     this.screen = new ScreenConfig();
-    this.state  = new GameState();
-    this.logic  = new Logic();
+    this.state = new GameState();
+    this.logic = new Logic();
   }
 
   // -- Public API -------------------------------------------------------------
@@ -101,7 +101,9 @@ export class GameScene extends PIXI.Container {
     if (this.currentTargetIdx < this.stage.targets.length) return;
 
     const stars = StarManager.calculateStars(
-      this.stage.stageIndex, this.livesEverLost, this.state.timeRemainingMs,
+      this.stage.stageIndex,
+      this.livesEverLost,
+      this.state.timeRemainingMs
     );
     StarManager.saveStars(this.stage.stageIndex, stars);
     StageManager.recordComplete(this.stage.stageIndex);
@@ -111,10 +113,10 @@ export class GameScene extends PIXI.Container {
     this.stage = stage;
     this.screen.setGridDims(stage.gridW, stage.gridH);
 
-    this.lives            = 3;
+    this.lives = 3;
     this.currentTargetIdx = 0;
-    this.livesEverLost    = false;
-    this._extraLifeUsed   = false;
+    this.livesEverLost = false;
+    this._extraLifeUsed = false;
     this.state.reset();
     this.gameTimeMs = 0;
 
@@ -177,9 +179,9 @@ export class GameScene extends PIXI.Container {
       this._celebrationElapsed += deltaMs;
       if (this._celebrationElapsed >= GameScene.CELEBRATION_DURATION_MS) {
         const done = this._celebrationDone;
-        this._celebrationDone    = null;
+        this._celebrationDone = null;
         this._celebrationElapsed = 0;
-        this.state.isPause       = false;
+        this.state.isPause = false;
         done();
       }
     }
@@ -222,25 +224,39 @@ export class GameScene extends PIXI.Container {
 
     const audio = this.ctx.audio;
 
-    this.gridLayer   = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
+    this.gridLayer = new Grid(this.ctx, this.screen, (idx) => this.onCellClick(idx));
     this.numberLayer = new NumberLayer(this.ctx, this.screen);
     this.effectLayer = new EffectManager(this.ctx, this.screen);
-    this.header      = new Header(
-      this.ctx, this.screen,
-      this.stage.targets[0],
-      () => { audio.playClick(); this.openSettings(); },
-    );
+    this.header = new Header(this.ctx, this.screen, this.stage.targets[0], () => {
+      audio.playClick();
+      this.openSettings();
+    });
 
     this.resultOverlay = new GameResultOverlay(
       this.ctx,
-      () => { audio.playClick(); this.retryStageAfterGameOver(); },
-      () => { audio.playClick(); this.onStageComplete(this.stage); },
-      () => { audio.playClick(); this.onGoLobby(); },
+      () => {
+        audio.playClick();
+        this.retryStageAfterGameOver();
+      },
+      () => {
+        audio.playClick();
+        this.onStageComplete(this.stage);
+      },
+      () => {
+        audio.playClick();
+        this.onGoLobby();
+      }
     );
     this.settingsOverlay = new SettingsOverlay(
       this.ctx,
-      () => { audio.playClick(); this.resumeGame(); },
-      () => { audio.playClick(); this.onGoLobby(); },
+      () => {
+        audio.playClick();
+        this.resumeGame();
+      },
+      () => {
+        audio.playClick();
+        this.onGoLobby();
+      }
     );
 
     // gameContainer holds the three game-content layers so they can be
@@ -315,9 +331,13 @@ export class GameScene extends PIXI.Container {
       // so the lobby reflects the new unlock even if the player taps "lobby"
       // instead of "next".
       this.state.isGameEnd = true;
-      this.selectedIndex   = -1;
+      this.selectedIndex = -1;
       this.gridLayer.hideSelection();
-      const stars = StarManager.calculateStars(this.stage.stageIndex, this.livesEverLost, this.state.timeRemainingMs);
+      const stars = StarManager.calculateStars(
+        this.stage.stageIndex,
+        this.livesEverLost,
+        this.state.timeRemainingMs
+      );
       StarManager.saveStars(this.stage.stageIndex, stars);
       StageManager.recordComplete(this.stage.stageIndex);
       this.ctx.audio.playVictory();
@@ -332,14 +352,14 @@ export class GameScene extends PIXI.Container {
    * the empty grid over 1.6 s, then the update() timer triggers onDone at 2 s.
    */
   private showTargetClearCelebration(onDone: () => void): void {
-    this.state.isPause    = true;
+    this.state.isPause = true;
     this._celebrationElapsed = 0;
-    this._celebrationDone    = onDone;
+    this._celebrationDone = onDone;
 
-    const cols       = this.screen.gridCountW;
-    const rows       = this.screen.gridCountH;
-    const SPREAD_MS  = GameScene.CELEBRATION_DURATION_MS - 300;
-    const BURST      = 50; // positions repeat freely across the grid
+    const cols = this.screen.gridCountW;
+    const rows = this.screen.gridCountH;
+    const SPREAD_MS = GameScene.CELEBRATION_DURATION_MS - 300;
+    const BURST = 50; // positions repeat freely across the grid
 
     // Pre-schedule random effect times within the first SPREAD_MS
     const schedule: Array<{ t: number; idx: number }> = [];
@@ -351,7 +371,7 @@ export class GameScene extends PIXI.Container {
     schedule.sort((a, b) => a.t - b.t);
 
     let elapsed = 0;
-    let next    = 0;
+    let next = 0;
     const fireFn = (): void => {
       elapsed += PIXI.Ticker.shared.elapsedMS;
       while (next < schedule.length && schedule[next].t <= elapsed) {
@@ -382,7 +402,7 @@ export class GameScene extends PIXI.Container {
     } else {
       // Freeze the game loop before triggering the rewarded-ad / game-over flow.
       this.state.isGameEnd = true;
-      this.selectedIndex   = -1;
+      this.selectedIndex = -1;
       this.gridLayer.hideSelection();
       this.tryExtraLife();
     }
@@ -470,8 +490,8 @@ export class GameScene extends PIXI.Container {
       return;
     }
 
-    const a      = this.logic.getNumberByIndex(this.selectedIndex);
-    const b      = this.logic.getNumberByIndex(index);
+    const a = this.logic.getNumberByIndex(this.selectedIndex);
+    const b = this.logic.getNumberByIndex(index);
     const target = this.stage.targets[this.currentTargetIdx];
 
     if (a + b === target) {
@@ -481,12 +501,12 @@ export class GameScene extends PIXI.Container {
       this.selectedIndex = index;
       this.gridLayer.showSelection(index);
       this.header.setFirstSelected(b);
-      this.startHintTimer();   // restart countdown for the new selection
+      this.startHintTimer(); // restart countdown for the new selection
     }
   }
 
   private eliminatePair(idxA: number, idxB: number, a: number, b: number): void {
-    this.resetHintTimer();   // pair found -- cancel any pending hint
+    this.resetHintTimer(); // pair found -- cancel any pending hint
     this.header.showMatchResult(a, b);
     this.gridLayer.hideSelection();
     this.gridLayer.hideCell(idxA);
@@ -516,9 +536,7 @@ export class GameScene extends PIXI.Container {
     this.selectedIndex = -1;
 
     // Bonus seconds: 1st (+2 s), 2nd consecutive (+3 s), 3rd+ (+4 s cap)
-    const bonusSec = this.comboCount === 1 ? 2
-                   : this.comboCount === 2 ? 3
-                   :                         4;
+    const bonusSec = this.comboCount === 1 ? 2 : this.comboCount === 2 ? 3 : 4;
 
     this.state.addTime(bonusSec * 1000);
     this.ctx.audio.playAddTime();
@@ -526,18 +544,21 @@ export class GameScene extends PIXI.Container {
     // Flying bonus animation -- bursts from the centre of the last-tapped cell (idxB).
     // indexToPos() returns coordinates in gameContainer local space; transform to
     // scene space so the label travels correctly to the clock (which is in scene space).
-    const half  = this.screen.gridSize / 2;
-    const posB  = this.screen.indexToPos(idxB);
+    const half = this.screen.gridSize / 2;
+    const posB = this.screen.indexToPos(idxB);
     const startX = this.gameContainer.x + (posB.x + half) * this.gameContainerScale;
     const startY = this.gameContainer.y + (posB.y + half) * this.gameContainerScale;
 
     const clockPos = this.header.getClockCenter();
 
     this.effectLayer.playFlyingBonus(
-      startX, startY,
-      clockPos.x, clockPos.y,
-      bonusSec, isCombo,
-      () => this.header.triggerClockBounce(),
+      startX,
+      startY,
+      clockPos.x,
+      clockPos.y,
+      bonusSec,
+      isCombo,
+      () => this.header.triggerClockBounce()
     );
 
     if (this.logic.isAllRemoved()) {
@@ -548,12 +569,12 @@ export class GameScene extends PIXI.Container {
   // -- Hint system ------------------------------------------------------------
 
   private resetHintTimer(): void {
-    this.hintTimerMs  = -1;
+    this.hintTimerMs = -1;
     this.hintThreshold = GameScene.HINT_DELAY_MS;
   }
 
   private startHintTimer(): void {
-    this.hintTimerMs  = 0;
+    this.hintTimerMs = 0;
     this.hintThreshold = GameScene.HINT_DELAY_MS;
   }
 
@@ -561,8 +582,8 @@ export class GameScene extends PIXI.Container {
     if (this.selectedIndex === -1) return;
 
     const selectedValue = this.logic.getNumberByIndex(this.selectedIndex);
-    const target        = this.stage.targets[this.currentTargetIdx];
-    const pairIndices   = this.logic.findPairIndices(selectedValue, target);
+    const target = this.stage.targets[this.currentTargetIdx];
+    const pairIndices = this.logic.findPairIndices(selectedValue, target);
 
     if (pairIndices.length > 0) {
       this.numberLayer.flashHint(pairIndices);
@@ -600,7 +621,7 @@ export class GameScene extends PIXI.Container {
     }
 
     const { width, height, offsetY, lockedLogicalW, lockedLogicalH } = this.screen;
-    const availH     = height - offsetY;
+    const availH = height - offsetY;
     const lockedPlayH = lockedLogicalH - offsetY;
 
     const s = Math.min(width / lockedLogicalW, availH / lockedPlayH);
@@ -623,20 +644,24 @@ export class GameScene extends PIXI.Container {
     // [key, anchorX, anchorY, x, y, rotation_deg, scale]
     const configs: Array<[string, number, number, number, number, number, number]> = [
       // corners
-      ['deco_pencil.png',    0,   0,   w * 0.02, h * 0.03,   15,  1.00],
-      ['deco_eraser.png',    1,   0,   w * 0.98, h * 0.04,  -10,  1.00],
-      ['deco_paperclip.png', 1,   1,   w * 0.97, h * 0.95,   20,  1.00],
-      ['deco_pencil.png',    0,   1,   w * 0.03, h * 0.95,  -20,  1.00],
+      ['deco_pencil.png', 0, 0, w * 0.02, h * 0.03, 15, 1.0],
+      ['deco_eraser.png', 1, 0, w * 0.98, h * 0.04, -10, 1.0],
+      ['deco_paperclip.png', 1, 1, w * 0.97, h * 0.95, 20, 1.0],
+      ['deco_pencil.png', 0, 1, w * 0.03, h * 0.95, -20, 1.0],
       // left / right mid-edge
-      ['deco_paperclip.png', 0, 0.5,   w * 0.01, h * 0.48,   85,  0.80],
-      ['deco_eraser.png',    1, 0.5,   w * 0.99, h * 0.52,  -80,  0.75],
+      ['deco_paperclip.png', 0, 0.5, w * 0.01, h * 0.48, 85, 0.8],
+      ['deco_eraser.png', 1, 0.5, w * 0.99, h * 0.52, -80, 0.75],
       // extra corner accents
-      ['deco_paperclip.png', 0,   0,   w * 0.04, h * 0.12,  -30,  0.70],
-      ['deco_pencil.png',    1,   1,   w * 0.96, h * 0.88,   10,  0.70],
+      ['deco_paperclip.png', 0, 0, w * 0.04, h * 0.12, -30, 0.7],
+      ['deco_pencil.png', 1, 1, w * 0.96, h * 0.88, 10, 0.7],
     ];
     for (const [key, ax, ay, x, y, deg, sc] of configs) {
       let tex: PIXI.Texture | null = null;
-      try { tex = this.ctx.assets.GetTexture(key); } catch { /* not yet available */ }
+      try {
+        tex = this.ctx.assets.GetTexture(key);
+      } catch {
+        /* not yet available */
+      }
       if (!tex) continue;
       const spr = new PIXI.Sprite(tex);
       spr.anchor.set(ax, ay);
@@ -665,7 +690,7 @@ export class GameScene extends PIXI.Container {
   }
 
   private triggerComboVignette(comboCount: number): void {
-    this.vignetteColor = comboCount >= 4 ? 0x76FF03 : 0xFFD700;
+    this.vignetteColor = comboCount >= 4 ? 0x76ff03 : 0xffd700;
     this.redrawVignette(this.screen.width, this.screen.height);
     this.vignetteAlpha = 1;
     this.comboVignette.alpha = 1;

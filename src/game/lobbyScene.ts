@@ -6,9 +6,14 @@ import { StageManager } from './stageManager';
 import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
-import { drawCircleCell, drawCircleCellSelected, makeTexture, drawButtonBackground } from './graphicsFactory';
+import {
+  drawCircleCell,
+  drawCircleCellSelected,
+  makeTexture,
+  drawButtonBackground,
+} from './graphicsFactory';
 import { getDailyBestScore } from './dailyChallengeStore';
-import { getLobbyLayout, LobbyLayout } from './lobbyLayout';
+import { getLobbyLayout } from './lobbyLayout';
 import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
 
@@ -23,108 +28,108 @@ function makeSeededRng(seed: number): () => number {
 }
 
 // ── Node star dimensions ─────────────────────────────────────────────────────
-const STAR_SIZE    = 22;
-const STAR_GAP     = 3;
+const STAR_SIZE = 22;
+const STAR_GAP = 3;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 // Padding around stars for the white pill background
-const STAR_PAD_X   = 6;
-const STAR_PAD_Y   = 4;
+const STAR_PAD_X = 6;
+const STAR_PAD_Y = 4;
 
 // ── Adventure path ────────────────────────────────────────────────────────────
 // Roadbed: solid polyline drawn UNDER the dashed progress line.
 // Replaces the painted trail formerly baked into lobby_bg.png (art.md 8.3).
-const ROADBED_COLOR     = 0xC19A6B; // warm sandy tan
-const ROADBED_ALPHA     = 0.45;
-const ROADBED_WIDTH     = 22;
-const PATH_COLOR_DONE   = 0x6D4C41; // dark brown, completed segment
-const PATH_COLOR_LOCKED = 0x8B6E47; // mid warm-brown, locked segment
-const PATH_WIDTH        = 6;        // line width (logical pixels)
-const PATH_DASH         = 14;       // dash length
-const PATH_GAP          = 8;        // gap between dashes
-const PATH_ALPHA_DONE   = 0.8;
+const ROADBED_COLOR = 0xc19a6b; // warm sandy tan
+const ROADBED_ALPHA = 0.45;
+const ROADBED_WIDTH = 22;
+const PATH_COLOR_DONE = 0x6d4c41; // dark brown, completed segment
+const PATH_COLOR_LOCKED = 0x8b6e47; // mid warm-brown, locked segment
+const PATH_WIDTH = 6; // line width (logical pixels)
+const PATH_DASH = 14; // dash length
+const PATH_GAP = 8; // gap between dashes
+const PATH_ALPHA_DONE = 0.8;
 const PATH_ALPHA_LOCKED = 0.55;
 
 // ── Daily challenge animation ─────────────────────────────────────────────────
-const GLOW_RADIUS_MIN  = 68;  // minimum glow radius (slightly larger than the circle icon radius of 65)
-const GLOW_RADIUS_RANGE = 8;  // glow amplitude
-const GLOW_PERIOD_MS   = 1200;
-const PULSE_PERIOD_MS  = 800; // node pulse period
-const BOUNCE_DURATION  = 100; // click bounce animation duration (ms)
+const GLOW_RADIUS_MIN = 68; // minimum glow radius (slightly larger than the circle icon radius of 65)
+const GLOW_RADIUS_RANGE = 8; // glow amplitude
+const GLOW_PERIOD_MS = 1200;
+const PULSE_PERIOD_MS = 800; // node pulse period
+const BOUNCE_DURATION = 100; // click bounce animation duration (ms)
 
 // ── Daily challenge area: icon + digit row dimensions (1.5 × 1.3 = 1.95× original) ─
-const DC_ICON_H  = 59;
-const DC_ICON_W  = 59;
+const DC_ICON_H = 59;
+const DC_ICON_W = 59;
 const DC_DIGIT_H = 59;
-const DC_DIGIT_W = Math.round(DC_DIGIT_H * 120 / 160); // ~44
-const DC_GAP     = 12;
+const DC_DIGIT_W = Math.round((DC_DIGIT_H * 120) / 160); // ~44
+const DC_GAP = 12;
 
 // ── Node stage number dimensions ─────────────────────────────────────────────
 const NODE_DIGIT_H = Math.round(150 * 0.85); // 127 — 85% of NODE_SIZE
-const NODE_DIGIT_W = Math.round(NODE_DIGIT_H * 120 / 160); // ~95
+const NODE_DIGIT_W = Math.round((NODE_DIGIT_H * 120) / 160); // ~95
 
 // Per-node runtime data for repositioning on resize
 interface NodeEntry {
-  stageIndex:    number;
-  card:          PIXI.Sprite;
-  numDisplay:    DigitDisplay;
+  stageIndex: number;
+  card: PIXI.Sprite;
+  numDisplay: DigitDisplay;
   starContainer: PIXI.Container;
-  starSprites:   PIXI.Sprite[];
+  starSprites: PIXI.Sprite[];
 }
 
 // Daily challenge element refs for repositioning on resize
 interface DailyChallengeEntry {
-  circle:      PIXI.Graphics;
-  icon:        PIXI.Sprite;
-  bestRow:     PIXI.Container;
+  circle: PIXI.Graphics;
+  icon: PIXI.Sprite;
+  bestRow: PIXI.Container;
   bestDisplay: DigitDisplay;
-  hit:         PIXI.Sprite;
+  hit: PIXI.Sprite;
   /** Breathing glow Graphics, rendered below the circle */
-  glow:          PIXI.Graphics;
+  glow: PIXI.Graphics;
 }
 
-const MUSIC_BTN_SIZE = 109;  // 56 × 1.5 × 1.3
+const MUSIC_BTN_SIZE = 109; // 56 × 1.5 × 1.3
 // Icon inset within the parchment button frame (matches art.md 9.3: size × 0.16)
 const MUSIC_ICON_PAD = Math.round(MUSIC_BTN_SIZE * 0.16);
 
 // ── Daily challenge / music button panel (warm parchment, header-bar family) ──
-const PANEL_FILL          = 0xEAD5A8; // warm parchment (= header bar body)
-const PANEL_FILL_ALPHA    = 0.85;     // slightly translucent so the map shows through
-const PANEL_BORDER        = 0xC4A068; // warm gold (= header bar border)
-const PANEL_BORDER_ALPHA  = 0.55;
-const PANEL_BORDER_WIDTH  = 1.5;
-const PANEL_SHADOW        = 0x3D2200;
-const PANEL_SHADOW_ALPHA  = 0.18;
-const PANEL_SHADOW_OFF_Y  = 5;
-const PANEL_RADIUS        = 24;
-const PANEL_HILIGHT_H     = 48;       // top highlight strip height
+const PANEL_FILL = 0xead5a8; // warm parchment (= header bar body)
+const PANEL_FILL_ALPHA = 0.85; // slightly translucent so the map shows through
+const PANEL_BORDER = 0xc4a068; // warm gold (= header bar border)
+const PANEL_BORDER_ALPHA = 0.55;
+const PANEL_BORDER_WIDTH = 1.5;
+const PANEL_SHADOW = 0x3d2200;
+const PANEL_SHADOW_ALPHA = 0.18;
+const PANEL_SHADOW_OFF_Y = 5;
+const PANEL_RADIUS = 24;
+const PANEL_HILIGHT_H = 48; // top highlight strip height
 const PANEL_HILIGHT_ALPHA = 0.18;
 
 export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
-  private static readonly NODE_SIZE  = 150;
-  private static readonly DAILY_SIZE = 254;  // 130 × 1.5 × 1.3
+  private static readonly NODE_SIZE = 150;
+  private static readonly DAILY_SIZE = 254; // 130 × 1.5 × 1.3
 
   private bg!: PIXI.Sprite;
   private decoContainer!: PIXI.Container;
   private decoOrientation: Orientation | null = null;
 
-  private nodeEntries: NodeEntry[]         = [];
+  private nodeEntries: NodeEntry[] = [];
   private dailyEntry!: DailyChallengeEntry;
-  private musicBtn!:      PIXI.Sprite;
-  private musicBtnBg!:    PIXI.Graphics;
+  private musicBtn!: PIXI.Sprite;
+  private musicBtnBg!: PIXI.Graphics;
   private musicOffSlash!: PIXI.Graphics;
-  private musicBtnHit!:   PIXI.Sprite;
+  private musicBtnHit!: PIXI.Sprite;
 
   // Parallel arrays kept for refresh()
-  private stageCards:         PIXI.Sprite[]    = [];
+  private stageCards: PIXI.Sprite[] = [];
   private nodeStarContainers: PIXI.Container[] = [];
-  private nodeStarSprites:    PIXI.Sprite[][]  = [];
+  private nodeStarSprites: PIXI.Sprite[][] = [];
 
   // ── Animation state ──────────────────────────────────────────────────────────
-  private pulseMs        = 0;
-  private glowMs         = 0;
-  private bounceElapsed  = -1;
+  private pulseMs = 0;
+  private glowMs = 0;
+  private bounceElapsed = -1;
   /** Current stage node Sprite (null means all stages are completed). */
   private currentCard: PIXI.Sprite | null = null;
 
@@ -132,13 +137,13 @@ export class LobbyScene extends PIXI.Container {
   private pathGraphics!: PIXI.Graphics;
   private panelGraphics!: PIXI.Graphics;
 
-  private cardTexture!:         PIXI.Texture;
+  private cardTexture!: PIXI.Texture;
   private cardSelectedTexture!: PIXI.Texture;
 
   constructor(
     private readonly ctx: AppContext,
     private readonly onSelectStage: (stage: StageData) => void,
-    private readonly onDailyChallenge: () => void,
+    private readonly onDailyChallenge: () => void
   ) {
     super();
     this.screen = new ScreenConfig();
@@ -162,8 +167,8 @@ export class LobbyScene extends PIXI.Container {
     this.currentCard = null; // reset; reassigned by the loop below
 
     STAGES.forEach((stage, i) => {
-      const card      = this.stageCards[i];
-      const starCont  = this.nodeStarContainers[i];
+      const card = this.stageCards[i];
+      const starCont = this.nodeStarContainers[i];
       const starSprts = this.nodeStarSprites[i];
       if (!card || !starCont || !starSprts) return;
 
@@ -172,22 +177,22 @@ export class LobbyScene extends PIXI.Container {
 
       const entry = this.nodeEntries[i];
       if (isCurrent) {
-        card.texture   = this.cardSelectedTexture;
-        card.tint      = 0xFFFFFF;
-        card.alpha     = 1;
+        card.texture = this.cardSelectedTexture;
+        card.tint = 0xffffff;
+        card.alpha = 1;
         this.currentCard = card;
-        if (entry) entry.numDisplay.tint = 0xF5EAC8;
+        if (entry) entry.numDisplay.tint = 0xf5eac8;
       } else if (completed) {
         card.texture = this.cardTexture;
-        card.tint    = 0xFFFFFF;
-        card.alpha   = 1;
-        if (entry) entry.numDisplay.tint = 0xF5EAC8;
+        card.tint = 0xffffff;
+        card.alpha = 1;
+        if (entry) entry.numDisplay.tint = 0xf5eac8;
       } else {
         card.texture = this.cardTexture;
-        card.tint    = 0xB09060;
-        card.alpha   = 0.75;
+        card.tint = 0xb09060;
+        card.alpha = 0.75;
         if (this.currentCard === card) this.currentCard = null;
-        if (entry) entry.numDisplay.tint = 0xB09060;
+        if (entry) entry.numDisplay.tint = 0xb09060;
       }
 
       if (completed || isCurrent) {
@@ -195,7 +200,7 @@ export class LobbyScene extends PIXI.Container {
         starCont.visible = stars > 0;
         for (let s = 0; s < 3; s++) {
           const sp = starSprts[s]!;
-          sp.tint  = s < stars ? 0xEAB830 : 0x888888;
+          sp.tint = s < stars ? 0xeab830 : 0x888888;
           sp.alpha = s < stars ? 1.0 : 0.35;
         }
       } else {
@@ -211,9 +216,9 @@ export class LobbyScene extends PIXI.Container {
 
   private buildUI(): void {
     this.buildBackground();
-    this.buildPath();          // path renders below the nodes
+    this.buildPath(); // path renders below the nodes
     this.buildAdventureMap();
-    this.buildPanel();         // background panel renders below the daily challenge / music button
+    this.buildPanel(); // background panel renders below the daily challenge / music button
     this.buildDailyChallenge();
     this.buildMusicButton();
   }
@@ -222,7 +227,7 @@ export class LobbyScene extends PIXI.Container {
 
   public update(deltaMs: number): void {
     this.pulseMs += deltaMs;
-    this.glowMs  += deltaMs;
+    this.glowMs += deltaMs;
     this.updateCurrentNodePulse();
     this.updateDailyGlow();
     this.updateDailyBounce(deltaMs);
@@ -260,20 +265,20 @@ export class LobbyScene extends PIXI.Container {
     this.decoContainer.removeChildren();
     this.decoOrientation = this.screen.orientation;
 
-    const KEYS    = ['deco_pencil.png', 'deco_eraser.png', 'deco_paperclip.png'];
-    const COUNT   = 12;
-    const NODE_R  = 160; // keep-out radius around each stage node centre
+    const KEYS = ['deco_pencil.png', 'deco_eraser.png', 'deco_paperclip.png'];
+    const COUNT = 12;
+    const NODE_R = 160; // keep-out radius around each stage node centre
     const PANEL_R = 200; // keep-out radius around the daily-challenge panel centre
-    const MARGIN  = 50;  // minimum distance from canvas edge
+    const MARGIN = 50; // minimum distance from canvas edge
 
-    const cw     = this.screen.width;
-    const ch     = this.screen.height;
+    const cw = this.screen.width;
+    const ch = this.screen.height;
     const layout = getLobbyLayout(this.screen);
     const { x: pcx, y: pcy } = layout.dailyChallengePos;
 
-    const rng     = makeSeededRng(0xDECA_F00D);
-    let   placed  = 0;
-    let   attempt = 0;
+    const rng = makeSeededRng(0xdeca_f00d);
+    let placed = 0;
+    let attempt = 0;
 
     while (placed < COUNT && attempt < 400) {
       attempt++;
@@ -282,31 +287,37 @@ export class LobbyScene extends PIXI.Container {
       const y = MARGIN + rng() * (ch - MARGIN * 2);
 
       // Reject if too close to any stage node
-      const nearNode = layout.nodePositions.some(p => {
-        const dx = p.x - x, dy = p.y - y;
+      const nearNode = layout.nodePositions.some((p) => {
+        const dx = p.x - x,
+          dy = p.y - y;
         return dx * dx + dy * dy < NODE_R * NODE_R;
       });
       if (nearNode) continue;
 
       // Reject if too close to the daily-challenge panel
-      const dpx = pcx - x, dpy = pcy - y;
+      const dpx = pcx - x,
+        dpy = pcy - y;
       if (dpx * dpx + dpy * dpy < PANEL_R * PANEL_R) continue;
 
-      const key   = KEYS[Math.floor(rng() * KEYS.length)]!;
-      const scale = 0.70 + rng() * 0.35;        // 0.70 – 1.05
-      const deg   = (rng() - 0.5) * 60;         // –30° … +30°
+      const key = KEYS[Math.floor(rng() * KEYS.length)]!;
+      const scale = 0.7 + rng() * 0.35; // 0.70 – 1.05
+      const deg = (rng() - 0.5) * 60; // –30° … +30°
 
       let tex: PIXI.Texture | null = null;
-      try { tex = this.ctx.assets.GetTexture(key); } catch { continue; }
+      try {
+        tex = this.ctx.assets.GetTexture(key);
+      } catch {
+        continue;
+      }
       if (!tex) continue;
 
-      const spr    = new PIXI.Sprite(tex);
+      const spr = new PIXI.Sprite(tex);
       spr.anchor.set(0.5, 0.5);
-      spr.x        = x;
-      spr.y        = y;
+      spr.x = x;
+      spr.y = y;
       spr.scale.set(scale);
       spr.rotation = (deg * Math.PI) / 180;
-      spr.alpha    = 0.38;
+      spr.alpha = 0.38;
       this.decoContainer.addChild(spr);
       placed++;
     }
@@ -314,10 +325,14 @@ export class LobbyScene extends PIXI.Container {
 
   private buildAdventureMap(): void {
     const sz = LobbyScene.NODE_SIZE;
-    const r  = sz / 2;
+    const r = sz / 2;
 
-    this.cardTexture         = makeTexture(this.ctx.renderer, g => drawCircleCell(g, sz), sz);
-    this.cardSelectedTexture = makeTexture(this.ctx.renderer, g => drawCircleCellSelected(g, sz), sz);
+    this.cardTexture = makeTexture(this.ctx.renderer, (g) => drawCircleCell(g, sz), sz);
+    this.cardSelectedTexture = makeTexture(
+      this.ctx.renderer,
+      (g) => drawCircleCellSelected(g, sz),
+      sz
+    );
 
     // Build nodes using the portrait layout initially (resize() repositions them for the current orientation)
     const layout = getLobbyLayout(this.screen);
@@ -331,15 +346,21 @@ export class LobbyScene extends PIXI.Container {
       const card = this.buildStageButton(stage, cx - r, cy - r, sz);
       this.stageCards.push(card);
 
-      const numDisplay = new DigitDisplay(this.ctx, NODE_DIGIT_W, NODE_DIGIT_H, 0xFFFFFF, Math.round(NODE_DIGIT_W * 2 / 3));
+      const numDisplay = new DigitDisplay(
+        this.ctx,
+        NODE_DIGIT_W,
+        NODE_DIGIT_H,
+        0xffffff,
+        Math.round((NODE_DIGIT_W * 2) / 3)
+      );
       numDisplay.update(stage.stageIndex);
       numDisplay.x = cx - numDisplay.totalWidth / 2;
       numDisplay.y = cy - NODE_DIGIT_H / 2;
       this.addChild(numDisplay);
 
       const { container: starContainer, sprites: starSprites } = this.buildStarRow();
-      starContainer.x       = cx - TOTAL_STAR_W / 2;
-      starContainer.y       = cy + r + 4;
+      starContainer.x = cx - TOTAL_STAR_W / 2;
+      starContainer.y = cy + r + 4;
       starContainer.visible = false;
       this.addChild(starContainer);
       this.nodeStarContainers.push(starContainer);
@@ -347,7 +368,10 @@ export class LobbyScene extends PIXI.Container {
 
       this.nodeEntries.push({
         stageIndex: stage.stageIndex,
-        card, numDisplay, starContainer, starSprites,
+        card,
+        numDisplay,
+        starContainer,
+        starSprites,
       });
     });
 
@@ -360,22 +384,22 @@ export class LobbyScene extends PIXI.Container {
 
     // White pill background — makes stars legible on any map background.
     const pillW = TOTAL_STAR_W + STAR_PAD_X * 2;
-    const pillH = STAR_SIZE    + STAR_PAD_Y * 2;
-    const pill  = new PIXI.Graphics();
-    pill.beginFill(0xFFFFFF, 0.88);
+    const pillH = STAR_SIZE + STAR_PAD_Y * 2;
+    const pill = new PIXI.Graphics();
+    pill.beginFill(0xffffff, 0.88);
     pill.drawRoundedRect(-STAR_PAD_X, -STAR_PAD_Y, pillW, pillH, pillH / 2);
     pill.endFill();
     container.addChild(pill);
 
     const sprites: PIXI.Sprite[] = [];
     for (let i = 0; i < 3; i++) {
-      const s    = new PIXI.Sprite(this.ctx.assets.GetTexture('star.png'));
-      s.width    = STAR_SIZE;
-      s.height   = STAR_SIZE;
-      s.x        = i * (STAR_SIZE + STAR_GAP);
-      s.y        = 0;
-      s.tint     = 0x888888;
-      s.alpha    = 0.45;
+      const s = new PIXI.Sprite(this.ctx.assets.GetTexture('star.png'));
+      s.width = STAR_SIZE;
+      s.height = STAR_SIZE;
+      s.x = i * (STAR_SIZE + STAR_GAP);
+      s.y = 0;
+      s.tint = 0x888888;
+      s.alpha = 0.45;
       container.addChild(s);
       sprites.push(s);
     }
@@ -386,7 +410,7 @@ export class LobbyScene extends PIXI.Container {
     const layout = getLobbyLayout(this.screen);
     const { x, y } = layout.dailyChallengePos;
     const sz = LobbyScene.DAILY_SIZE;
-    const r  = sz / 2;
+    const r = sz / 2;
 
     // Breathing glow (rendered below the circular icon)
     const glow = new PIXI.Graphics();
@@ -395,8 +419,8 @@ export class LobbyScene extends PIXI.Container {
     this.addChild(glow);
 
     const circle = new PIXI.Graphics();
-    circle.lineStyle(4, 0x6D4C41, 1);
-    circle.beginFill(0xC8862A);
+    circle.lineStyle(4, 0x6d4c41, 1);
+    circle.beginFill(0xc8862a);
     circle.drawCircle(0, 0, r);
     circle.endFill();
     circle.x = x;
@@ -404,9 +428,9 @@ export class LobbyScene extends PIXI.Container {
     this.addChild(circle);
 
     const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
-    const targetPx  = sz * 0.7;
+    const targetPx = sz * 0.7;
     const iconScale = targetPx / Math.max(icon.texture.width, icon.texture.height);
-    icon.width  = icon.texture.width  * iconScale;
+    icon.width = icon.texture.width * iconScale;
     icon.height = icon.texture.height * iconScale;
     icon.anchor.set(0.5, 0.5);
     icon.x = x;
@@ -417,10 +441,10 @@ export class LobbyScene extends PIXI.Container {
     this.addChild(best.container);
 
     const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
-    hit.width  = sz;
+    hit.width = sz;
     hit.height = sz;
-    hit.x      = x - r;
-    hit.y      = y - r;
+    hit.x = x - r;
+    hit.y = y - r;
     this.addChild(hit);
     this.ctx.input.registerUI(
       new UIElement({
@@ -431,12 +455,15 @@ export class LobbyScene extends PIXI.Container {
           this.bounceElapsed = 0;
           this.onDailyChallenge();
         },
-      }),
+      })
     );
 
     this.dailyEntry = {
-      circle, icon, glow,
-      bestRow: best.container, bestDisplay: best.display,
+      circle,
+      icon,
+      glow,
+      bestRow: best.container,
+      bestDisplay: best.display,
       hit,
     };
 
@@ -444,15 +471,15 @@ export class LobbyScene extends PIXI.Container {
   }
 
   private buildIconDigitRow(iconKey: string): { container: PIXI.Container; display: DigitDisplay } {
-    const container  = new PIXI.Container();
+    const container = new PIXI.Container();
     const iconSprite = new PIXI.Sprite(this.ctx.assets.GetTexture(iconKey));
-    iconSprite.width  = DC_ICON_W;
+    iconSprite.width = DC_ICON_W;
     iconSprite.height = DC_ICON_H;
-    iconSprite.x      = 0;
-    iconSprite.y      = (DC_DIGIT_H - DC_ICON_H) / 2;
+    iconSprite.x = 0;
+    iconSprite.y = (DC_DIGIT_H - DC_ICON_H) / 2;
     container.addChild(iconSprite);
 
-    const display = new DigitDisplay(this.ctx, DC_DIGIT_W, DC_DIGIT_H, 0xF5E6C8);
+    const display = new DigitDisplay(this.ctx, DC_DIGIT_W, DC_DIGIT_H, 0xf5e6c8);
     display.x = DC_ICON_W + DC_GAP;
     display.y = 0;
     container.addChild(display);
@@ -477,8 +504,8 @@ export class LobbyScene extends PIXI.Container {
     if (best > 0) {
       this.dailyEntry.bestDisplay.update(best);
       const rowW = DC_ICON_W + DC_GAP + this.dailyEntry.bestDisplay.totalWidth;
-      this.dailyEntry.bestRow.x       = x - rowW / 2;
-      this.dailyEntry.bestRow.y       = y + dr + 8;
+      this.dailyEntry.bestRow.x = x - rowW / 2;
+      this.dailyEntry.bestRow.y = y + dr + 8;
       this.dailyEntry.bestRow.visible = true;
     } else {
       this.dailyEntry.bestRow.visible = false;
@@ -496,22 +523,22 @@ export class LobbyScene extends PIXI.Container {
    */
   private updateBgSize(): void {
     if (!this.bg) return;
-    const canvasW  = this.screen.width;
-    const canvasH  = this.screen.height;
-    const texW     = this.bg.texture.width;
-    const texH     = this.bg.texture.height;
+    const canvasW = this.screen.width;
+    const canvasH = this.screen.height;
+    const texW = this.bg.texture.width;
+    const texH = this.bg.texture.height;
     const portrait = this.screen.orientation === Orientation.Portrait;
 
-    const effW  = portrait ? texH : texW;
-    const effH  = portrait ? texW : texH;
+    const effW = portrait ? texH : texW;
+    const effH = portrait ? texW : texH;
     const scale = Math.max(canvasW / effW, canvasH / effH);
 
     this.bg.anchor.set(0.5);
     this.bg.rotation = portrait ? Math.PI / 2 : 0;
-    this.bg.width    = texW * scale;
-    this.bg.height   = texH * scale;
-    this.bg.x        = canvasW / 2;
-    this.bg.y        = canvasH / 2;
+    this.bg.width = texW * scale;
+    this.bg.height = texH * scale;
+    this.bg.x = canvasW / 2;
+    this.bg.y = canvasH / 2;
   }
 
   /**
@@ -522,18 +549,18 @@ export class LobbyScene extends PIXI.Container {
   private repositionAll(): void {
     const layout = getLobbyLayout(this.screen);
     const sz = LobbyScene.NODE_SIZE;
-    const r  = sz / 2;
+    const r = sz / 2;
 
     for (const entry of this.nodeEntries) {
-      const pos = layout.nodePositions.find(p => p.stageIndex === entry.stageIndex);
+      const pos = layout.nodePositions.find((p) => p.stageIndex === entry.stageIndex);
       if (!pos) continue;
       const cx = pos.x;
       const cy = pos.y;
 
-      entry.card.x          = cx - r;
-      entry.card.y          = cy - r;
-      entry.numDisplay.x    = cx - entry.numDisplay.totalWidth / 2;
-      entry.numDisplay.y    = cy - NODE_DIGIT_H / 2;
+      entry.card.x = cx - r;
+      entry.card.y = cy - r;
+      entry.numDisplay.x = cx - entry.numDisplay.totalWidth / 2;
+      entry.numDisplay.y = cy - NODE_DIGIT_H / 2;
       entry.starContainer.x = cx - TOTAL_STAR_W / 2;
       entry.starContainer.y = cy + r + 4;
     }
@@ -542,14 +569,14 @@ export class LobbyScene extends PIXI.Container {
       const { x, y } = layout.dailyChallengePos;
       const dr = LobbyScene.DAILY_SIZE / 2;
 
-      this.dailyEntry.glow.x   = x;
-      this.dailyEntry.glow.y   = y;
+      this.dailyEntry.glow.x = x;
+      this.dailyEntry.glow.y = y;
       this.dailyEntry.circle.x = x;
       this.dailyEntry.circle.y = y;
-      this.dailyEntry.icon.x   = x;
-      this.dailyEntry.icon.y   = y;
-      this.dailyEntry.hit.x    = x - dr;
-      this.dailyEntry.hit.y    = y - dr;
+      this.dailyEntry.icon.x = x;
+      this.dailyEntry.icon.y = y;
+      this.dailyEntry.hit.x = x - dr;
+      this.dailyEntry.hit.y = y - dr;
 
       this.refreshDailyRows();
     }
@@ -559,14 +586,14 @@ export class LobbyScene extends PIXI.Container {
       const dr = LobbyScene.DAILY_SIZE / 2;
       const bx = x - MUSIC_BTN_SIZE / 2;
       const by = y - dr - MUSIC_BTN_SIZE - 10;
-      this.musicBtnBg.x    = bx;
-      this.musicBtnBg.y    = by;
-      this.musicBtn.x      = bx + MUSIC_ICON_PAD;
-      this.musicBtn.y      = by + MUSIC_ICON_PAD;
+      this.musicBtnBg.x = bx;
+      this.musicBtnBg.y = by;
+      this.musicBtn.x = bx + MUSIC_ICON_PAD;
+      this.musicBtn.y = by + MUSIC_ICON_PAD;
       this.musicOffSlash.x = bx + MUSIC_ICON_PAD;
       this.musicOffSlash.y = by + MUSIC_ICON_PAD;
-      this.musicBtnHit.x   = bx;
-      this.musicBtnHit.y   = by;
+      this.musicBtnHit.x = bx;
+      this.musicBtnHit.y = by;
     }
 
     const { x: pcx, y: pcy } = layout.dailyChallengePos;
@@ -586,12 +613,12 @@ export class LobbyScene extends PIXI.Container {
    * circle + the stats digit rows (below).  cx/cy is the daily challenge circle centre.
    */
   private getPanelBounds(cx: number, cy: number): { x: number; y: number; w: number; h: number } {
-    const dr  = LobbyScene.DAILY_SIZE / 2;      // 65
+    const dr = LobbyScene.DAILY_SIZE / 2; // 65
     const pad = 18;
-    const top    = cy - dr - MUSIC_BTN_SIZE - 10 - pad;
+    const top = cy - dr - MUSIC_BTN_SIZE - 10 - pad;
     const bottom = cy + dr + 8 + DC_DIGIT_H + pad;
-    const left   = cx - dr - pad;
-    const right  = cx + dr + pad;
+    const left = cx - dr - pad;
+    const right = cx + dr + pad;
     return { x: left, y: top, w: right - left, h: bottom - top };
   }
 
@@ -632,7 +659,7 @@ export class LobbyScene extends PIXI.Container {
 
     // Top highlight strip
     g.lineStyle(0);
-    g.beginFill(0xFFFFFF, PANEL_HILIGHT_ALPHA);
+    g.beginFill(0xffffff, PANEL_HILIGHT_ALPHA);
     g.drawRoundedRect(x + 3, y + 3, w - 6, PANEL_HILIGHT_H, PANEL_RADIUS - 3);
     g.endFill();
   }
@@ -656,16 +683,16 @@ export class LobbyScene extends PIXI.Container {
 
     const iconSize = MUSIC_BTN_SIZE - MUSIC_ICON_PAD * 2;
     const btn = new PIXI.Sprite(this.ctx.assets.GetTexture('music.png'));
-    btn.width  = iconSize;
+    btn.width = iconSize;
     btn.height = iconSize;
-    btn.x      = bx + MUSIC_ICON_PAD;
-    btn.y      = by + MUSIC_ICON_PAD;
+    btn.x = bx + MUSIC_ICON_PAD;
+    btn.y = by + MUSIC_ICON_PAD;
     this.addChild(btn);
     this.musicBtn = btn;
 
     // Diagonal slash shown when music is off (replaces the old grey tint)
     const slash = new PIXI.Graphics();
-    slash.lineStyle(8, 0x6D4C41, 0.9);
+    slash.lineStyle(8, 0x6d4c41, 0.9);
     slash.moveTo(iconSize, 0);
     slash.lineTo(0, iconSize);
     slash.x = bx + MUSIC_ICON_PAD;
@@ -675,10 +702,10 @@ export class LobbyScene extends PIXI.Container {
 
     // Invisible full-frame hit target so the tap area covers the whole button
     const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
-    hit.width  = MUSIC_BTN_SIZE;
+    hit.width = MUSIC_BTN_SIZE;
     hit.height = MUSIC_BTN_SIZE;
-    hit.x      = bx;
-    hit.y      = by;
+    hit.x = bx;
+    hit.y = by;
     this.addChild(hit);
     this.musicBtnHit = hit;
 
@@ -692,14 +719,14 @@ export class LobbyScene extends PIXI.Container {
           this.ctx.audio.toggleMusic();
           this.applyMusicBtnState();
         },
-      }),
+      })
     );
   }
 
   private applyMusicBtnState(): void {
     const on = this.ctx.audio.isMusicEnabled();
-    this.musicBtn.tint        = on ? 0xFFFFFF : 0x999999;
-    this.musicBtn.alpha       = on ? 1 : 0.55;
+    this.musicBtn.tint = on ? 0xffffff : 0x999999;
+    this.musicBtn.alpha = on ? 1 : 0.55;
     this.musicOffSlash.visible = !on;
   }
 
@@ -717,8 +744,8 @@ export class LobbyScene extends PIXI.Container {
   private refreshPath(): void {
     if (!this.pathGraphics) return;
     this.pathGraphics.clear();
-    const layout      = getLobbyLayout(this.screen);
-    const positions   = [...layout.nodePositions].sort((a, b) => a.stageIndex - b.stageIndex);
+    const layout = getLobbyLayout(this.screen);
+    const positions = [...layout.nodePositions].sort((a, b) => a.stageIndex - b.stageIndex);
     const maxCompleted = StageManager.getMaxCompleted();
 
     // Layer 1: solid roadbed — one continuous polyline through all node centres,
@@ -728,8 +755,8 @@ export class LobbyScene extends PIXI.Container {
         width: ROADBED_WIDTH,
         color: ROADBED_COLOR,
         alpha: ROADBED_ALPHA,
-        cap:   PIXI.LINE_CAP.ROUND,
-        join:  PIXI.LINE_JOIN.ROUND,
+        cap: PIXI.LINE_CAP.ROUND,
+        join: PIXI.LINE_JOIN.ROUND,
       });
       this.pathGraphics.moveTo(positions[0]!.x, positions[0]!.y);
       for (let i = 1; i < positions.length; i++) {
@@ -739,9 +766,9 @@ export class LobbyScene extends PIXI.Container {
 
     // Layer 2: dashed progress line on top of the roadbed.
     for (let i = 0; i < positions.length - 1; i++) {
-      const a     = positions[i]!;
-      const b     = positions[i + 1]!;
-      const done  = a.stageIndex <= maxCompleted; // segment is "done" if its start node is completed
+      const a = positions[i]!;
+      const b = positions[i + 1]!;
+      const done = a.stageIndex <= maxCompleted; // segment is "done" if its start node is completed
       const color = done ? PATH_COLOR_DONE : PATH_COLOR_LOCKED;
       const alpha = done ? PATH_ALPHA_DONE : PATH_ALPHA_LOCKED;
       this.pathGraphics.lineStyle(PATH_WIDTH, color, alpha);
@@ -756,43 +783,33 @@ export class LobbyScene extends PIXI.Container {
    * simulate a hand-drawn pencil line.  The jitter is deterministic (based on
    * the segment index) so the path looks consistent across redraws.
    */
-  private drawDashedLine(
-    g: PIXI.Graphics,
-    x1: number, y1: number,
-    x2: number, y2: number,
-  ): void {
-    const dx  = x2 - x1;
-    const dy  = y2 - y1;
+  private drawDashedLine(g: PIXI.Graphics, x1: number, y1: number, x2: number, y2: number): void {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len === 0) return;
     const nx = dx / len;
     const ny = dy / len;
     // Perpendicular unit vector for jitter
     const px = -ny;
-    const py =  nx;
+    const py = nx;
 
     let traveled = 0;
-    let drawing  = true;
-    let segIdx   = 0;
+    let drawing = true;
+    let segIdx = 0;
 
     while (traveled < len) {
       const seg = Math.min(drawing ? PATH_DASH : PATH_GAP, len - traveled);
       if (drawing) {
         // Deterministic pseudo-random jitter per segment endpoint.
         // sin(prime * segIdx) maps to a stable value in [-1, 1].
-        const j0 = Math.sin(segIdx * 7.3) * 3;          // jitter at dash start
-        const j1 = Math.sin((segIdx + 1) * 7.3) * 3;   // jitter at dash end
-        g.moveTo(
-          x1 + nx * traveled         + px * j0,
-          y1 + ny * traveled         + py * j0,
-        );
-        g.lineTo(
-          x1 + nx * (traveled + seg) + px * j1,
-          y1 + ny * (traveled + seg) + py * j1,
-        );
+        const j0 = Math.sin(segIdx * 7.3) * 3; // jitter at dash start
+        const j1 = Math.sin((segIdx + 1) * 7.3) * 3; // jitter at dash end
+        g.moveTo(x1 + nx * traveled + px * j0, y1 + ny * traveled + py * j0);
+        g.lineTo(x1 + nx * (traveled + seg) + px * j1, y1 + ny * (traveled + seg) + py * j1);
       }
       traveled += seg;
-      drawing   = !drawing;
+      drawing = !drawing;
       segIdx++;
     }
   }
@@ -802,7 +819,7 @@ export class LobbyScene extends PIXI.Container {
   /** Current stage node pulse (scale 1 → 1.03, 800 ms loop). */
   private updateCurrentNodePulse(): void {
     if (!this.currentCard) return;
-    const t     = (Math.sin(this.pulseMs / PULSE_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
+    const t = (Math.sin((this.pulseMs / PULSE_PERIOD_MS) * Math.PI * 2) + 1) / 2; // 0..1
     const scale = 1 + 0.03 * t;
     this.currentCard.scale.set(scale);
   }
@@ -810,12 +827,12 @@ export class LobbyScene extends PIXI.Container {
   /** Daily challenge breathing glow (sin-based expanding/contracting circle). */
   private updateDailyGlow(): void {
     if (!this.dailyEntry) return;
-    const t      = (Math.sin(this.glowMs / GLOW_PERIOD_MS * Math.PI * 2) + 1) / 2; // 0..1
+    const t = (Math.sin((this.glowMs / GLOW_PERIOD_MS) * Math.PI * 2) + 1) / 2; // 0..1
     const radius = GLOW_RADIUS_MIN + GLOW_RADIUS_RANGE * t;
-    const alpha  = 0.25 + 0.2 * t;
-    const g      = this.dailyEntry.glow;
+    const alpha = 0.25 + 0.2 * t;
+    const g = this.dailyEntry.glow;
     g.clear();
-    g.beginFill(0xFFD700, alpha);
+    g.beginFill(0xffd700, alpha);
     g.drawCircle(0, 0, radius);
     g.endFill();
   }
@@ -839,11 +856,11 @@ export class LobbyScene extends PIXI.Container {
   // ── Internal builders ───────────────────────────────────────────────────────
 
   private buildStageButton(stage: StageData, x: number, y: number, size: number): PIXI.Sprite {
-    const card  = new PIXI.Sprite(this.cardTexture);
-    card.width  = size;
+    const card = new PIXI.Sprite(this.cardTexture);
+    card.width = size;
     card.height = size;
-    card.x      = x;
-    card.y      = y;
+    card.x = x;
+    card.y = y;
     this.addChild(card);
     this.ctx.input.registerUI(
       new UIElement({
@@ -855,7 +872,7 @@ export class LobbyScene extends PIXI.Container {
             this.onSelectStage(stage);
           }
         },
-      }),
+      })
     );
     return card;
   }

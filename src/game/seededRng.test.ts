@@ -32,7 +32,7 @@ describe('dateStringToSeed', () => {
   it('returns a 32-bit unsigned integer', () => {
     const seed = dateStringToSeed('2024-06-15');
     expect(seed).toBeGreaterThanOrEqual(0);
-    expect(seed).toBeLessThanOrEqual(0xFFFFFFFF);
+    expect(seed).toBeLessThanOrEqual(0xffffffff);
     expect(Number.isInteger(seed)).toBe(true);
   });
 

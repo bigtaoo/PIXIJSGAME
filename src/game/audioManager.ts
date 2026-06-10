@@ -18,11 +18,11 @@
 import { IPlayerPrefs } from '../playerPrefs/IPlayerPrefs';
 import { IAudioManager } from './IAudioManager';
 
-import musicBgUrl   from '../assets/music_bg_web.ogg';
-import clickUrl     from '../assets/click.ogg';
-import addtimeUrl   from '../assets/addtime.ogg';
-import victoryUrl   from '../assets/victory.ogg';
-import gameoverUrl  from '../assets/gameover.ogg';
+import musicBgUrl from '../assets/music_bg_web.ogg';
+import clickUrl from '../assets/click.ogg';
+import addtimeUrl from '../assets/addtime.ogg';
+import victoryUrl from '../assets/victory.ogg';
+import gameoverUrl from '../assets/gameover.ogg';
 
 const PREF_KEY = 'music_enabled';
 
@@ -44,7 +44,9 @@ export class AudioManager implements IAudioManager {
   public playBgMusic(): void {
     this.ensureBgMusic();
     if (this.musicEnabled && this.bgAudio) {
-      this.bgAudio.play().catch(() => {/* autoplay blocked — silent */});
+      this.bgAudio.play().catch(() => {
+        /* autoplay blocked — silent */
+      });
     }
   }
 
@@ -71,20 +73,28 @@ export class AudioManager implements IAudioManager {
 
   // ── Public: sound effects ───────────────────────────────────────────────────
 
-  public playClick(): void   { this.playSfx('click',   clickUrl);   }
-  public playAddTime(): void { this.playSfx('addtime', addtimeUrl); }
-  public playVictory(): void { this.playSfx('victory', victoryUrl); }
-  public playGameOver(): void { this.playSfx('gameover', gameoverUrl); }
+  public playClick(): void {
+    this.playSfx('click', clickUrl);
+  }
+  public playAddTime(): void {
+    this.playSfx('addtime', addtimeUrl);
+  }
+  public playVictory(): void {
+    this.playSfx('victory', victoryUrl);
+  }
+  public playGameOver(): void {
+    this.playSfx('gameover', gameoverUrl);
+  }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private ensureBgMusic(): void {
     if (this.bgAudio) return;
-    const audio   = new Audio(musicBgUrl);
-    audio.loop    = true;
+    const audio = new Audio(musicBgUrl);
+    audio.loop = true;
     audio.preload = 'none'; // lazy — browser won't fetch until play() is called
-    audio.volume  = 0.6;
-    this.bgAudio  = audio;
+    audio.volume = 0.6;
+    this.bgAudio = audio;
   }
 
   private playSfx(key: string, url: string): void {
@@ -97,6 +107,8 @@ export class AudioManager implements IAudioManager {
     // Clone and play so overlapping calls don't conflict
     const clone = audio.cloneNode() as HTMLAudioElement;
     clone.volume = 0.8;
-    clone.play().catch(() => {/* autoplay blocked — silent */});
+    clone.play().catch(() => {
+      /* autoplay blocked — silent */
+    });
   }
 }

@@ -8,13 +8,13 @@ import { StageManager } from './stageManager';
 
 // ── Transition overlay constants ──────────────────────────────────────────────
 /** Alpha at peak of the flash (warm parchment overlay). */
-const TRANS_PEAK_ALPHA  = 0.55;
+const TRANS_PEAK_ALPHA = 0.55;
 /** Duration of the fade-in phase (ms). */
-const TRANS_FADE_IN_MS  = 80;
+const TRANS_FADE_IN_MS = 80;
 /** Duration of the fade-out phase (ms). */
 const TRANS_FADE_OUT_MS = 150;
 /** Warm beige flash colour — matches the parchment theme. */
-const TRANS_COLOR       = 0xF5EDD6;
+const TRANS_COLOR = 0xf5edd6;
 
 type TransPhase = 'idle' | 'fade_in' | 'fade_out';
 
@@ -37,12 +37,12 @@ type TransPhase = 'idle' | 'fade_in' | 'fade_out';
  * update / resize are forwarded to the active scene only.
  */
 export class SceneCoordinator extends PIXI.Container {
-  private readonly lobbyScene:          LobbyScene;
-  private readonly gameScene:           GameScene;
+  private readonly lobbyScene: LobbyScene;
+  private readonly gameScene: GameScene;
   private readonly dailyChallengeScene: DailyChallengeScene;
 
   private activeScene: LobbyScene | GameScene | DailyChallengeScene | null = null;
-  private windowWidth  = 0;
+  private windowWidth = 0;
   private windowHeight = 0;
   private started = false;
   /** Skip the interstitial on the very first showGame call (initial load). */
@@ -60,8 +60,8 @@ export class SceneCoordinator extends PIXI.Container {
 
   // ── Transition overlay ────────────────────────────────────────────────────
   private readonly transOverlay: PIXI.Graphics;
-  private transPhase:   TransPhase = 'idle';
-  private transElapsed  = 0;
+  private transPhase: TransPhase = 'idle';
+  private transElapsed = 0;
   /** Called once at the peak of the overlay (when the scene switch executes). */
   private transSwitchFn: (() => void) | null = null;
   private transSwitchFired = false;
@@ -72,21 +72,18 @@ export class SceneCoordinator extends PIXI.Container {
     this.gameScene = new GameScene(
       ctx,
       (completedStage) => this.onStageComplete(completedStage),
-      () => this.showLobby(),
+      () => this.showLobby()
     );
     this.lobbyScene = new LobbyScene(
       ctx,
       (stage) => this.showGame(stage),
-      () => this.showDailyChallenge(),
+      () => this.showDailyChallenge()
     );
-    this.dailyChallengeScene = new DailyChallengeScene(
-      ctx,
-      () => this.showLobby(),
-    );
+    this.dailyChallengeScene = new DailyChallengeScene(ctx, () => this.showLobby());
 
     // Add all scenes to the display tree; visibility controls which is active.
-    this.gameScene.visible           = false;
-    this.lobbyScene.visible          = false;
+    this.gameScene.visible = false;
+    this.lobbyScene.visible = false;
     this.dailyChallengeScene.visible = false;
     this.addChild(this.gameScene);
     this.addChild(this.lobbyScene);
@@ -102,7 +99,7 @@ export class SceneCoordinator extends PIXI.Container {
   // ── Public API ────────────────────────────────────────────────────
 
   public resize(w: number, h: number): void {
-    this.windowWidth  = w;
+    this.windowWidth = w;
     this.windowHeight = h;
 
     // Resize the overlay to cover the full window.
@@ -145,10 +142,10 @@ export class SceneCoordinator extends PIXI.Container {
    * switch fires immediately at the next peak.
    */
   private startTransition(switchFn: () => void): void {
-    this.transSwitchFn    = switchFn;
+    this.transSwitchFn = switchFn;
     this.transSwitchFired = false;
-    this.transElapsed     = 0;
-    this.transPhase       = 'fade_in';
+    this.transElapsed = 0;
+    this.transPhase = 'fade_in';
   }
 
   private updateTransition(deltaMs: number): void {
@@ -166,7 +163,7 @@ export class SceneCoordinator extends PIXI.Container {
         this.transSwitchFn?.();
         this.transSwitchFn = null;
         // Begin fade-out.
-        this.transPhase   = 'fade_out';
+        this.transPhase = 'fade_out';
         this.transElapsed = 0;
       }
     } else if (this.transPhase === 'fade_out') {
@@ -192,14 +189,14 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the stage lobby. Refreshes button states to reflect current progress. */
   public showLobby(): void {
-    this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
+    this.navGeneration++; // cancel any in-flight showGame() awaiting an ad
     this.gameScene.persistWinIfComplete(); // safety-net: ensure win data is saved
     if (this.gameplayStarted) this.ctx.platform?.gameplayStop();
     this.startTransition(() => {
-      this.gameScene.visible           = false;
+      this.gameScene.visible = false;
       this.dailyChallengeScene.visible = false;
-      this.lobbyScene.visible          = true;
-      this.activeScene                 = this.lobbyScene;
+      this.lobbyScene.visible = true;
+      this.activeScene = this.lobbyScene;
       this.lobbyScene.refresh();
       this.lobbyScene.resize(this.windowWidth, this.windowHeight);
     });
@@ -207,13 +204,13 @@ export class SceneCoordinator extends PIXI.Container {
 
   /** Show the Daily Challenge scene. */
   public showDailyChallenge(): void {
-    this.navGeneration++;           // cancel any in-flight showGame() awaiting an ad
+    this.navGeneration++; // cancel any in-flight showGame() awaiting an ad
     if (this.gameplayStarted) this.ctx.platform?.gameplayStop();
     this.startTransition(() => {
-      this.lobbyScene.visible          = false;
-      this.gameScene.visible           = false;
+      this.lobbyScene.visible = false;
+      this.gameScene.visible = false;
       this.dailyChallengeScene.visible = true;
-      this.activeScene                 = this.dailyChallengeScene;
+      this.activeScene = this.dailyChallengeScene;
       this.dailyChallengeScene.start();
       this.dailyChallengeScene.resize(this.windowWidth, this.windowHeight);
     });
@@ -244,10 +241,10 @@ export class SceneCoordinator extends PIXI.Container {
     }
 
     this.startTransition(() => {
-      this.lobbyScene.visible          = false;
+      this.lobbyScene.visible = false;
       this.dailyChallengeScene.visible = false;
-      this.gameScene.visible           = true;
-      this.activeScene                 = this.gameScene;
+      this.gameScene.visible = true;
+      this.activeScene = this.gameScene;
       this.gameScene.loadStage(stage);
       this.gameScene.resize(this.windowWidth, this.windowHeight);
     });

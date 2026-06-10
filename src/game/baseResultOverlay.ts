@@ -11,7 +11,7 @@ import { UIElement } from '../inputSystem/uiElement';
 import { drawPanel } from './graphicsFactory';
 
 export abstract class BaseResultOverlay extends PIXI.Container {
-  protected readonly bg:       PIXI.Graphics;
+  protected readonly bg: PIXI.Graphics;
   protected readonly retryBtn: PIXI.Sprite;
   protected readonly lobbyBtn: PIXI.Sprite;
   protected lastPanelW = 0;
@@ -21,7 +21,7 @@ export abstract class BaseResultOverlay extends PIXI.Container {
     protected readonly ctx: AppContext,
     onRetry: () => void,
     onLobby: () => void,
-    zIndex = 20,
+    zIndex = 20
   ) {
     super();
     this.visible = false;
@@ -38,7 +38,9 @@ export abstract class BaseResultOverlay extends PIXI.Container {
     ctx.input.registerUI(new UIElement({ zIndex, sprite: this.lobbyBtn, onTap: onLobby }));
   }
 
-  public hide(): void { this.visible = false; }
+  public hide(): void {
+    this.visible = false;
+  }
 
   /**
    * Redraw the background panel if the size changed, then position it.

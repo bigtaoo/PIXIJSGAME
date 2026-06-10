@@ -72,7 +72,11 @@ export class WechatPlayerPrefs implements IPlayerPrefs {
       const info = wxStorage.getStorageInfoSync();
       const toRemove = (info.keys as string[]).filter((k) => k.startsWith(this.prefix));
       toRemove.forEach((k) => {
-        try { wxStorage.removeStorageSync(k); } catch (_e) { /* ignore */ }
+        try {
+          wxStorage.removeStorageSync(k);
+        } catch (_e) {
+          /* ignore */
+        }
       });
     } catch (e) {
       console.warn('[WechatPlayerPrefs] deleteAll failed:', e);

@@ -13,10 +13,10 @@ import { IAudioManager } from './IAudioManager';
 const PREF_KEY = 'music_enabled';
 
 // Asset paths relative to the mini-game package root.
-const SRC_MUSIC    = 'assets/music_bg_web.ogg';
-const SRC_CLICK    = 'assets/click.ogg';
-const SRC_ADDTIME  = 'assets/addtime.ogg';
-const SRC_VICTORY  = 'assets/victory.ogg';
+const SRC_MUSIC = 'assets/music_bg_web.ogg';
+const SRC_CLICK = 'assets/click.ogg';
+const SRC_ADDTIME = 'assets/addtime.ogg';
+const SRC_VICTORY = 'assets/victory.ogg';
 const SRC_GAMEOVER = 'assets/gameover.ogg';
 
 export class WechatAudioManager implements IAudioManager {
@@ -57,18 +57,26 @@ export class WechatAudioManager implements IAudioManager {
 
   // ── Sound effects ─────────────────────────────────────────────────────────
 
-  public playClick(): void    { this.playSfx(SRC_CLICK);    }
-  public playAddTime(): void  { this.playSfx(SRC_ADDTIME);  }
-  public playVictory(): void  { this.playSfx(SRC_VICTORY);  }
-  public playGameOver(): void { this.playSfx(SRC_GAMEOVER); }
+  public playClick(): void {
+    this.playSfx(SRC_CLICK);
+  }
+  public playAddTime(): void {
+    this.playSfx(SRC_ADDTIME);
+  }
+  public playVictory(): void {
+    this.playSfx(SRC_VICTORY);
+  }
+  public playGameOver(): void {
+    this.playSfx(SRC_GAMEOVER);
+  }
 
   // ── Private ───────────────────────────────────────────────────────────────
 
   private ensureBgCtx(): void {
     if (this.bgCtx) return;
-    const ctx  = wx.createInnerAudioContext();
-    ctx.src    = SRC_MUSIC;
-    ctx.loop   = true;
+    const ctx = wx.createInnerAudioContext();
+    ctx.src = SRC_MUSIC;
+    ctx.loop = true;
     ctx.volume = 0.6;
     this.bgCtx = ctx;
   }
@@ -79,8 +87,8 @@ export class WechatAudioManager implements IAudioManager {
    * so we must release them promptly.
    */
   private playSfx(src: string): void {
-    const ctx  = wx.createInnerAudioContext();
-    ctx.src    = src;
+    const ctx = wx.createInnerAudioContext();
+    ctx.src = src;
     ctx.volume = 0.8;
     ctx.play();
     const cleanup = (): void => {

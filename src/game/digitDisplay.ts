@@ -15,30 +15,34 @@ import { AppContext } from './appContext';
 
 export class DigitDisplay extends PIXI.Container {
   private readonly sprites: PIXI.Sprite[] = [];
-  private _tint: number = 0xFFFFFF;
+  private _tint: number = 0xffffff;
   private _totalWidth = 0;
 
   constructor(
     private readonly ctx: AppContext,
     public digitW: number,
     public digitH: number,
-    tint: number = 0xFFFFFF,
+    tint: number = 0xffffff,
     /** X step between digits. Defaults to digitW (no overlap). */
-    public digitSpacing: number = digitW,
+    public digitSpacing: number = digitW
   ) {
     super();
     this._tint = tint;
   }
 
   /** Total pixel width of all currently visible digits. */
-  get totalWidth(): number { return this._totalWidth; }
+  get totalWidth(): number {
+    return this._totalWidth;
+  }
 
   /** Set a new tint and apply it to all sprites. */
   set tint(value: number) {
     this._tint = value;
     for (const s of this.sprites) s.tint = value;
   }
-  get tint(): number { return this._tint; }
+  get tint(): number {
+    return this._tint;
+  }
 
   /**
    * Update the displayed number.
@@ -60,13 +64,13 @@ export class DigitDisplay extends PIXI.Container {
     for (let i = 0; i < this.sprites.length; i++) {
       const s = this.sprites[i];
       if (i < len) {
-        s.texture  = this.ctx.assets.GetTexture(`${str[i]}.png`);
-        s.width    = this.digitW;
-        s.height   = this.digitH;
-        s.x        = i * this.digitSpacing;
-        s.y        = 0;
-        s.tint     = this._tint;
-        s.visible  = true;
+        s.texture = this.ctx.assets.GetTexture(`${str[i]}.png`);
+        s.width = this.digitW;
+        s.height = this.digitH;
+        s.x = i * this.digitSpacing;
+        s.y = 0;
+        s.tint = this._tint;
+        s.visible = true;
       } else {
         s.visible = false;
       }

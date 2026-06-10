@@ -88,7 +88,7 @@ describe('Logic', () => {
 
   describe('findPairIndices', () => {
     it('returns indices of all cells whose value = target - selected', () => {
-      const screen = makeScreen(2, 2);
+      const _screen = makeScreen(2, 2);
       // Use a custom setup: manually inject known values
       const logicAny = logic as unknown as { numbers: Map<number, number> };
       logicAny.numbers.set(0, 3);

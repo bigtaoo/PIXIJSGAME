@@ -8,52 +8,64 @@ import { BaseResultOverlay } from './baseResultOverlay';
 
 // -- Star row dimensions (fixed, identical in both orientations) ---------------
 
-const STAR_SIZE    = 72;
-const STAR_GAP     = 8;
+const STAR_SIZE = 72;
+const STAR_GAP = 8;
 const TOTAL_STAR_W = 3 * STAR_SIZE + 2 * STAR_GAP;
 
 // -- Layout -------------------------------------------------------------------
 
 interface GameResultLayout {
-  panelW:    number;
-  panelH:    number;
-  panelX:    number;
-  panelY:    number;
-  btnSize:   number;
-  btnY:      number;
-  btnLeftX:  number;
+  panelW: number;
+  panelH: number;
+  panelX: number;
+  panelY: number;
+  btnSize: number;
+  btnY: number;
+  btnLeftX: number;
   btnRightX: number;
-  starRowX:  number;
-  starRowY:  number;
+  starRowX: number;
+  starRowY: number;
 }
 
 function portraitLayout(screenH: number): GameResultLayout {
-  const panelW = 700, panelH = 500;
+  const panelW = 700,
+    panelH = 500;
   const panelX = (GAME_WIDTH - panelW) / 2;
   const panelY = Math.round((screenH - panelH) / 2);
   const btnSize = 200;
-  const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
+  const btnY = panelY + panelH / 2 - btnSize / 2 + 30;
   return {
-    panelW, panelH, panelX, panelY, btnSize, btnY,
-    btnLeftX:  panelX + 80,
+    panelW,
+    panelH,
+    panelX,
+    panelY,
+    btnSize,
+    btnY,
+    btnLeftX: panelX + 80,
     btnRightX: panelX + panelW - 80 - btnSize,
-    starRowX:  panelX + panelW / 2 - TOTAL_STAR_W / 2,
-    starRowY:  panelY + 84,
+    starRowX: panelX + panelW / 2 - TOTAL_STAR_W / 2,
+    starRowY: panelY + 84,
   };
 }
 
 function landscapeLayout(screenW: number, screenH: number): GameResultLayout {
-  const panelW = 700, panelH = 500;
+  const panelW = 700,
+    panelH = 500;
   const panelX = Math.round((screenW - panelW) / 2);
   const panelY = Math.round((screenH - panelH) / 2);
   const btnSize = 200;
-  const btnY    = panelY + panelH / 2 - btnSize / 2 + 30;
+  const btnY = panelY + panelH / 2 - btnSize / 2 + 30;
   return {
-    panelW, panelH, panelX, panelY, btnSize, btnY,
-    btnLeftX:  panelX + 80,
+    panelW,
+    panelH,
+    panelX,
+    panelY,
+    btnSize,
+    btnY,
+    btnLeftX: panelX + 80,
     btnRightX: panelX + panelW - 80 - btnSize,
-    starRowX:  panelX + panelW / 2 - TOTAL_STAR_W / 2,
-    starRowY:  panelY + 84,
+    starRowX: panelX + panelW / 2 - TOTAL_STAR_W / 2,
+    starRowY: panelY + 84,
   };
 }
 
@@ -65,32 +77,27 @@ function getLayout(screen: ScreenConfig): GameResultLayout {
 
 // -- Star reveal animation ----------------------------------------------------
 
-const STAR_DELAY    = 150;
-const STAR_POP_DUR  = 220;
-const STAR_PEAK     = 1.25;
+const STAR_DELAY = 150;
+const STAR_POP_DUR = 220;
+const STAR_PEAK = 1.25;
 
 interface StarAnim {
   starIndex: number;
-  elapsed:   number;
-  filled:    boolean;
+  elapsed: number;
+  filled: boolean;
 }
 
 // -- GameResultOverlay --------------------------------------------------------
 
 export class GameResultOverlay extends BaseResultOverlay {
-  private readonly nextBtn:     PIXI.Sprite;
-  private readonly starRow:     PIXI.Container;
+  private readonly nextBtn: PIXI.Sprite;
+  private readonly starRow: PIXI.Container;
   private readonly starSprites: PIXI.Sprite[] = [];
   private _lastLayout: GameResultLayout = portraitLayout(0);
 
   private starAnims: StarAnim[] = [];
 
-  constructor(
-    ctx: AppContext,
-    onRetry: () => void,
-    onNext:  () => void,
-    onLobby: () => void,
-  ) {
+  constructor(ctx: AppContext, onRetry: () => void, onNext: () => void, onLobby: () => void) {
     super(ctx, onRetry, onLobby, 20);
 
     this.nextBtn = new PIXI.Sprite(ctx.assets.GetTexture('next.png'));
@@ -101,10 +108,10 @@ export class GameResultOverlay extends BaseResultOverlay {
     this.starRow = new PIXI.Container();
     for (let i = 0; i < 3; i++) {
       const s = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
-      s.width  = STAR_SIZE;
+      s.width = STAR_SIZE;
       s.height = STAR_SIZE;
       s.x = i * (STAR_SIZE + STAR_GAP);
-      s.tint  = 0x888888;
+      s.tint = 0x888888;
       s.alpha = 0.35;
       this.starRow.addChild(s);
       this.starSprites.push(s);
@@ -122,24 +129,24 @@ export class GameResultOverlay extends BaseResultOverlay {
 
   public show(success: boolean, stars?: number): void {
     this.retryBtn.visible = !success;
-    this.nextBtn.visible  = success;
+    this.nextBtn.visible = success;
 
     const L = this._lastLayout;
     if (success) {
       this.lobbyBtn.x = L.btnLeftX;
-      this.nextBtn.x  = L.btnRightX;
+      this.nextBtn.x = L.btnRightX;
     } else {
       this.retryBtn.x = L.btnLeftX;
       this.lobbyBtn.x = L.btnRightX;
     }
 
-    const filled = success ? (stars ?? 0) : 0;
+    const filled = success ? stars ?? 0 : 0;
 
     this.starAnims = [];
     for (let i = 0; i < 3; i++) {
       this.starSprites[i].scale.set(0);
       this.starSprites[i].alpha = 1;
-      this.starSprites[i].tint  = i < filled ? 0xEAB830 : 0x888888;
+      this.starSprites[i].tint = i < filled ? 0xeab830 : 0x888888;
       this.starAnims.push({ starIndex: i, elapsed: 0, filled: i < filled });
     }
 
@@ -176,7 +183,7 @@ export class GameResultOverlay extends BaseResultOverlay {
     }
 
     const allDone = this.starAnims.every(
-      (a) => a.elapsed - a.starIndex * STAR_DELAY >= STAR_POP_DUR,
+      (a) => a.elapsed - a.starIndex * STAR_DELAY >= STAR_POP_DUR
     );
     if (allDone) this.starAnims = [];
   }
@@ -187,14 +194,20 @@ export class GameResultOverlay extends BaseResultOverlay {
     this._lastLayout = L;
     this.redrawPanel(L.panelW, L.panelH, L.panelX, L.panelY);
 
-    this.retryBtn.width  = L.btnSize; this.retryBtn.height = L.btnSize;
-    this.retryBtn.x = L.btnLeftX;    this.retryBtn.y = L.btnY;
+    this.retryBtn.width = L.btnSize;
+    this.retryBtn.height = L.btnSize;
+    this.retryBtn.x = L.btnLeftX;
+    this.retryBtn.y = L.btnY;
 
-    this.nextBtn.width  = L.btnSize; this.nextBtn.height = L.btnSize;
-    this.nextBtn.x = L.btnRightX;   this.nextBtn.y = L.btnY;
+    this.nextBtn.width = L.btnSize;
+    this.nextBtn.height = L.btnSize;
+    this.nextBtn.x = L.btnRightX;
+    this.nextBtn.y = L.btnY;
 
-    this.lobbyBtn.width  = L.btnSize; this.lobbyBtn.height = L.btnSize;
-    this.lobbyBtn.x = L.btnLeftX;    this.lobbyBtn.y = L.btnY;
+    this.lobbyBtn.width = L.btnSize;
+    this.lobbyBtn.height = L.btnSize;
+    this.lobbyBtn.x = L.btnLeftX;
+    this.lobbyBtn.y = L.btnY;
 
     this.starRow.x = L.starRowX;
     this.starRow.y = L.starRowY;

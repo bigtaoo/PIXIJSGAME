@@ -35,7 +35,8 @@ window.onload = async () => {
     console.error('[init] loadAssets failed:', err);
     // Show error on screen so we can diagnose on device
     const msg = document.createElement('div');
-    msg.style.cssText = 'position:fixed;top:0;left:0;width:100%;padding:20px;background:#c00;color:#fff;font:16px monospace;z-index:9999;word-break:break-all;';
+    msg.style.cssText =
+      'position:fixed;top:0;left:0;width:100%;padding:20px;background:#c00;color:#fff;font:16px monospace;z-index:9999;word-break:break-all;';
     msg.textContent = '[loadAssets error] ' + String(err);
     document.body.appendChild(msg);
     return;
@@ -50,7 +51,12 @@ window.onload = async () => {
 
   const audio = new MobileAudioManager(prefs);
 
-  const ctx: AppContext = { assets, input, renderer: app.renderer as unknown as PIXI.Renderer, audio };
+  const ctx: AppContext = {
+    assets,
+    input,
+    renderer: app.renderer as unknown as PIXI.Renderer,
+    audio,
+  };
 
   const coordinator = new SceneCoordinator(ctx);
   app.stage.addChild(coordinator);
