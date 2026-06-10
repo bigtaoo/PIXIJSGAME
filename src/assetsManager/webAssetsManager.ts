@@ -8,7 +8,6 @@ import bgPngUrl      from '../assets/lobby_bg.png';
 import dailyPngUrl   from '../assets/daily_challenge_icon.png';
 import starPngUrl    from '../assets/star.png';
 import trophyPngUrl  from '../assets/trophy.png';
-import firePngUrl    from '../assets/fire.png';
 import musicPngUrl       from '../assets/music.png';
 import decoPencilUrl    from '../assets/deco_pencil.png';
 import decoEraserUrl    from '../assets/deco_eraser.png';
@@ -90,7 +89,6 @@ export class WebAssetsManager implements IAssetsManager {
       ['daily_icon', () => this.loadDailyIcon()],
       ['star',       () => this.loadStar()],
       ['trophy',     () => this.loadTrophy()],
-      ['fire',       () => this.loadFire()],
       ['music',      () => this.loadMusic()],
       ['deco',       () => this.loadDecos()],
     ];
@@ -127,10 +125,6 @@ export class WebAssetsManager implements IAssetsManager {
   private async loadTrophy(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(trophyPngUrl));
     this.textures['trophy.png'] = new PIXI.Texture(base);
-  }
-  private async loadFire(): Promise<void> {
-    const base = await this.waitForBase(PIXI.BaseTexture.from(firePngUrl));
-    this.textures['fire.png'] = new PIXI.Texture(base);
   }
   private async loadMusic(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(musicPngUrl));

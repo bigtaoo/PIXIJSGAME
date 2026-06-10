@@ -71,3 +71,22 @@
 | `ENCRYPTION_KEY` 为空 | `dailyChallengeResult.ts:17` | 排行榜提分功能目前静默失败 |
 | Auth 状态只打 log | `crazygamesIndex.ts:84` | 登录状态未与 UI 联动 |
 | Banner 广告未接入 | `crazygamesService.ts` | API 已实现，未在任何场景调用 |
+
+---
+
+## 大厅视觉问题记录（2026-06-10）
+
+### ✅ 已修复 — 装饰文具太稀疏
+`lobbyScene.ts → rebuildDecos()`：原来只有 4 个固定四角的装饰，现改为基于画布尺寸的 seeded RNG 随机散布（12 个），横竖屏各自用当前 `screen.width/height` 范围随机，自动避开 stage node 中心（160px）和 daily challenge 面板（200px）。方向切换时在 `repositionAll()` 自动重建。
+
+### ✅ 已修复 — 大厅面板简化
+移除了 streak（🔥连续天数）显示，只保留最高分（🏆）。未打过每日挑战时不显示数字（显示 0 视觉上奇怪）。同步清理了 `fire.png` 的 import 和加载逻辑（`webAssetsManager.ts`）。
+
+### ⏳ 待处理 — 每日挑战图标像排行榜
+`src/assets/daily_challenge_icon.png` 是柱状图图案，视觉上与"排行榜"无法区分。需替换为更有挑战感的图标（闪电、计时器、日历+星星等）。代码无需改动，直接替换图片文件即可。
+
+### ⏳ 待处理 — 橡皮擦装饰过于显眼
+`src/assets/deco_eraser.png` 当前是纯色粉色矩形，放在地图上被误认为 UI 选框/调试标记。需要重绘：加顶面高光、底部阴影、轻微擦痕纹理，避免纯平铺色块。或换用其他文具（如直尺 `deco_ruler.png`，更细长不像选框）。
+
+### ✅ 已修复 — 装饰不支持横屏重定位
+`repositionAll()` 现在检测 orientation 变化，自动调用 `rebuildDecos()` 用新的画布尺寸重新随机放置装饰。

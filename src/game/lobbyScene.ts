@@ -7,10 +7,20 @@ import { StarManager } from './starManager';
 import { UIElement } from '../inputSystem/uiElement';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
 import { drawCircleCell, drawCircleCellSelected, makeTexture, drawButtonBackground } from './graphicsFactory';
-import { getDailyBestScore, getStreakDays } from './dailyChallengeStore';
+import { getDailyBestScore } from './dailyChallengeStore';
 import { getLobbyLayout, LobbyLayout } from './lobbyLayout';
 import { Orientation } from './enums';
 import { DigitDisplay } from './digitDisplay';
+
+// ── Lobby decoration seeded RNG ──────────────────────────────────────────────
+/** Simple LCG, returns 0..1. Pass a fixed seed for deterministic placement. */
+function makeSeededRng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 0xffffffff;
+  };
+}
 
 // ── Node star dimensions ─────────────────────────────────────────────────────
 const STAR_SIZE    = 22;
@@ -63,13 +73,11 @@ interface NodeEntry {
 
 // Daily challenge element refs for repositioning on resize
 interface DailyChallengeEntry {
-  circle:        PIXI.Graphics;
-  icon:          PIXI.Sprite;
-  bestRow:       PIXI.Container;
-  bestDisplay:   DigitDisplay;
-  streakRow:     PIXI.Container;
-  streakDisplay: DigitDisplay;
-  hit:           PIXI.Sprite;
+  circle:      PIXI.Graphics;
+  icon:        PIXI.Sprite;
+  bestRow:     PIXI.Container;
+  bestDisplay: DigitDisplay;
+  hit:         PIXI.Sprite;
   /** Breathing glow Graphics, rendered below the circle */
   glow:          PIXI.Graphics;
 }
@@ -98,6 +106,8 @@ export class LobbyScene extends PIXI.Container {
   private static readonly DAILY_SIZE = 254;  // 130 × 1.5 × 1.3
 
   private bg!: PIXI.Sprite;
+  private decoContainer!: PIXI.Container;
+  private decoOrientation: Orientation | null = null;
 
   private nodeEntries: NodeEntry[]         = [];
   private dailyEntry!: DailyChallengeEntry;
@@ -225,8 +235,7 @@ export class LobbyScene extends PIXI.Container {
   }
 
   /**
-   * Overlays stationery decorations on the lobby map background.
-   * Silently skips any texture that hasn't been generated yet.
+   * Creates the deco container and does the first placement pass.
    *
    * Assets required (place in src/assets/):
    *   deco_pencil.png    — angled pencil
@@ -234,30 +243,72 @@ export class LobbyScene extends PIXI.Container {
    *   deco_paperclip.png — oval paperclip
    */
   private buildLobbyDecos(): void {
-    const w = this.screen.width;
-    const h = this.screen.height;
-    const ALPHA = 0.40;
+    this.decoContainer = new PIXI.Container();
+    this.addChildAt(this.decoContainer, 1);
+    this.rebuildDecos();
+  }
 
-    // [ key, x-anchor, y-anchor, x-pos, y-pos, rotation-deg ]
-    const configs: Array<[string, number, number, number, number, number]> = [
-      ['deco_pencil.png',    0, 0, w * 0.03, h * 0.08,   20],
-      ['deco_eraser.png',    1, 0, w * 0.95, h * 0.06,  -12],
-      ['deco_paperclip.png', 0, 1, w * 0.04, h * 0.88,   15],
-      ['deco_eraser.png',    1, 1, w * 0.96, h * 0.90,   10],
-    ];
+  /**
+   * Clears and re-places all deco sprites for the current orientation.
+   * Called on first build and whenever orientation changes.
+   *
+   * Positions are seeded-random so they are stable across redraws but
+   * avoid all stage-node centres and the daily-challenge panel area.
+   * Portrait has more vertical spread; landscape more horizontal.
+   */
+  private rebuildDecos(): void {
+    this.decoContainer.removeChildren();
+    this.decoOrientation = this.screen.orientation;
 
-    for (const [key, ax, ay, x, y, deg] of configs) {
+    const KEYS    = ['deco_pencil.png', 'deco_eraser.png', 'deco_paperclip.png'];
+    const COUNT   = 12;
+    const NODE_R  = 160; // keep-out radius around each stage node centre
+    const PANEL_R = 200; // keep-out radius around the daily-challenge panel centre
+    const MARGIN  = 50;  // minimum distance from canvas edge
+
+    const cw     = this.screen.width;
+    const ch     = this.screen.height;
+    const layout = getLobbyLayout(this.screen);
+    const { x: pcx, y: pcy } = layout.dailyChallengePos;
+
+    const rng     = makeSeededRng(0xDECA_F00D);
+    let   placed  = 0;
+    let   attempt = 0;
+
+    while (placed < COUNT && attempt < 400) {
+      attempt++;
+
+      const x = MARGIN + rng() * (cw - MARGIN * 2);
+      const y = MARGIN + rng() * (ch - MARGIN * 2);
+
+      // Reject if too close to any stage node
+      const nearNode = layout.nodePositions.some(p => {
+        const dx = p.x - x, dy = p.y - y;
+        return dx * dx + dy * dy < NODE_R * NODE_R;
+      });
+      if (nearNode) continue;
+
+      // Reject if too close to the daily-challenge panel
+      const dpx = pcx - x, dpy = pcy - y;
+      if (dpx * dpx + dpy * dpy < PANEL_R * PANEL_R) continue;
+
+      const key   = KEYS[Math.floor(rng() * KEYS.length)]!;
+      const scale = 0.70 + rng() * 0.35;        // 0.70 – 1.05
+      const deg   = (rng() - 0.5) * 60;         // –30° … +30°
+
       let tex: PIXI.Texture | null = null;
-      try { tex = this.ctx.assets.GetTexture(key); } catch { /* not yet available */ }
+      try { tex = this.ctx.assets.GetTexture(key); } catch { continue; }
       if (!tex) continue;
 
-      const spr = new PIXI.Sprite(tex);
-      spr.anchor.set(ax, ay);
-      spr.x = x;
-      spr.y = y;
+      const spr    = new PIXI.Sprite(tex);
+      spr.anchor.set(0.5, 0.5);
+      spr.x        = x;
+      spr.y        = y;
+      spr.scale.set(scale);
       spr.rotation = (deg * Math.PI) / 180;
-      spr.alpha = ALPHA;
-      this.addChildAt(spr, 1);
+      spr.alpha    = 0.38;
+      this.decoContainer.addChild(spr);
+      placed++;
     }
   }
 
@@ -362,11 +413,8 @@ export class LobbyScene extends PIXI.Container {
     icon.y = y;
     this.addChild(icon);
 
-    const best   = this.buildIconDigitRow('trophy.png');
+    const best = this.buildIconDigitRow('trophy.png');
     this.addChild(best.container);
-
-    const streak = this.buildIconDigitRow('fire.png');
-    this.addChild(streak.container);
 
     const hit = new PIXI.Sprite(PIXI.Texture.EMPTY);
     hit.width  = sz;
@@ -388,8 +436,7 @@ export class LobbyScene extends PIXI.Container {
 
     this.dailyEntry = {
       circle, icon, glow,
-      bestRow:       best.container,   bestDisplay:   best.display,
-      streakRow:     streak.container, streakDisplay: streak.display,
+      bestRow: best.container, bestDisplay: best.display,
       hit,
     };
 
@@ -424,6 +471,8 @@ export class LobbyScene extends PIXI.Container {
     const { x, y } = layout.dailyChallengePos;
     const dr = LobbyScene.DAILY_SIZE / 2;
 
+    // Only show best score once the player has completed at least one daily challenge.
+    // Displaying 0 looks odd on a fresh install, so we hide the row until there is a real score.
     const best = getDailyBestScore();
     if (best > 0) {
       this.dailyEntry.bestDisplay.update(best);
@@ -434,13 +483,6 @@ export class LobbyScene extends PIXI.Container {
     } else {
       this.dailyEntry.bestRow.visible = false;
     }
-
-    const streakDays = getStreakDays();
-    this.dailyEntry.streakDisplay.update(streakDays);
-    const streakW = DC_ICON_W + DC_GAP + this.dailyEntry.streakDisplay.totalWidth;
-    this.dailyEntry.streakRow.x       = x - streakW / 2;
-    this.dailyEntry.streakRow.y       = y + dr + (best > 0 ? 82 : 58);
-    this.dailyEntry.streakRow.visible = true;
   }
 
   // ── Resize helpers ──────────────────────────────────────────────────────────
@@ -530,6 +572,11 @@ export class LobbyScene extends PIXI.Container {
     const { x: pcx, y: pcy } = layout.dailyChallengePos;
     this.redrawPanel(pcx, pcy);
     this.refreshPath();
+
+    // Rebuild decorations if orientation changed (portrait ↔ landscape)
+    if (this.decoContainer && this.screen.orientation !== this.decoOrientation) {
+      this.rebuildDecos();
+    }
   }
 
   // ── Daily challenge + music button background panel ───────────────────────────
@@ -542,7 +589,7 @@ export class LobbyScene extends PIXI.Container {
     const dr  = LobbyScene.DAILY_SIZE / 2;      // 65
     const pad = 18;
     const top    = cy - dr - MUSIC_BTN_SIZE - 10 - pad;
-    const bottom = cy + dr + 8 + DC_DIGIT_H + 24 + DC_DIGIT_H + pad;
+    const bottom = cy + dr + 8 + DC_DIGIT_H + pad;
     const left   = cx - dr - pad;
     const right  = cx + dr + pad;
     return { x: left, y: top, w: right - left, h: bottom - top };
