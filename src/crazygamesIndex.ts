@@ -56,6 +56,10 @@ window.onload = async () => {
   crazyGames.loadingStop();
   await loadingOverlay.dismiss();
 
+  // ── 5a. Request banner ad ─────────────────────────────────────────
+  // Replace 'banner-bottom' with the actual banner ID from the CrazyGames dashboard.
+  crazyGames.requestBanner('banner-bottom', 'cg-banner', [728, 90]);
+
   // ── 6. Build scene graph ──────────────────────────────────────────
   const audio = new AudioManager(prefs);
   const ctx: AppContext = {
@@ -68,6 +72,16 @@ window.onload = async () => {
       gameplayStop:         () => crazyGames.gameplayStop(),
       requestInterstitialAd: () => crazyGames.showInterstitialAdThrottled(10 * 60 * 1000),
       requestExtraLife:     () => crazyGames.showRewardedAd(),
+      submitDailyScore: async (score: number) => {
+        if (!crazyGames.isUserAccountAvailable) return;
+        let user = await crazyGames.getUser();
+        if (!user) {
+          user = await crazyGames.showAuthPrompt();
+        }
+        if (user) {
+          await crazyGames.saveScore('daily-challenge', score);
+        }
+      },
     },
   };
   const coordinator = new SceneCoordinator(ctx);
@@ -89,14 +103,18 @@ window.onload = async () => {
   // ── 9. Page lifecycle ─────────────────────────────────────────────
   // Notify CrazyGames before the page reloads or navigates away so it
   // doesn't count the session as a crash.
-  window.addEventListener('beforeunload', () => crazyGames.sdkGameLoadingStart());
+  window.addEventListener('beforeunload', () => {
+    crazyGames.clearBanner('banner-bottom');
+    crazyGames.sdkGameLoadingStart();
+  });
 
   // Pause when the tab/app goes to background.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) coordinator.pauseIfPlaying();
   });
 
-  // ── 10. Auth state listener (optional) ───────────────────────────
+  // -- 10. Auth state listener --
+  // Kept for debugging; submitDailyScore handles auth on-demand.
   if (crazyGames.isUserAccountAvailable) {
     crazyGames.onAuthChange((user) => {
       console.log('[CrazyGames] Auth state changed:', user?.username ?? 'logged out');

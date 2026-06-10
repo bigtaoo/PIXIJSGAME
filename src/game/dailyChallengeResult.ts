@@ -11,37 +11,6 @@ import { DigitDisplay } from './digitDisplay';
 import { ScreenConfig } from './screenConfig';
 import { BaseResultOverlay } from './baseResultOverlay';
 
-// ── CrazyGames leaderboard (optional) ─────────────────────────────────────────
-const ENCRYPTION_KEY = '';   // TODO: set before going live
-
-async function encryptScore(score: number, key: string): Promise<string> {
-  const iv       = window.crypto.getRandomValues(new Uint8Array(12));
-  const alg: AesGcmParams = { name: 'AES-GCM', iv };
-  const keyBytes = Uint8Array.from(atob(key), c => c.charCodeAt(0));
-  const cryptoKey = await window.crypto.subtle.importKey('raw', keyBytes, alg, false, ['encrypt']);
-  const data      = new TextEncoder().encode(score.toString());
-  const encrypted = await window.crypto.subtle.encrypt(alg, cryptoKey, data);
-  const combined  = new Uint8Array(12 + encrypted.byteLength);
-  combined.set(iv);
-  combined.set(new Uint8Array(encrypted), 12);
-  return btoa(String.fromCharCode(...combined));
-}
-
-function submitScoreToCrazyGames(score: number): void {
-  if (!ENCRYPTION_KEY) {
-    console.warn('[DailyChallengeResult] ENCRYPTION_KEY not set — leaderboard score not submitted.');
-    return;
-  }
-  const sdk = (window as unknown as Record<string, unknown>)['CrazyGames'];
-  if (!sdk) return;
-  encryptScore(score, ENCRYPTION_KEY)
-    .then(enc => {
-      (sdk as { SDK: { user: { submitScore: (o: object) => void } } })
-        .SDK.user.submitScore({ encryptedScore: enc });
-    })
-    .catch(() => { /* silent */ });
-}
-
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 interface DailyChallengeResultLayout {
@@ -137,7 +106,7 @@ export class DailyChallengeResult extends BaseResultOverlay {
     this.streakRow.x       = cx - streakW / 2;
     this.streakRow.visible = true;
 
-    submitScoreToCrazyGames(score);
+    this.ctx.platform?.submitDailyScore?.(score);
     this.visible = true;
   }
 

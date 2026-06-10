@@ -23,6 +23,12 @@ export interface PlatformCallbacks {
    * Returns false if no ad is available or the player dismissed it.
    */
   requestExtraLife(): Promise<boolean>;
+  /**
+   * Submit a daily-challenge score to the platform leaderboard.
+   * Prompts login if the player is not yet authenticated.
+   * No-op on platforms that don't support leaderboards.
+   */
+  submitDailyScore?(score: number): Promise<void>;
 }
 
 export interface AppContext {
