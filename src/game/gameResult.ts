@@ -93,6 +93,7 @@ export class GameResultOverlay extends BaseResultOverlay {
   private readonly nextBtn: PIXI.Sprite;
   private readonly starRow: PIXI.Container;
   private readonly starSprites: PIXI.Sprite[] = [];
+  private starBaseScale = 1;
   private _lastLayout: GameResultLayout = portraitLayout(0);
 
   private starAnims: StarAnim[] = [];
@@ -110,6 +111,9 @@ export class GameResultOverlay extends BaseResultOverlay {
       const s = new PIXI.Sprite(ctx.assets.GetTexture('star.png'));
       s.width = STAR_SIZE;
       s.height = STAR_SIZE;
+      // width/height above set scale implicitly; remember it so the pop
+      // animation can scale relative to the 72px target, not the raw texture.
+      this.starBaseScale = s.scale.x;
       s.x = i * (STAR_SIZE + STAR_GAP);
       s.tint = 0x888888;
       s.alpha = 0.35;
@@ -165,9 +169,10 @@ export class GameResultOverlay extends BaseResultOverlay {
       if (localT <= 0) continue;
 
       const sprite = this.starSprites[anim.starIndex];
+      const targetAlpha = anim.filled ? 1.0 : 0.35;
       if (localT >= STAR_POP_DUR) {
-        sprite.scale.set(1);
-        sprite.alpha = anim.filled ? 1.0 : 0.35;
+        sprite.scale.set(this.starBaseScale);
+        sprite.alpha = targetAlpha;
       } else {
         const t = localT / STAR_POP_DUR;
         let scale: number;
@@ -176,9 +181,8 @@ export class GameResultOverlay extends BaseResultOverlay {
         } else {
           scale = STAR_PEAK - (STAR_PEAK - 1.0) * ((t - 0.6) / 0.4);
         }
-        sprite.scale.set(scale);
-        sprite.alpha = Math.min(1, t * 3);
-        if (!anim.filled && t >= 1) sprite.alpha = 0.35;
+        sprite.scale.set(scale * this.starBaseScale);
+        sprite.alpha = Math.min(targetAlpha, t * 3);
       }
     }
 

@@ -23,6 +23,17 @@ const HINT_DURATION_MS = 600;
 /** Lowest alpha reached at the mid-point of the pulse. */
 const HINT_MIN_ALPHA = 0.25;
 
+// -- Fall animation -----------------------------------------------------------
+const FALL_DURATION_MS = 180;
+
+interface FallAnim {
+  /** All digit sprites belonging to this cell (1 or 2). */
+  sprites: PIXI.Sprite[];
+  fromY: number;
+  toY: number;
+  elapsed: number;
+}
+
 export class NumberLayer extends PIXI.Container {
   /**
    * High-watermark sprite pool, mirroring Grid's cell pool.
@@ -32,6 +43,8 @@ export class NumberLayer extends PIXI.Container {
 
   /** Active hint pulse animations (at most one at a time in practice). */
   private hintAnimations: HintAnimation[] = [];
+
+  private fallAnims: FallAnim[] = [];
 
   constructor(
     private readonly ctx: AppContext,
@@ -82,6 +95,33 @@ export class NumberLayer extends PIXI.Container {
   }
 
   /**
+   * Start a fall animation for all visible cells at rows 0..emptyRow (inclusive).
+   * Must be called after reconfigure() has positioned sprites at their new Y.
+   * Shifts sprites back up by one gridSize and tweens them down.
+   */
+  public startFallAnims(emptyRow: number): void {
+    const { gridCountW: w, gridSize } = this.screen;
+
+    // Snap any in-progress fall anims.
+    for (const a of this.fallAnims) a.sprites.forEach((s) => (s.y = a.toY));
+    this.fallAnims = [];
+
+    for (let col = 0; col < w; col++) {
+      for (let row = 0; row <= emptyRow; row++) {
+        const idx = this.screen.cellIndex(col, row);
+        const cell = this.cells.get(idx);
+        if (!cell) continue;
+        const visibleSlots = cell.slots.filter((s) => s.visible);
+        if (visibleSlots.length === 0) continue;
+        const toY = visibleSlots[0]!.y;
+        const fromY = toY - gridSize;
+        visibleSlots.forEach((s) => (s.y = fromY));
+        this.fallAnims.push({ sprites: visibleSlots, fromY, toY, elapsed: 0 });
+      }
+    }
+  }
+
+  /**
    * Trigger a single gentle alpha pulse on the given cells.
    * Intentionally subtle so the player still feels they "found" the answer.
    * Safe to call multiple times — each call queues an independent animation.
@@ -94,6 +134,7 @@ export class NumberLayer extends PIXI.Container {
    * Advance all running hint animations.  Call once per frame from GameScene.
    */
   public update(deltaMs: number): void {
+    this.updateFall(deltaMs);
     if (this.hintAnimations.length === 0) return;
 
     const half = HINT_DURATION_MS / 2;
@@ -126,6 +167,25 @@ export class NumberLayer extends PIXI.Container {
 
       if (anim.elapsed >= HINT_DURATION_MS) {
         this.hintAnimations.splice(i, 1);
+      }
+    }
+  }
+
+  private updateFall(deltaMs: number): void {
+    for (let i = this.fallAnims.length - 1; i >= 0; i--) {
+      const a = this.fallAnims[i]!;
+      if (a.sprites.every((s) => !s.visible)) {
+        this.fallAnims.splice(i, 1);
+        continue;
+      }
+      a.elapsed += deltaMs;
+      const t = Math.min(a.elapsed / FALL_DURATION_MS, 1);
+      const eased = 1 - (1 - t) * (1 - t);
+      const y = a.fromY + (a.toY - a.fromY) * eased;
+      a.sprites.forEach((s) => (s.y = y));
+      if (t >= 1) {
+        a.sprites.forEach((s) => (s.y = a.toY));
+        this.fallAnims.splice(i, 1);
       }
     }
   }

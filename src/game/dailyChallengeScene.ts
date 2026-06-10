@@ -169,6 +169,7 @@ export class DailyChallengeScene extends PIXI.Container {
     if (!this.initialized) return;
 
     this.effectLayer.update(deltaMs);
+    this.gridLayer.update(deltaMs);
     this.numberLayer.update(deltaMs);
     this.header.tickTipReset(deltaMs);
 
@@ -353,11 +354,17 @@ export class DailyChallengeScene extends PIXI.Container {
       this.comboCount > 1
     );
 
-    // ── Row collapse ────────────────────────────────────────────────────────
-    let collapsed = this.logic.checkAndCollapse();
-    while (collapsed) {
+    // Row collapse: animate the first collapse, apply any extras immediately.
+    const firstCollapse = this.logic.checkAndCollapse();
+    if (firstCollapse >= 0) {
       this.syncGrid();
-      collapsed = this.logic.checkAndCollapse();
+      this.gridLayer.startFallAnims(firstCollapse);
+      this.numberLayer.startFallAnims(firstCollapse);
+      let more = this.logic.checkAndCollapse();
+      while (more >= 0) {
+        this.syncGrid();
+        more = this.logic.checkAndCollapse();
+      }
     }
   }
 

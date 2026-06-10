@@ -10,6 +10,16 @@ const CELL_GAP = 5; // must match reconfigure() GAP
 const BOUNCE_DURATION = 120; // ms - total duration of the scale pop
 const BOUNCE_PEAK = 1.12; // max scale overshoot
 
+// -- Fall animation -----------------------------------------------------------
+const FALL_DURATION_MS = 180;
+
+interface FallAnim {
+  sprite: PIXI.Sprite;
+  fromY: number;
+  toY: number;
+  elapsed: number;
+}
+
 // -- Idle shimmer -------------------------------------------------------------
 const IDLE_INTERVAL = 1600;
 const IDLE_PULSE_DUR = 500;
@@ -32,6 +42,8 @@ export class Grid extends PIXI.Container {
 
   private idleTimer = IDLE_INTERVAL;
   private idlePulses: IdlePulse[] = [];
+
+  private fallAnims: FallAnim[] = [];
 
   constructor(
     private readonly ctx: AppContext,
@@ -163,9 +175,34 @@ export class Grid extends PIXI.Container {
     }
   }
 
+  /**
+   * Start a fall animation for all visible cells at rows 0..emptyRow (inclusive).
+   * Called immediately after syncGrid() has repositioned sprites to their new
+   * logical positions. Shifts sprites back up by one gridSize and tweens down.
+   */
+  public startFallAnims(emptyRow: number): void {
+    const { gridCountW: w, gridSize } = this.screen;
+
+    // Snap any in-progress fall anims so we do not compound offsets.
+    for (const a of this.fallAnims) a.sprite.y = a.toY;
+    this.fallAnims = [];
+
+    for (let col = 0; col < w; col++) {
+      for (let row = 0; row <= emptyRow; row++) {
+        const idx = this.screen.cellIndex(col, row);
+        const sprite = this.cells.get(idx);
+        if (!sprite || !sprite.visible) continue;
+        const toY = sprite.y;
+        sprite.y = toY - gridSize; // shift one row up
+        this.fallAnims.push({ sprite, fromY: sprite.y, toY, elapsed: 0 });
+      }
+    }
+  }
+
   public update(deltaMs: number): void {
     this.updateBounce(deltaMs);
     this.updateIdle(deltaMs);
+    this.updateFall(deltaMs);
   }
 
   private updateBounce(deltaMs: number): void {
@@ -221,6 +258,25 @@ export class Grid extends PIXI.Container {
       if (p.elapsed >= IDLE_PULSE_DUR) {
         p.sprite.alpha = 1;
         this.idlePulses.splice(i, 1);
+      }
+    }
+  }
+
+  private updateFall(deltaMs: number): void {
+    for (let i = this.fallAnims.length - 1; i >= 0; i--) {
+      const a = this.fallAnims[i]!;
+      if (!a.sprite.visible) {
+        this.fallAnims.splice(i, 1);
+        continue;
+      }
+      a.elapsed += deltaMs;
+      const t = Math.min(a.elapsed / FALL_DURATION_MS, 1);
+      // ease-out quad: decelerates into final position
+      const eased = 1 - (1 - t) * (1 - t);
+      a.sprite.y = a.fromY + (a.toY - a.fromY) * eased;
+      if (t >= 1) {
+        a.sprite.y = a.toY;
+        this.fallAnims.splice(i, 1);
       }
     }
   }

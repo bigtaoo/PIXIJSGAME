@@ -71,10 +71,12 @@ export class DailyChallengeLogic extends Logic {
    * When found, shift everything above it one row down and insert a fresh
    * self-paired row at the top (row 0).
    *
-   * Returns true if a collapse occurred (caller should redraw).
+   * Returns the index of the collapsed row (≥ 0) so callers can animate the
+   * falling cells (rows 0..emptyRow all shifted down by one gridSize).
+   * Returns -1 if no collapse occurred.
    * Only collapses one row per call — invoke in a loop if needed.
    */
-  public checkAndCollapse(): boolean {
+  public checkAndCollapse(): number {
     const w = this.gridW;
     const h = this.gridH;
 
@@ -86,7 +88,7 @@ export class DailyChallengeLogic extends Logic {
         break;
       }
     }
-    if (emptyRow === -1) return false;
+    if (emptyRow === -1) return -1;
 
     // Shift rows above emptyRow downward by one position.
     for (let row = emptyRow; row > 0; row--) {
@@ -98,7 +100,7 @@ export class DailyChallengeLogic extends Logic {
 
     // Insert a new self-paired row at the top.
     this.fillRow(0);
-    return true;
+    return emptyRow;
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
