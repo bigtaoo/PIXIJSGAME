@@ -240,9 +240,50 @@ export class DailyChallengeScene extends PIXI.Container {
     // hardcoded constructor defaults until the next external resize() call.
     this.resultOverlay.resize(this.screen);
 
+    this.buildBackgroundDecos();
+
     this.syncGrid();
     this.header.setScore(0);
     this.header.setTimer(this.state.remainingSeconds);
+  }
+
+  // ── Background decorations ─────────────────────────────────────────────────
+
+  private buildBackgroundDecos(): void {
+    const w = this.screen.width;
+    const h = this.screen.height;
+    const ALPHA = 0.35;
+    // [key, anchorX, anchorY, x, y, rotation_deg, scale]
+    const configs: Array<[string, number, number, number, number, number, number]> = [
+      // corners
+      ['deco_pencil.png', 0, 0, w * 0.02, h * 0.03, 15, 1.0],
+      ['deco_eraser.png', 1, 0, w * 0.94 - 100, h * 0.04, -10, 1.0],
+      ['deco_paperclip.png', 1, 1, w * 0.93 - 100, h * 0.95, 20, 1.0],
+      ['deco_pencil.png', 0, 1, w * 0.03, h * 0.95, -20, 1.0],
+      // left / right mid-edge
+      ['deco_paperclip.png', 0, 0.5, w * 0.01, h * 0.48, 85, 0.8],
+      ['deco_eraser.png', 1, 0.5, w * 0.95 - 100, h * 0.52, -80, 0.75],
+      // extra corner accents
+      ['deco_paperclip.png', 0, 0, w * 0.04, h * 0.12, -30, 0.7],
+      ['deco_pencil.png', 1, 1, w * 0.92 - 100, h * 0.88, 10, 0.7],
+    ];
+    for (const [key, ax, ay, x, y, deg, sc] of configs) {
+      let tex: PIXI.Texture | null = null;
+      try {
+        tex = this.ctx.assets.GetTexture(key);
+      } catch {
+        /* not yet available */
+      }
+      if (!tex) continue;
+      const spr = new PIXI.Sprite(tex);
+      spr.anchor.set(ax, ay);
+      spr.x = x;
+      spr.y = y;
+      spr.rotation = (deg * Math.PI) / 180;
+      spr.alpha = ALPHA;
+      spr.scale.set(sc);
+      this.addChildAt(spr, 1);
+    }
   }
 
   // ── Grid sync ──────────────────────────────────────────────────────────────

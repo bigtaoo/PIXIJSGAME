@@ -15,9 +15,9 @@ import * as PIXI from 'pixi.js-legacy';
  * Index 0 = tier 0 (small numbers), 1 = tier 1 (mid), 2 = tier 2 (large).
  */
 export const CELL_PALETTE = [
-  0xc5e8fa, // tier 0 — soft sky blue   (small numbers)
-  0xfff3cc, // tier 1 — warm cream       (mid numbers)
-  0xffccbc, // tier 2 — soft coral/peach (large numbers)
+  0xa9d2e8, // tier 0 — sky blue   (small numbers) — deeper/more saturated than before
+  0xe9d29c, // tier 1 — warm sand  (mid numbers)
+  0xf0b6b2, // tier 2 — rose       (large numbers)
 ] as const;
 
 /** One gloss ellipse: position + size as fractions of cell size. */
@@ -42,8 +42,8 @@ function darkenHex(color: number, amount: number): number {
 // ─── Colour palette ───────────────────────────────────────────────────────────
 
 export const C = {
-  // Background
-  bgFill: 0xede8dc,
+  // Background — slightly darker than before so tiles lift off it
+  bgFill: 0xe5ddca,
   bgLine: 0xcccccc,
   bgLineAlpha: 0.12,
 
@@ -128,7 +128,7 @@ export function drawBackground(g: PIXI.Graphics, w: number, h: number): void {
   g.lineStyle(0);
   for (let i = 0; i < vLayers; i++) {
     const frac = (vLayers - i) / vLayers; // 1 → 1/vLayers (outermost darkest)
-    const alpha = 0.05 * frac * frac;
+    const alpha = 0.09 * frac * frac; // stronger vignette (was 0.05)
     const d0 = (i / vLayers) * vDepth; // outer edge of this strip
     const d1 = ((i + 1) / vLayers) * vDepth; // inner edge
     const thick = d1 - d0;
@@ -156,23 +156,26 @@ export function drawCell(
   glossEllipses: readonly GlossEllipse[] = [{ cx: 0.31, cy: 0.19, rx: 0.19, ry: 0.1 }]
 ): void {
   const r = Math.round(size * 0.18);
-  const depth = Math.round(size * 0.1);
-  const shadow = darkenHex(fillColor, 0.28);
+  const depth = Math.round(size * 0.07); // deeper raised-tile look (was 0.04)
+  const shadow = darkenHex(fillColor, 0.3); // darker anchor (was 0.12)
+  const border = darkenHex(fillColor, 0.32); // (was 0.18)
 
-  // ── Layer 1: shadow strip ──────────────────────────────────────────────────
+  // ── Layer 1: shadow strip — the dark value anchor of the tile ─────────────
   g.lineStyle(0);
   g.beginFill(shadow);
   g.drawRoundedRect(0, depth, size, size - depth, r);
   g.endFill();
 
-  // ── Layer 2: main tile body ────────────────────────────────────────────────
+  // ── Layer 2: main tile body with thin border ───────────────────────────────
+  g.lineStyle(2, border, 0.95);
   g.beginFill(fillColor);
   g.drawRoundedRect(0, 0, size, size - depth, r);
   g.endFill();
 
-  // ── Layer 3: gloss ellipses (1 large / 2 medium / 3 small, random positions)
+  // ── Layer 3: very subtle gloss (watercolor style — barely visible) ─────────
+  g.lineStyle(0);
   for (const { cx, cy, rx, ry } of glossEllipses) {
-    g.beginFill(0xffffff, 0.38);
+    g.beginFill(0xffffff, 0.1); // was 0.38
     g.drawEllipse(size * cx, size * cy, size * rx, size * ry);
     g.endFill();
   }
@@ -184,11 +187,11 @@ export function drawCell(
  */
 export function drawCellSelected(g: PIXI.Graphics, size: number): void {
   const r = Math.round(size * 0.18);
-  const depth = Math.round(size * 0.1);
-  const bw = Math.max(5, Math.round(size * 0.05));
-  const shadow = darkenHex(C.cellSelFill, 0.22);
+  const depth = Math.round(size * 0.07); // match drawCell
+  const bw = Math.max(4, Math.round(size * 0.05));
+  const shadow = darkenHex(C.cellSelBorder, 0.25); // dark gold anchor under selected tile
 
-  // Shadow strip
+  // Subtle shadow strip
   g.lineStyle(0);
   g.beginFill(shadow);
   g.drawRoundedRect(0, depth, size, size - depth, r);
@@ -200,9 +203,9 @@ export function drawCellSelected(g: PIXI.Graphics, size: number): void {
   g.drawRoundedRect(bw / 2, bw / 2, size - bw, size - depth - bw / 2, r);
   g.endFill();
 
-  // Gloss
+  // Minimal gloss
   g.lineStyle(0);
-  g.beginFill(0xffffff, 0.4);
+  g.beginFill(0xffffff, 0.12); // was 0.4
   g.drawEllipse(size * 0.31, size * 0.19, size * 0.19, size * 0.1);
   g.endFill();
 }

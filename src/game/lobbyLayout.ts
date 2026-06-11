@@ -57,7 +57,11 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex: 19, x: 906, y: 100 },
 ];
 
-const PORTRAIT_DAILY_POS = { x: 177, y: 660 } as const; // left margin 50px: 50 + DAILY_SIZE/2(127)
+// x: left margin 50px = 50 + DAILY_SIZE/2 (127).
+// y: panel vertical centre aligned with stage-11 node (y=920). The panel centre
+//    sits 26px above the daily icon centre (music button 109px on top vs.
+//    trophy row 59px below, see getPanelBounds in lobbyScene.ts), so icon y = 870.
+const PORTRAIT_DAILY_POS = { x: 177, y: 870 } as const;
 
 // ── Landscape node coordinates (background 1920×1080, strictly aligned to the stretched background) ──
 // Baseline formula: x = round(portraitX * 16/9), y = round(portraitY * 9/16)

@@ -23,6 +23,27 @@ const HINT_DURATION_MS = 600;
 /** Lowest alpha reached at the mid-point of the pulse. */
 const HINT_MIN_ALPHA = 0.25;
 
+// -- Digit layout ---------------------------------------------------------------
+/** Digit size relative to the original hand-tuned layout. */
+const DIGIT_SCALE = 0.85;
+/** Must match CELL_GAP in grid.ts. */
+const TILE_GAP = 5;
+/** Tile depth-strip fraction; must match drawCell() in graphicsFactory.ts. */
+const TILE_DEPTH_FRAC = 0.07;
+/** Original depth fraction the old hand-tuned offsets were calibrated for. */
+const OLD_TILE_DEPTH_FRAC = 0.04;
+/** Extra nudge of the digit group, as fractions of gridSize (negative = up/left). */
+const DIGIT_OFFSET_X_FRAC = -0.02;
+const DIGIT_OFFSET_Y_FRAC = -0.02;
+
+/**
+ * Vertical correction so digits stay centered on the tile *body* after the
+ * depth strip grew from OLD_TILE_DEPTH_FRAC to TILE_DEPTH_FRAC.
+ */
+function depthShift(gs: number): number {
+  return ((TILE_DEPTH_FRAC - OLD_TILE_DEPTH_FRAC) * (gs - TILE_GAP)) / 2;
+}
+
 // -- Fall animation -----------------------------------------------------------
 const FALL_DURATION_MS = 180;
 
@@ -227,11 +248,20 @@ export class NumberLayer extends PIXI.Container {
     const cell = this.getOrCreateCell(idx, false);
     const s = cell.slots[0];
 
+    // Scale around the previous hand-tuned center, then shift up to follow
+    // the tile body (depth strip grew from 0.04 to 0.07 of the tile).
+    const w0 = gs * 0.8;
+    const h0 = gs * 1.0;
+    const cx = cellX + 5 + w0 / 2;
+    const cy = cellY - 8 + h0 / 2;
+    const w = w0 * DIGIT_SCALE;
+    const h = h0 * DIGIT_SCALE;
+
     s.texture = this.ctx.assets.GetTexture(`${digit}.png`);
-    s.width = gs * 0.8;
-    s.height = gs * 1.0;
-    s.x = cellX + 5;
-    s.y = cellY - 8;
+    s.width = w;
+    s.height = h;
+    s.x = cx - w / 2 + gs * DIGIT_OFFSET_X_FRAC;
+    s.y = cy - h / 2 - depthShift(gs) + gs * DIGIT_OFFSET_Y_FRAC;
     s.alpha = 1;
     s.visible = true;
 
@@ -251,13 +281,20 @@ export class NumberLayer extends PIXI.Container {
   ): void {
     const cell = this.getOrCreateCell(idx, true);
 
-    // Scale the pair to 80% of the cell; each digit gets half the total width
-    const scale = 1.0;
-    const totalW = gs * scale;
-    const dw = totalW / 2; // width per digit
-    const dh = gs * scale; // height per digit
-    const marginX = (gs - totalW) / 2; // horizontal centering offset
-    const marginY = (gs - dh) / 2 - 8; // vertical centering offset
+    // Previous hand-tuned layout: dw0 = gs/2, dh0 = gs, units digit overlaps
+    // by 15px, vertical offset -8. Scale the whole group around its old
+    // center, then shift up to follow the tile body.
+    const dw0 = gs / 2;
+    const dh0 = gs;
+    const overlap0 = 15;
+    const groupCx = cellX + (2 * dw0 - overlap0) / 2;
+    const groupCy = cellY - 8 + dh0 / 2;
+
+    const dw = dw0 * DIGIT_SCALE;
+    const dh = dh0 * DIGIT_SCALE;
+    const overlap = overlap0 * DIGIT_SCALE;
+    const groupX = groupCx - (2 * dw - overlap) / 2 + gs * DIGIT_OFFSET_X_FRAC;
+    const y = groupCy - dh / 2 - depthShift(gs) + gs * DIGIT_OFFSET_Y_FRAC;
 
     const digits = [tensChar, unitsChar];
 
@@ -265,8 +302,8 @@ export class NumberLayer extends PIXI.Container {
     s0.texture = this.ctx.assets.GetTexture(`${digits[0]}.png`);
     s0.width = dw;
     s0.height = dh;
-    s0.x = cellX + marginX + 0 * dw;
-    s0.y = cellY + marginY;
+    s0.x = groupX;
+    s0.y = y;
     s0.alpha = 1;
     s0.visible = true;
 
@@ -274,8 +311,8 @@ export class NumberLayer extends PIXI.Container {
     s1.texture = this.ctx.assets.GetTexture(`${digits[1]}.png`);
     s1.width = dw;
     s1.height = dh;
-    s1.x = cellX + marginX + 1 * dw - 15;
-    s1.y = cellY + marginY;
+    s1.x = groupX + dw - overlap;
+    s1.y = y;
     s1.alpha = 1;
     s1.visible = true;
   }
