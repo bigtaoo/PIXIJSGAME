@@ -22,10 +22,15 @@ class MobileAssetReplacementPlugin {
         const absPath = path.resolve(resolveData.context, req);
         if (!absPath.startsWith(ASSETS_DIR + path.sep)) return;
 
-        const filename     = path.basename(absPath);
-        const mobileAsset  = path.join(MOBILE_ASSETS_DIR, filename);
-        if (fs.existsSync(mobileAsset)) {
-          resolveData.request = mobileAsset;
+        // Match by filename stem (ignore extension) so an import of e.g.
+        // lobby_bg.webp is satisfied by mobileAssets/lobby_bg.png.
+        if (!fs.existsSync(MOBILE_ASSETS_DIR)) return;
+        const stem = path.basename(absPath, path.extname(absPath));
+        const match = fs
+          .readdirSync(MOBILE_ASSETS_DIR)
+          .find(f => path.basename(f, path.extname(f)) === stem);
+        if (match) {
+          resolveData.request = path.join(MOBILE_ASSETS_DIR, match);
         }
       });
     });
@@ -36,7 +41,7 @@ module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
   const targetPlatform = env.TARGET || 'web';
 
-  // ── Platform-specific overrides ──────────────────────────────────
+  // platform-specific overrides
   const platformConfig = {
     web: {
       entry: './src/index.ts',
@@ -90,7 +95,6 @@ module.exports = (env, argv) => {
       new webpack.DefinePlugin({
         TARGET: JSON.stringify(targetPlatform),
       }),
-      // Mobile builds: prefer high-res assets from src/mobileAssets/ when available
       ...(platform.useMobileAssets ? [new MobileAssetReplacementPlugin()] : []),
     ],
     devServer: {

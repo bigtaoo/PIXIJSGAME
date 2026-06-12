@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js-legacy';
 import { IAssetsManager } from '../assetsManager/IAssetsManager';
 
+declare const TARGET: string;
+
 /**
  * SplashScreen
  *
@@ -19,10 +21,10 @@ import { IAssetsManager } from '../assetsManager/IAssetsManager';
 
 /** Texture key registered by the asset managers. */
 const SPLASH_TEXTURE_KEY = 'splash.png';
-/** Parchment background — matches LoadingOverlay and the game art style. */
+/** Parchment background - matches LoadingOverlay and the game art style. */
 const BG_COLOR = 0xf5eac8;
 
-// ── Timing (ms) ──────────────────────────────────────────────────────────────
+// Timing (ms)
 const FADE_IN_MS = 350;
 const HOLD_MS = 900;
 const FADE_OUT_MS = 350;
@@ -43,25 +45,31 @@ export function playSplash(app: PIXI.Application, assets: IAssetsManager): Promi
   try {
     texture = assets.GetTexture(SPLASH_TEXTURE_KEY);
   } catch {
-    // Splash is optional — never block startup on a missing texture.
+    // Splash is optional - never block startup on a missing texture.
     return Promise.resolve();
   }
+
+  // On mobile builds the splash stretches to fill the entire screen
+  // (non-uniform scale, no aspect preservation); elsewhere it is contained.
+  const isMobile = typeof TARGET !== 'undefined' && TARGET === 'mobile';
 
   return new Promise<void>((resolve) => {
     const container = new PIXI.Container();
     container.interactiveChildren = false;
 
-    // ── Opaque parchment backdrop covering the whole screen ──────────────────
+    // Opaque parchment backdrop covering the whole screen
     const bg = new PIXI.Graphics();
     container.addChild(bg);
 
-    // ── Logo sprite (anchored at its centre for clean scaling) ───────────────
+    // Logo sprite (anchored at its centre for clean scaling)
     const logo = new PIXI.Sprite(texture);
     logo.anchor.set(0.5);
     container.addChild(logo);
 
     // Base scale that fits the logo to the screen; the entrance "pop" multiplies it.
-    let baseScale = 1;
+    // Separate axes so mobile can stretch non-uniformly to fill the screen.
+    let baseScaleX = 1;
+    let baseScaleY = 1;
 
     const layout = (): void => {
       const w = app.renderer.width / app.renderer.resolution;
@@ -72,11 +80,19 @@ export function playSplash(app: PIXI.Application, assets: IAssetsManager): Promi
       bg.drawRect(0, 0, w, h);
       bg.endFill();
 
-      // Contain the portrait splash art within the screen, preserving aspect.
-      baseScale = Math.min(
-        (w * SPLASH_SCREEN_FRACTION) / texture.width,
-        (h * SPLASH_SCREEN_FRACTION) / texture.height
-      );
+      if (isMobile) {
+        // Stretch to fill the entire screen (no aspect preservation).
+        baseScaleX = w / texture.width;
+        baseScaleY = h / texture.height;
+      } else {
+        // Contain the portrait splash art within the screen, preserving aspect.
+        const s = Math.min(
+          (w * SPLASH_SCREEN_FRACTION) / texture.width,
+          (h * SPLASH_SCREEN_FRACTION) / texture.height
+        );
+        baseScaleX = s;
+        baseScaleY = s;
+      }
       logo.position.set(w / 2, h / 2);
     };
 
@@ -86,9 +102,12 @@ export function playSplash(app: PIXI.Application, assets: IAssetsManager): Promi
       typeof window !== 'undefined' && typeof window.addEventListener === 'function';
     if (hasWindow) window.addEventListener('resize', layout);
 
+    // Subtle entrance "pop" (contain mode only); mobile stays at full fill.
+    const popFrom = isMobile ? 1 : 0.94;
+
     // Set the starting frame explicitly to avoid a one-frame flash at full size.
     container.alpha = 0;
-    logo.scale.set(baseScale * 0.94);
+    logo.scale.set(baseScaleX * popFrom, baseScaleY * popFrom);
 
     app.stage.addChild(container);
 
@@ -102,11 +121,12 @@ export function playSplash(app: PIXI.Application, assets: IAssetsManager): Promi
         const t = elapsed / FADE_IN_MS;
         const e = smoothstep(t);
         container.alpha = e;
-        // Subtle pop: scale logo from 0.94× → 1.0× of its fitted size.
-        logo.scale.set(baseScale * (0.94 + 0.06 * e));
+        // Pop: scale logo from popFrom to 1.0x of its fitted size.
+        const pop = popFrom + (1 - popFrom) * e;
+        logo.scale.set(baseScaleX * pop, baseScaleY * pop);
         if (t >= 1) {
           container.alpha = 1;
-          logo.scale.set(baseScale);
+          logo.scale.set(baseScaleX, baseScaleY);
           phase = 'hold';
           elapsed = 0;
         }
