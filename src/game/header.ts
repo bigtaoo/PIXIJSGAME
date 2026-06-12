@@ -338,10 +338,7 @@ export class Header extends BaseHeader {
     this.settingsSprite.x = L.settingsX;
     this.settingsSprite.y = L.settingsY;
 
-    this.musicSprite.width = L.musicSize;
-    this.musicSprite.height = L.musicSize;
-    this.musicSprite.x = L.musicX;
-    this.musicSprite.y = L.musicY;
+    this.resizeMusicButton(L.musicX, L.musicY, L.musicSize);
 
     this.rebuildTip(null, null);
   }

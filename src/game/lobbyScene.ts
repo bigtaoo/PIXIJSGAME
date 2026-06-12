@@ -78,7 +78,7 @@ interface NodeEntry {
 
 // Daily challenge element refs for repositioning on resize
 interface DailyChallengeEntry {
-  circle: PIXI.Graphics;
+  circle: PIXI.Container;
   icon: PIXI.Sprite;
   bestRow: PIXI.Container;
   bestDisplay: DigitDisplay;
@@ -108,7 +108,7 @@ export class LobbyScene extends PIXI.Container {
   private readonly screen: ScreenConfig;
 
   private static readonly NODE_SIZE = 150;
-  private static readonly DAILY_SIZE = 254; // 130 × 1.5 × 1.3
+  private static readonly DAILY_SIZE = 274; // 304 × 0.9
 
   private bg!: PIXI.Sprite;
   private decoContainer!: PIXI.Container;
@@ -419,24 +419,16 @@ export class LobbyScene extends PIXI.Container {
     glow.y = y;
     this.addChild(glow);
 
-    const circle = new PIXI.Graphics();
-    circle.lineStyle(4, 0x6d4c41, 1);
-    circle.beginFill(0xc8862a);
-    circle.drawCircle(0, 0, r);
-    circle.endFill();
+    const circle = new PIXI.Container();
     circle.x = x;
     circle.y = y;
     this.addChild(circle);
 
     const icon = new PIXI.Sprite(this.ctx.assets.GetTexture('daily_challenge_icon.png'));
-    const targetPx = sz * 0.7;
-    const iconScale = targetPx / Math.max(icon.texture.width, icon.texture.height);
-    icon.width = icon.texture.width * iconScale;
-    icon.height = icon.texture.height * iconScale;
+    icon.width = sz;
+    icon.height = sz;
     icon.anchor.set(0.5, 0.5);
-    icon.x = x;
-    icon.y = y;
-    this.addChild(icon);
+    circle.addChild(icon);
 
     const best = this.buildIconDigitRow('trophy.png');
     this.addChild(best.container);
@@ -574,8 +566,6 @@ export class LobbyScene extends PIXI.Container {
       this.dailyEntry.glow.y = y;
       this.dailyEntry.circle.x = x;
       this.dailyEntry.circle.y = y;
-      this.dailyEntry.icon.x = x;
-      this.dailyEntry.icon.y = y;
       this.dailyEntry.hit.x = x - dr;
       this.dailyEntry.hit.y = y - dr;
 

@@ -1,6 +1,6 @@
 # 数字消除游戏 美术文档
 
-**版本：** v1.8  
+**版本：** v1.9（2026-06-12 视觉定稿，不再迭代大方向）  
 **日期：** 2026年6月  
 **关联文档：** 策划文档 v1.0
 
@@ -8,14 +8,16 @@
 
 ## 1. 整体风格定位
 
-### 1.0 美术大方向（v1.8 更新，2026-06-11）
+### 1.0 美术大方向（v1.9 **定稿**，2026-06-12）
 
-**定位：水彩柔和·休闲亲切版。** 从"大众豪华感"转向更轻盈、眼睛友好的视觉风格。
+**定位：水彩柔和·文具便签本主题。** 以「在草稿纸/牛皮纸上做数学题」为视觉隐喻，整体轻盈、眼睛友好。**本节为锁定方向，不再大幅修改。**
 
-**决策依据（v1.8 风格切换）：**
+**风格演变：**
 
-- v1.7 金色 3D 方向：描边太重、浮雕感强、多色饱和同时出现 → 视觉"刺眼"
-- 新方向：muted pastel 底色 + 暖棕白描边数字 + 弱化的格子阴影 → 整体柔和，降低视觉疲劳
+- v1.0–1.5：米色填充+深棕粗描边（偏粗糙，弃用）
+- v1.7：金色 3D 挤出（描边太重、浮雕感强、视觉疲劳，弃用）
+- v1.8：水彩扁平初版（NotoSans-Bold，暖棕填充+白描边）
+- **v1.9（当前定稿）**：近白填充+暖棕描边+波浪指纹纹理，格子 pastel 三色，牛皮纸大厅背景+方格纸游戏背景，文具装饰（铅笔/橡皮/回形针）已落地
 - 参考：NYT Games、休闲益智类移动游戏
 
 **核心原则：**
@@ -25,15 +27,17 @@
 3. **去除过度装饰**——格子阴影极弱、高光透明度极低，接近扁平但保留微弱立体感
 4. **风格一致性**——数字、格子、选中状态统一调整
 
-**执行顺序（每步先出预览对比，确认后再部署）：**
+**执行进度（v1.9 定稿时状态）：**
 
 | 步骤 | 内容 | 状态 |
 |------|------|------|
-| ① | 金色 3D 数字（程序化生成，见 2.1） | 进行中 |
-| ② | 格子微调配套：底色略加深、内阴影"嵌在木板里"感，衬托金色数字 | 待开始 |
-| ③ | 图标升级（爱心/时钟/星星/按钮跟随数字风格） | 待开始 |
-| ④ | 动效粒子密度加码（消除爆裂感、连击冲击力） | 待开始 |
-| ⑤ | CrazyGames 封面图/缩略图（对转化数据影响最大，单独认真做） | 待开始 |
+| ① | 数字：近白填充+暖棕描边+波浪纹 alpha38（`tools/generate_digits_watercolor.py`） | ✅ 已完成 |
+| ② | 格子：pastel 三色（muted 天蓝/暖沙/柔玫瑰），弱阴影、弱高光 | ✅ 已完成 |
+| ③ | 文具装饰（铅笔/橡皮/回形针）落地游戏场景 + 大厅 | ✅ 已完成 |
+| ④ | **排行榜图标重做**（水彩 podium 风格，含圆形底盘，替换 `daily_challenge_icon.png`） | ✅ 已完成 |
+| ⑦ | **音乐关闭斜线**（`baseHeader.ts`）：游戏场景 + 每日挑战 header 与大厅保持一致 | ✅ 已完成 |
+| ⑤ | 动效粒子密度（当前已实现，可按需加码） | 🔄 可选优化 |
+| ⑥ | CrazyGames 封面图/缩略图（对转化数据影响最大，单独认真做） | 📋 待开始 |
 
 **主题：文具 / 便签本**
 
@@ -558,14 +562,29 @@ X marks, crosses, footprints, paint drips
 
 无锁定状态，无需灰色变体——进入大厅即表示已通关第 1 关，图标始终以激活态显示。
 
-#### AI 图片生成参考 Prompt（如需预渲染）
+#### ⚠️ 图标重做（v1.9 待处理）
+
+当前 `daily_challenge_icon.png` 为扁平现代风格柱状图，与整体水彩文具风格不符（见截图）。需要重新生成。
+
+**推荐方案：AI 重新生成**（手绘/水彩质感很难用 SVG 复现）
+
+**AI 生成 Prompt（Leonardo.ai，1:1）：**
 
 ```
-A circular game map icon, deep amber gold background (#C8862A), dark brown outline (#6D4C41),
-featuring a simple leaderboard bar chart inside: three vertical bars, center bar tallest in gold,
-side bars shorter in white, bold flat style, no gradient, transparent background,
-centered on 260x260 canvas. Hand-drawn adventure map aesthetic. --ar 1:1 --v 6 --style raw
+A circular game icon, warm hand-painted illustration style, deep amber gold background,
+dark brown outline. Inside the circle: three-tier podium / leaderboard trophy podium
+viewed from front, center platform tallest in warm gold, left and right platforms shorter
+in creamy white, oil painting texture, warm amber tones, adventure map aesthetic,
+no flat design, no modern UI style. Transparent background, centered on 260x260 canvas.
 ```
+
+**Negative Prompt：**
+```
+flat design, modern UI, bar chart, graph, minimalist, pixel art, 
+sharp edges, gradient mesh, digital illustration, vector art
+```
+
+**备注：** 用"podium 领奖台"而非"bar chart 柱状图"——视觉更直觉，也更符合手绘风。
 
 ---
 
@@ -1018,6 +1037,4 @@ public update(deltaMs: number): void {
 |------|------|------|
 | Banner pop-in | 120ms | ease-out（0→70%: linear 0→1.08，70%→100%: 1.08→1.0） |
 | Banner hold | 580ms | 静止 |
-| Banner fade-out | 200ms | linear（alpha + scale） |
-| 粒子触发 | 每 60ms 一批，共 ~5 次 | — |
-| 总时长 | **900ms** | — |
+| Banner fade-

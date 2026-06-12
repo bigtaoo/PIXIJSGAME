@@ -41,6 +41,7 @@ export abstract class BaseHeader extends PIXI.Container {
 
   // ── Music ──────────────────────────────────────────────────────────────────
   protected musicSprite!: PIXI.Sprite;
+  protected musicOffSlash!: PIXI.Graphics;
 
   // ── Shared constants ───────────────────────────────────────────────────────
   protected static readonly WARN_THRESHOLD = 10;
@@ -126,23 +127,53 @@ export abstract class BaseHeader extends PIXI.Container {
     btn.height = size;
     btn.x = x;
     btn.y = y;
-    this.applyMusicTint(btn);
     this.addChild(btn);
     this.musicSprite = btn;
+
+    const slash = new PIXI.Graphics();
+    this.drawMusicSlash(slash, x, y, size);
+    this.addChild(slash);
+    this.musicOffSlash = slash;
+
+    this.applyMusicState();
+
     this.ctx.input.registerUI(
       new UIElement({
         zIndex: 15,
         sprite: btn,
         onTap: () => {
           this.ctx.audio.toggleMusic();
-          this.applyMusicTint(btn);
+          this.applyMusicState();
         },
       })
     );
   }
 
+  /** Reposition slash and sprite after a resize. */
+  protected resizeMusicButton(x: number, y: number, size: number): void {
+    this.musicSprite.x = x;
+    this.musicSprite.y = y;
+    this.musicSprite.width = size;
+    this.musicSprite.height = size;
+    this.drawMusicSlash(this.musicOffSlash, x, y, size);
+  }
+
+  private drawMusicSlash(g: PIXI.Graphics, x: number, y: number, size: number): void {
+    g.clear();
+    g.lineStyle(Math.round(size * 0.09), 0x6d4c41, 0.9);
+    g.moveTo(x + size, y);
+    g.lineTo(x, y + size);
+  }
+
   protected applyMusicTint(sprite: PIXI.Sprite): void {
-    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xffffff : 0x444444;
+    sprite.tint = this.ctx.audio.isMusicEnabled() ? 0xffffff : 0x999999;
+    sprite.alpha = this.ctx.audio.isMusicEnabled() ? 1 : 0.55;
+  }
+
+  protected applyMusicState(): void {
+    const on = this.ctx.audio.isMusicEnabled();
+    this.applyMusicTint(this.musicSprite);
+    if (this.musicOffSlash) this.musicOffSlash.visible = !on;
   }
 
   // ── Protected tip helpers ──────────────────────────────────────────────────
@@ -230,31 +261,3 @@ export abstract class BaseHeader extends PIXI.Container {
           s.y = y;
           container.addChild(s);
         });
-      }
-    }
-  }
-
-  // ── Private ────────────────────────────────────────────────────────────────
-
-  /**
-   * Add a plus or equals symbol sprite to the tip container.
-   * Full-size (DC style) when tipSymbolFullSize=true; 2/3 centred (game style) otherwise.
-   */
-  private addTipSymbol(texture: string, x: number, y: number, w: number, h: number): void {
-    const sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(texture));
-    if (this.tipSymbolFullSize) {
-      sprite.width = w;
-      sprite.height = h;
-      sprite.x = x;
-      sprite.y = y;
-    } else {
-      const sW = Math.round((w * 2) / 3),
-        sH = Math.round((h * 2) / 3);
-      sprite.width = sW;
-      sprite.height = sH;
-      sprite.x = x + Math.round((w - sW) / 2);
-      sprite.y = y + Math.round((h - sH) / 2);
-    }
-    this.tipContainer.addChild(sprite);
-  }
-}
