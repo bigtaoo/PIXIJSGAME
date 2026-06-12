@@ -261,3 +261,31 @@ export abstract class BaseHeader extends PIXI.Container {
           s.y = y;
           container.addChild(s);
         });
+      }
+    }
+  }
+
+  // ── Private ────────────────────────────────────────────────────────────────
+
+  /**
+   * Add a plus or equals symbol sprite to the tip container.
+   * Full-size (DC style) when tipSymbolFullSize=true; 2/3 centred (game style) otherwise.
+   */
+  private addTipSymbol(texture: string, x: number, y: number, w: number, h: number): void {
+    const sprite = new PIXI.Sprite(this.ctx.assets.GetTexture(texture));
+    if (this.tipSymbolFullSize) {
+      sprite.width = w;
+      sprite.height = h;
+      sprite.x = x;
+      sprite.y = y;
+    } else {
+      const sW = Math.round((w * 2) / 3),
+        sH = Math.round((h * 2) / 3);
+      sprite.width = sW;
+      sprite.height = sH;
+      sprite.x = x + Math.round((w - sW) / 2);
+      sprite.y = y + Math.round((h - sH) / 2);
+    }
+    this.tipContainer.addChild(sprite);
+  }
+}

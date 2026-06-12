@@ -1037,4 +1037,6 @@ public update(deltaMs: number): void {
 |------|------|------|
 | Banner pop-in | 120ms | ease-out（0→70%: linear 0→1.08，70%→100%: 1.08→1.0） |
 | Banner hold | 580ms | 静止 |
-| Banner fade-
+| Banner fade-out | 200ms | linear（alpha + scale） |
+| 粒子触发 | 每 60ms 一批，共 ~5 次 | — |
+| 总时长 | **900ms** | — |
