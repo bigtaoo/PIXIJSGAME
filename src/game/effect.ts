@@ -74,11 +74,12 @@ export class ExplosionSystem {
    * @param isCombo  Whether this is a combo elimination (more / faster particles)
    * @param gridSize Cell size in logical pixels — used to scale fragments
    */
-  public play(cx: number, cy: number, isCombo: boolean, gridSize: number): void {
+  public play(cx: number, cy: number, isCombo: boolean, gridSize: number, sizeMul = 1): void {
     if (!this.ready) return;
 
     // Base visual scale: fragment should look ~27 % of a cell for "large" (2/3 of original)
-    const bs = gridSize / 180;
+    // sizeMul lets callers enlarge a burst (e.g. celebration ambient ×1.3 / focus ×1.5).
+    const bs = (gridSize / 180) * sizeMul;
 
     if (isCombo) {
       this.spawnGroup(this.largeTextures, cx, cy, 3, {

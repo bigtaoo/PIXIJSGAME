@@ -55,6 +55,11 @@ export class GameScene extends PIXI.Container {
   private _celebrationElapsed = 0;
   private static readonly CELEBRATION_DURATION_MS = 1800;
 
+  /** Screen-shake state (programmatic scene offset; cross-platform). */
+  private _shakeMs = 0;
+  private _shakeDuration = 0;
+  private _shakeMag = 0;
+
   /** How many ms have elapsed since the player selected the first tile. -1 = inactive. */
   private hintTimerMs = -1;
   /** Threshold for the next hint fire: HINT_DELAY_MS on first fire, HINT_REPEAT_MS afterwards. */
@@ -173,6 +178,8 @@ export class GameScene extends PIXI.Container {
       this.vignetteAlpha = Math.max(0, this.vignetteAlpha - deltaMs / 400);
       this.comboVignette.alpha = this.vignetteAlpha;
     }
+
+    this.updateShake(deltaMs);
 
     // Tick celebration timer while paused
     if (this._celebrationDone) {
@@ -348,26 +355,88 @@ export class GameScene extends PIXI.Container {
   }
 
   /**
-   * Sub-target cleared celebration: fire ~12 staggered explosion effects across
-   * the empty grid over 1.6 s, then the update() timer triggers onDone at 2 s.
+   * Sub-target cleared celebration.
+   *
+   * Instead of spraying ~50 identical max-combo bursts as uniform noise, the
+   * show is choreographed in two tiers over CELEBRATION_DURATION_MS:
+   *
+   *  - FOCUS bursts (combo×3, ~19 particles each + ripple + glow): the "stars".
+   *    Clustered near the centre and front-loaded for a strong opening punch.
+   *  - AMBIENT bursts (plain, ~11 particles each): fill the grid as an outward
+   *    shockwave — trigger time grows with each cell's distance from centre, so
+   *    the celebration reads as centre → edges rather than random static.
+   *
+   * Total ≈ FOCUS + AMBIENT bursts (fewer particles than the old flat 50×combo),
+   * giving more visual layering at a lower peak particle count.
    */
+  private static readonly CELEBRATION_FOCUS_BURSTS = 10; // focus tier (combo×3)
+  private static readonly CELEBRATION_OPENING_BURSTS = 4; // focus subset fired together as the opening punch
+  private static readonly CELEBRATION_AMBIENT_BURSTS = 34; // ambient shockwave tier (plain)
+  private static readonly CELEBRATION_FINALE_BURSTS = 6; // dense closing cluster near centre
+
   private showTargetClearCelebration(onDone: () => void): void {
     this.state.isPause = true;
     this._celebrationElapsed = 0;
     this._celebrationDone = onDone;
+    // Opening punch: a short screen shake synced with the opening salvo below.
+    this.triggerShake(this.screen.gridSize * 0.2, 350);
 
     const cols = this.screen.gridCountW;
     const rows = this.screen.gridCountH;
     const SPREAD_MS = GameScene.CELEBRATION_DURATION_MS - 300;
-    const BURST = 50; // positions repeat freely across the grid
 
-    // Pre-schedule random effect times within the first SPREAD_MS
-    const schedule: Array<{ t: number; idx: number }> = [];
-    for (let i = 0; i < BURST; i++) {
+    const ccol = (cols - 1) / 2;
+    const crow = (rows - 1) / 2;
+    const maxDist = Math.hypot(ccol, crow) || 1;
+    const clamp = (v: number, lo: number, hi: number): number =>
+      Math.min(hi, Math.max(lo, v));
+
+    interface Shot {
+      t: number;
+      idx: number;
+      focus: boolean;
+    }
+    const schedule: Shot[] = [];
+
+    // Tier 1 — focus bursts near centre. The first OPENING_BURSTS fire together
+    // (0–120 ms) as a single opening punch / peak; the rest spread through the
+    // first half.
+    for (let i = 0; i < GameScene.CELEBRATION_FOCUS_BURSTS; i++) {
+      const col = clamp(Math.round(ccol + (Math.random() - 0.5) * cols * 0.5), 0, cols - 1);
+      const row = clamp(Math.round(crow + (Math.random() - 0.5) * rows * 0.5), 0, rows - 1);
+      const t =
+        i < GameScene.CELEBRATION_OPENING_BURSTS
+          ? Math.random() * 120
+          : 120 + Math.random() * SPREAD_MS * 0.45;
+      schedule.push({ t, idx: this.screen.cellIndex(col, row), focus: true });
+    }
+
+    // Tier 2 — ambient shockwave: trigger time grows with distance from centre,
+    // capped before the finale window so the tail stays clear.
+    for (let i = 0; i < GameScene.CELEBRATION_AMBIENT_BURSTS; i++) {
       const col = Math.floor(Math.random() * cols);
       const row = Math.floor(Math.random() * rows);
-      schedule.push({ t: Math.random() * SPREAD_MS, idx: this.screen.cellIndex(col, row) });
+      const dist = Math.hypot(col - ccol, row - crow) / maxDist; // 0..1
+      const jitter = (Math.random() - 0.5) * SPREAD_MS * 0.2;
+      schedule.push({
+        t: clamp(dist * SPREAD_MS * 0.8 + jitter, 0, SPREAD_MS * 0.82),
+        idx: this.screen.cellIndex(col, row),
+        focus: false,
+      });
     }
+
+    // Tier 3 — finale: a tight cluster near centre in the last ~18 % to close
+    // the show with a clear punctuation (the first one is a big focus burst).
+    for (let i = 0; i < GameScene.CELEBRATION_FINALE_BURSTS; i++) {
+      const col = clamp(Math.round(ccol + (Math.random() - 0.5) * cols * 0.4), 0, cols - 1);
+      const row = clamp(Math.round(crow + (Math.random() - 0.5) * rows * 0.4), 0, rows - 1);
+      schedule.push({
+        t: SPREAD_MS * 0.82 + Math.random() * SPREAD_MS * 0.18,
+        idx: this.screen.cellIndex(col, row),
+        focus: i === 0,
+      });
+    }
+
     schedule.sort((a, b) => a.t - b.t);
 
     let elapsed = 0;
@@ -375,7 +444,12 @@ export class GameScene extends PIXI.Container {
     const fireFn = (): void => {
       elapsed += PIXI.Ticker.shared.elapsedMS;
       while (next < schedule.length && schedule[next].t <= elapsed) {
-        this.effectLayer.playEffect(schedule[next].idx, true, 3);
+        const shot = schedule[next];
+        if (shot.focus) {
+          this.effectLayer.playEffect(shot.idx, true, 3, 1.5); // center focus +50%
+        } else {
+          this.effectLayer.playEffect(shot.idx, false, 1, 1.3); // ambient +30%
+        }
         next++;
       }
       if (next >= schedule.length) {
@@ -383,6 +457,29 @@ export class GameScene extends PIXI.Container {
       }
     };
     PIXI.Ticker.shared.add(fireFn);
+  }
+
+  /** Trigger a decaying screen shake by offsetting the scene container. */
+  private triggerShake(magnitude: number, durationMs: number): void {
+    this._shakeMag = magnitude;
+    this._shakeDuration = durationMs;
+    this._shakeMs = 0;
+  }
+
+  /** Advance the active shake; offsets this.x/y with random jitter that decays to 0. */
+  private updateShake(deltaMs: number): void {
+    if (this._shakeDuration <= 0) return;
+    this._shakeMs += deltaMs;
+    const k = 1 - this._shakeMs / this._shakeDuration;
+    if (k <= 0) {
+      this._shakeDuration = 0;
+      this.x = 0;
+      this.y = 0;
+      return;
+    }
+    const m = this._shakeMag * k;
+    this.x = (Math.random() * 2 - 1) * m;
+    this.y = (Math.random() * 2 - 1) * m;
   }
 
   private onTimeUp(): void {

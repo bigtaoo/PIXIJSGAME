@@ -37,7 +37,7 @@
 | ④ | **排行榜图标重做**（水彩 podium 风格，含圆形底盘，替换 `daily_challenge_icon.png`） | ✅ 已完成 |
 | ⑦ | **音乐关闭斜线**（`baseHeader.ts`）：游戏场景 + 每日挑战 header 与大厅保持一致 | ✅ 已完成 |
 | ⑤ | 动效粒子密度（当前已实现，可按需加码） | 🔄 可选优化 |
-| ⑥ | CrazyGames 封面图/缩略图（对转化数据影响最大，单独认真做） | 📋 待开始 |
+| ⑥ | CrazyGames 封面图/缩略图（`markting/` 目录：1920×1080、800×1200、800×800 + 竖/横屏宣传视频） | ✅ 已完成 |
 
 **主题：文具 / 便签本**
 
@@ -176,7 +176,7 @@ Tier 颜色随 target 数值动态重算，同一 target 内保持不变。实�
 | 安全机制 | 仅选取 `alpha === 1` 的可见格子；`hideCell()` 取消进行中的 pulse |
 | 实现 | `Grid.updateIdle()` + `spawnIdlePulse()`，每帧由 `GameScene.update()` 驱动 |
 
-### 3.5 格子尺寸
+### 3.6 格子尺寸
 
 代码中 `gridSize = 120`（逻辑像素），即每格 **120 × 120**。纹理以 **120 × 120** 程序生成（`CELL_BASE = 120`），显示时 width/height 均设为 `gridSize - 5`（即 115px）。
 
@@ -281,18 +281,18 @@ z层级（从底到顶）
 起点：最后点击格子（idxB）的中心点，gameContainer 局部坐标转换为场景坐标
 终点：Header 区域闹钟图标中心（header.getClockCenter()，直接返回场景坐标）
 
-动画分三阶段，总时长 300ms（FlyingBonus.DURATION）：
-  Phase 1（0–100ms）: 在起点弹出，scale 0 → 2.0（含轻微过冲，peak≈2.2）
-  Phase 2（100–200ms）: 停留在起点，scale 保持 2.0
-  Phase 3（200–300ms）: 沿弧线飞向时钟，scale 逐渐缩小，alpha 在 raw>0.4 后淡出
+动画分三阶段，总时长 600ms：
+  Phase 1（0–100ms）: 在起点弹出，scale 0 → 1.0（含过冲，peak≈1.12，75% 处回落）
+  Phase 2（100–300ms）: 停留在起点，scale 保持 1.0
+  Phase 3（300–600ms）: 沿弧线飞向时钟，scale 1→0.35，alpha raw>0.55 后淡出，轻微旋转
 
 路径：二次贝塞尔弧线
-  控制点 = 起终点 x 取中，y 取 min(sy, ey) − 200px
+  控制点 = 起终点 x 取中，y 取 min(sy, ey) − 220px
   （使精灵先向上弧起，再落向闹钟，形成自然弧线）
   位移参数沿弧线做 quadratic ease-in（t = raw²）
 ```
 
-回调触发时机：动画开始后 250ms（CALLBACK_TIME），触发 `header.triggerClockBounce()`。
+回调触发时机：动画开始后 500ms（CALLBACK_TIME），触发 `header.triggerClockBounce()`。
 
 坐标变换（gameContainer 已缩放时）：
 ```typescript
@@ -562,29 +562,9 @@ X marks, crosses, footprints, paint drips
 
 无锁定状态，无需灰色变体——进入大厅即表示已通关第 1 关，图标始终以激活态显示。
 
-#### ⚠️ 图标重做（v1.9 待处理）
+#### ✅ 图标重做（v1.9 已完成）
 
-当前 `daily_challenge_icon.png` 为扁平现代风格柱状图，与整体水彩文具风格不符（见截图）。需要重新生成。
-
-**推荐方案：AI 重新生成**（手绘/水彩质感很难用 SVG 复现）
-
-**AI 生成 Prompt（Leonardo.ai，1:1）：**
-
-```
-A circular game icon, warm hand-painted illustration style, deep amber gold background,
-dark brown outline. Inside the circle: three-tier podium / leaderboard trophy podium
-viewed from front, center platform tallest in warm gold, left and right platforms shorter
-in creamy white, oil painting texture, warm amber tones, adventure map aesthetic,
-no flat design, no modern UI style. Transparent background, centered on 260x260 canvas.
-```
-
-**Negative Prompt：**
-```
-flat design, modern UI, bar chart, graph, minimalist, pixel art, 
-sharp edges, gradient mesh, digital illustration, vector art
-```
-
-**备注：** 用"podium 领奖台"而非"bar chart 柱状图"——视觉更直觉，也更符合手绘风。
+`daily_challenge_icon.png` 已重做为水彩 podium 风格，含圆形底盘，与整体水彩文具风格一致。
 
 ---
 
@@ -888,7 +868,7 @@ this.textures['next.png'] = makeTexture(renderer, g => {
 | 格子消除（冲击帧） | 50ms | linear | ✅ |
 | 格子消除（碎裂） | 150ms | ease-out | ✅ |
 | 粒子消散 | 150ms | ease-out | ✅ |
-| 加时精灵飞行（总） | 700ms | 弹出 160ms（overshoot）+ 停留 200ms + 飞行 340ms（ease-in + 轻旋转） | ✅ |
+| 加时精灵飞行（总） | 600ms | 弹出 100ms（overshoot peak≈1.12）+ 停留 200ms + 飞行 300ms（quadratic ease-in + 轻旋转） | ✅ |
 | 闹钟弹跳 | 200ms | sin 弧（峰值 ×1.25） | ✅ |
 | 时间数字高亮 | 300ms | ease-in-out | ✅ |
 | 命数图标 pop | 230ms | scale 1→1.3→0 | ✅ |
@@ -902,17 +882,15 @@ this.textures['next.png'] = makeTexture(renderer, g => {
 | **场景切换淡出（v1.4）** | 150ms | linear | ✅ |
 | **星星弹出（v1.4）** | 220ms × 3，stagger 150ms | linear 双段（0→peak→1） | ✅ |
 
-> **实现提示**：最简单的做法是给 `drawRetryIcon` / `drawNextIcon` / `drawLobbyIcon` 各自增加 `(x, y, size)` 偏移参数，调用时传入 `pad` 值，而不需要修改 Graphics 坐标系。
-
 ---
 
 ## 14. 小关过关庆祝动画 ✅（v1.2 已实现）
 
-### 12.1 触发时机
+### 14.1 触发时机
 
 每次清除单个 Target（即 `onTargetCleared()` 检测到仍有剩余 target 时），在进入下一个 target 之前播放庆祝动画。最后一个 target 清除时不触发（直接显示关卡结算 `GameResultOverlay`）。
 
-### 12.2 视觉描述
+### 14.2 视觉描述
 
 格子全部清空后，在空棋盘上随机打 50 次爆炸特效，位置和开始时间均随机，持续 1.8s 后自动进入下一个 target。无任何横幅或浮层。
 
@@ -936,13 +914,13 @@ this.textures['next.png'] = makeTexture(renderer, g => {
 
 > 淡出阶段当前版本省略，Banner 在 900ms 时直接移除。后续可加入 alpha 淡出。
 
-### 12.3 游戏状态
+### 14.3 游戏状态
 
 动画播放期间 `state.isPause = true`，防止输入和时间推进。动画结束后在调用 `startCurrentTarget()` 前重置 `state.isPause = false`。
 
 时间池（`state.timeRemainingMs`）在 `startCurrentTarget()` 内部调用 `state.addTime(30_000)` 补充，不需要提前处理。
 
-### 12.4 建议实现方式
+### 14.4 建议实现方式
 
 在 `gameScene.ts` 中新增私有方法，**不需要新建独立文件**：
 
@@ -1031,7 +1009,7 @@ public update(deltaMs: number): void {
 
 `screen.cols` 和 `screen.rows` 在 `ScreenConfig` 上已有，网格 index 范围 `[0, cols * rows)`，无需改动 `logic.ts`。
 
-### 12.5 动画参数速查
+### 14.5 动画参数速查
 
 | 动画 | 时长 | 缓动 |
 |------|------|------|

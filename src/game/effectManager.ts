@@ -16,6 +16,7 @@ interface Ripple {
   cx: number;
   cy: number;
   color: number;
+  scale: number;
   elapsed: number;
   active: boolean;
 }
@@ -64,37 +65,38 @@ export class EffectManager extends PIXI.Container {
    * @param isCombo    Whether this elimination is part of a combo
    * @param comboCount Current combo count (used to pick ripple colour)
    */
-  public playEffect(index: number, isCombo = false, comboCount = 1): void {
+  public playEffect(index: number, isCombo = false, comboCount = 1, sizeMul = 1): void {
     const { x, y } = this.screen.indexToPos(index);
     const half = this.screen.gridSize / 2;
     const cx = x + half;
     const cy = y + half;
-    this.explosion.play(cx, cy, isCombo, this.screen.gridSize);
+    this.explosion.play(cx, cy, isCombo, this.screen.gridSize, sizeMul);
     if (isCombo) {
-      this.spawnRipple(cx, cy, comboCount >= 3 ? RIPPLE_COLOR_3 : RIPPLE_COLOR_2);
-      this.spawnGlow(cx, cy, comboCount >= 3 ? GLOW_COLOR_3 : GLOW_COLOR_2);
+      this.spawnRipple(cx, cy, comboCount >= 3 ? RIPPLE_COLOR_3 : RIPPLE_COLOR_2, sizeMul);
+      this.spawnGlow(cx, cy, comboCount >= 3 ? GLOW_COLOR_3 : GLOW_COLOR_2, sizeMul);
     }
   }
 
   // ── Ripple helpers ───────────────────────────────────────────────────────
 
-  private spawnRipple(cx: number, cy: number, color: number): void {
+  private spawnRipple(cx: number, cy: number, color: number, scale = 1): void {
     // Reuse an inactive ripple from the pool, or create a new one.
     let r = this.ripples.find((p) => !p.active);
     if (!r) {
       const gfx = new PIXI.Graphics();
       this.addChild(gfx);
-      r = { gfx, cx, cy, color, elapsed: 0, active: false };
+      r = { gfx, cx, cy, color, scale, elapsed: 0, active: false };
       this.ripples.push(r);
     }
     r.cx = cx;
     r.cy = cy;
     r.color = color;
+    r.scale = scale;
     r.elapsed = 0;
     r.active = true;
   }
 
-  private spawnGlow(cx: number, cy: number, color: number): void {
+  private spawnGlow(cx: number, cy: number, color: number, sizeMul = 1): void {
     // Skip if the asset isn't loaded yet (during development / missing file).
     let tex: PIXI.Texture | null = null;
     try {
@@ -119,7 +121,7 @@ export class EffectManager extends PIXI.Container {
     g.spr.alpha = 1;
     // Scale so glow matches cell size
     const s = this.screen.gridSize / tex.width;
-    g.spr.scale.set(s * 1.4); // slightly larger than cell for soft bloom
+    g.spr.scale.set(s * 1.4 * sizeMul); // slightly larger than cell for soft bloom
     g.elapsed = 0;
     g.active = true;
   }
@@ -146,7 +148,7 @@ export class EffectManager extends PIXI.Container {
       if (!r.active) continue;
       r.elapsed += deltaMs;
       const t = Math.min(r.elapsed / RIPPLE_DURATION, 1);
-      const radius = rMin + (rMax - rMin) * t;
+      const radius = (rMin + (rMax - rMin) * t) * r.scale;
       const alpha = 1 - t;
 
       r.gfx.clear();
