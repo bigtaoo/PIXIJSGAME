@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
 import { LoadingOverlay } from './ui/loadingOverlay';
+import { playSplash } from './ui/splashScreen';
 
 declare const TARGET: string;
 import { InputManager } from './inputSystem/inputManager';
@@ -45,6 +46,9 @@ window.onload = async () => {
   // Generate programmatic textures after renderer is ready
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
   await loadingOverlay?.dismiss();
+
+  // Branded splash, shown on every launch before the first scene appears.
+  await playSplash(app, assets);
 
   const input = new InputManager();
   setupWebInput(canvas, input);

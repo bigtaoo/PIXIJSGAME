@@ -12,6 +12,7 @@ import musicPngUrl from '../assets/music.png';
 import decoPencilUrl from '../assets/deco_pencil.png';
 import decoEraserUrl from '../assets/deco_eraser.png';
 import decoPaperclipUrl from '../assets/deco_paperclip.png';
+import splashUrl from '../assets/splash.png';
 import { AtlasJson, IAssetsManager } from './IAssetsManager';
 import {
   makeTexture,
@@ -102,6 +103,7 @@ export class WebAssetsManager implements IAssetsManager {
       ['trophy', () => this.loadTrophy()],
       ['music', () => this.loadMusic()],
       ['deco', () => this.loadDecos()],
+      ['splash', () => this.loadSplash()],
     ];
 
     const total = tasks.length;
@@ -140,6 +142,10 @@ export class WebAssetsManager implements IAssetsManager {
   private async loadMusic(): Promise<void> {
     const base = await this.waitForBase(PIXI.BaseTexture.from(musicPngUrl));
     this.textures['music.png'] = new PIXI.Texture(base);
+  }
+  private async loadSplash(): Promise<void> {
+    const base = await this.waitForBase(PIXI.BaseTexture.from(splashUrl));
+    this.textures['splash.png'] = new PIXI.Texture(base);
   }
 
   private async loadDecos(): Promise<void> {

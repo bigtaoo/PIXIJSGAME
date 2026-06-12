@@ -10,6 +10,7 @@
 import * as PIXI from 'pixi.js-legacy';
 import { WebAssetsManager } from './assetsManager/webAssetsManager';
 import { LoadingOverlay } from './ui/loadingOverlay';
+import { playSplash } from './ui/splashScreen';
 import { InputManager } from './inputSystem/inputManager';
 import { setupWebInput } from './inputSystem/webAdapter';
 import { AppContext } from './game/appContext';
@@ -55,6 +56,9 @@ window.onload = async () => {
   // ── 5. Signal loading complete and dismiss overlay ────────────────
   crazyGames.loadingStop();
   await loadingOverlay.dismiss();
+
+  // Branded splash, shown on every launch before the first scene appears.
+  await playSplash(app, assets);
 
   // ── 5a. Request banner ad ─────────────────────────────────────────
   // Replace 'banner-bottom' with the actual banner ID from the CrazyGames dashboard.

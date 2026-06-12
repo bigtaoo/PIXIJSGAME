@@ -63,6 +63,15 @@ export class WechatAssetsManager implements IAssetsManager {
     this.textures['fire.png'] = new PIXI.Texture(this.imageToBaseTexture(fireImg));
     this.textures['music.png'] = new PIXI.Texture(this.imageToBaseTexture(musicImg));
 
+    // Splash screen art (load failure does not affect the game)
+    await this.loadImageWX('assets/splash.png')
+      .then((img) => {
+        this.textures['splash.png'] = new PIXI.Texture(this.imageToBaseTexture(img));
+      })
+      .catch(() => {
+        /* ignore — splash is skipped if the texture is unavailable */
+      });
+
     // Explosion particle atlas (load failure does not affect the game)
     await this.loadExplosionAtlasWX().catch(() => {
       /* ignore */

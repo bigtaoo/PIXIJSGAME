@@ -8,6 +8,7 @@ import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WechatAudioManager } from './game/wechatAudioManager';
 import { WechatPlayerPrefs } from './playerPrefs/wechatPlayerPrefs';
+import { playSplash } from './ui/splashScreen';
 
 function setupPixiWechatAdapter(mainCanvas: HTMLCanvasElement) {
   // PixiJS's CanvasResource.test() uses `instanceof HTMLCanvasElement` and
@@ -70,6 +71,9 @@ async function Init() {
   setupWeChatInput(input);
 
   assets.generateProgrammaticTextures(app.renderer as unknown as PIXI.Renderer);
+
+  // Branded splash, shown on every launch before the first scene appears.
+  await playSplash(app as unknown as PIXI.Application, assets);
 
   const audio = new WechatAudioManager(prefs);
   const ctx: AppContext = {
