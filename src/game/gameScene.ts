@@ -388,8 +388,7 @@ export class GameScene extends PIXI.Container {
     const ccol = (cols - 1) / 2;
     const crow = (rows - 1) / 2;
     const maxDist = Math.hypot(ccol, crow) || 1;
-    const clamp = (v: number, lo: number, hi: number): number =>
-      Math.min(hi, Math.max(lo, v));
+    const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
     interface Shot {
       t: number;
