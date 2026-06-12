@@ -15,9 +15,9 @@ import * as PIXI from 'pixi.js-legacy';
  * Index 0 = tier 0 (small numbers), 1 = tier 1 (mid), 2 = tier 2 (large).
  */
 export const CELL_PALETTE = [
-  0xa9d2e8, // tier 0 — sky blue   (small numbers) — deeper/more saturated than before
-  0xe9d29c, // tier 1 — warm sand  (mid numbers)
-  0xf0b6b2, // tier 2 — rose       (large numbers)
+  0x94c2db, // tier 0 — sky blue   (small numbers) — value-matched, desaturated so it no longer pops vs warm bg
+  0xdbc694, // tier 1 — warm sand  (mid numbers)
+  0xdb9994, // tier 2 — rose       (large numbers) — darkened for digit contrast; all three share L≈0.72 S≈0.50
 ] as const;
 
 /** One gloss ellipse: position + size as fractions of cell size. */
