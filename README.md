@@ -61,6 +61,8 @@ npm run build:mobile       # iOS / Android（Capacitor）
 npm run build:wechat       # 微信小游戏（Rollup）
 ```
 
+> **移动端高清资源**：`build:mobile` 会用 `src/mobileAssets/` 下的同名资源（按文件名主干匹配，忽略扩展名）替换 `src/assets/` 的导入——例如 `lobby_bg.webp` 的导入会命中 `mobileAssets/lobby_bg.png`。仅 mobile 构建生效，其他平台不受影响。splash 在手机端拉伸铺满全屏。
+
 ### 同步到移动端
 
 ```bash
