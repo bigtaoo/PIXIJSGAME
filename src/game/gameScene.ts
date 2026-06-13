@@ -391,6 +391,13 @@ export class GameScene extends PIXI.Container {
     const rows = this.screen.gridCountH;
     const SPREAD_MS = GameScene.CELEBRATION_DURATION_MS - 300;
 
+    // The confirmation chime is short (~0.3s); fire it on each of the three
+    // choreography beats (opening punch / spread peak / finale) so the audio
+    // fills the 1.8s show and lands with the visual punctuation.
+    this.ctx.audio.playConfirmation(); // opening punch (t = 0)
+    const audioCues = [SPREAD_MS * 0.4, SPREAD_MS * 0.82];
+    let audioNext = 0;
+
     const ccol = (cols - 1) / 2;
     const crow = (rows - 1) / 2;
     const maxDist = Math.hypot(ccol, crow) || 1;
@@ -448,6 +455,10 @@ export class GameScene extends PIXI.Container {
     let next = 0;
     const fireFn = (): void => {
       elapsed += PIXI.Ticker.shared.elapsedMS;
+      while (audioNext < audioCues.length && audioCues[audioNext] <= elapsed) {
+        this.ctx.audio.playConfirmation();
+        audioNext++;
+      }
       while (next < schedule.length && schedule[next].t <= elapsed) {
         const shot = schedule[next];
         if (shot.focus) {

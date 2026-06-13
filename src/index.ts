@@ -34,11 +34,12 @@ window.onload = async () => {
     await assets.loadAssets((loaded, total) => loadingOverlay?.setProgress(loaded / total));
   } catch (err) {
     console.error('[init] loadAssets failed:', err);
-    // Show error on screen so we can diagnose on device
+    // Textless on-device signal: a solid red full-screen overlay marks an asset
+    // load failure (vs a white screen for other init problems). Error detail
+    // goes to the console only — keeps the game free of any on-screen text.
     const msg = document.createElement('div');
     msg.style.cssText =
-      'position:fixed;top:0;left:0;width:100%;padding:20px;background:#c00;color:#fff;font:16px monospace;z-index:9999;word-break:break-all;';
-    msg.textContent = '[loadAssets error] ' + String(err);
+      'position:fixed;top:0;left:0;width:100%;height:100%;background:#c00;z-index:9999;';
     document.body.appendChild(msg);
     return;
   }

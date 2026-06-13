@@ -17,10 +17,11 @@ import clickUrl from '../assets/click.ogg';
 import addtimeUrl from '../assets/addtime.ogg';
 import victoryUrl from '../assets/victory.ogg';
 import gameoverUrl from '../assets/gameover.ogg';
+import confirmationUrl from '../assets/confirmation.ogg';
 
 const PREF_KEY = 'music_enabled';
 
-type SfxKey = 'click' | 'addtime' | 'victory' | 'gameover' | 'bg';
+type SfxKey = 'click' | 'addtime' | 'victory' | 'gameover' | 'confirmation' | 'bg';
 
 export class MobileAudioManager implements IAudioManager {
   private actx: AudioContext | null = null;
@@ -130,6 +131,9 @@ export class MobileAudioManager implements IAudioManager {
   }
   public playGameOver(): void {
     this.playSfx('gameover', gameoverUrl, 0.8);
+  }
+  public playConfirmation(): void {
+    this.playSfx('confirmation', confirmationUrl, 0.8);
   }
 
   private playSfx(key: SfxKey, url: string, volume: number): void {

@@ -18,6 +18,7 @@ const SRC_CLICK = 'assets/click.ogg';
 const SRC_ADDTIME = 'assets/addtime.ogg';
 const SRC_VICTORY = 'assets/victory.ogg';
 const SRC_GAMEOVER = 'assets/gameover.ogg';
+const SRC_CONFIRMATION = 'assets/confirmation.ogg';
 
 export class WechatAudioManager implements IAudioManager {
   private bgCtx: wx.IInnerAudioContext | null = null;
@@ -68,6 +69,9 @@ export class WechatAudioManager implements IAudioManager {
   }
   public playGameOver(): void {
     this.playSfx(SRC_GAMEOVER);
+  }
+  public playConfirmation(): void {
+    this.playSfx(SRC_CONFIRMATION);
   }
 
   // ── Private ───────────────────────────────────────────────────────────────

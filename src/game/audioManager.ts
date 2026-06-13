@@ -23,6 +23,7 @@ import clickUrl from '../assets/click.ogg';
 import addtimeUrl from '../assets/addtime.ogg';
 import victoryUrl from '../assets/victory.ogg';
 import gameoverUrl from '../assets/gameover.ogg';
+import confirmationUrl from '../assets/confirmation.ogg';
 
 const PREF_KEY = 'music_enabled';
 
@@ -84,6 +85,9 @@ export class AudioManager implements IAudioManager {
   }
   public playGameOver(): void {
     this.playSfx('gameover', gameoverUrl);
+  }
+  public playConfirmation(): void {
+    this.playSfx('confirmation', confirmationUrl);
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────

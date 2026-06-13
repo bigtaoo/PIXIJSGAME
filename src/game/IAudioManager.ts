@@ -18,4 +18,6 @@ export interface IAudioManager {
   playAddTime(): void;
   playVictory(): void;
   playGameOver(): void;
+  /** Short chime fired during the sub-target clear celebration. */
+  playConfirmation(): void;
 }
