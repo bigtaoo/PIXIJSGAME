@@ -123,6 +123,13 @@ export class SceneCoordinator extends PIXI.Container {
     }
   }
 
+  /** Capture/debug helper: force the win overlay on the active game scene. */
+  public showWinOverlay(stars = 3): void {
+    if (this.activeScene instanceof GameScene) {
+      this.activeScene.showWinOverlay(stars);
+    }
+  }
+
   public update(deltaMs: number): void {
     this.updateTransition(deltaMs);
 

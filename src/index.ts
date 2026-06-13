@@ -11,6 +11,7 @@ import { SceneCoordinator } from './game/sceneCoordinator';
 import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 import { MobileAudioManager } from './game/mobileAudioManager';
+import { STAGES } from './game/stageConfig';
 
 window.onload = async () => {
   const loadingOverlay = TARGET !== 'mobile' ? new LoadingOverlay() : null;
@@ -88,6 +89,12 @@ window.onload = async () => {
   app.ticker.add(() => {
     coordinator.update(app.ticker.elapsedMS);
   });
+
+  // Screenshot-tooling hook. Dead code in production: the __CAPTURE__ flag is
+  // only ever set by tools/capture-store-screenshots.mjs before page load.
+  if ((window as unknown as { __CAPTURE__?: boolean }).__CAPTURE__) {
+    (window as unknown as { __sq?: unknown }).__sq = { coordinator, STAGES };
+  }
 
   // Pause when the tab/app goes to background (web + Capacitor iOS).
   document.addEventListener('visibilitychange', () => {

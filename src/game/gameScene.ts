@@ -114,6 +114,11 @@ export class GameScene extends PIXI.Container {
     StageManager.recordComplete(this.stage.stageIndex);
   }
 
+  /** Capture/debug helper: force the win result overlay (used by screenshot tooling). */
+  public showWinOverlay(stars = 3): void {
+    this.resultOverlay.show(true, stars);
+  }
+
   public loadStage(stage: StageData, windowWidth: number, windowHeight: number): void {
     this.stage = stage;
     // Sync the screen config to the current window dimensions BEFORE
