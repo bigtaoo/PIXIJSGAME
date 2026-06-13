@@ -114,8 +114,14 @@ export class GameScene extends PIXI.Container {
     StageManager.recordComplete(this.stage.stageIndex);
   }
 
-  public loadStage(stage: StageData): void {
+  public loadStage(stage: StageData, windowWidth: number, windowHeight: number): void {
     this.stage = stage;
+    // Sync the screen config to the current window dimensions BEFORE
+    // startCurrentTarget() locks the layout. The lobby does not forward resize
+    // events to the hidden game scene, so without this the freshly entered
+    // stage would be laid out (and locked) using the orientation from the
+    // previous game session, showing the wrong orientation on first entry.
+    this.screen.update(windowWidth, windowHeight);
     this.screen.setGridDims(stage.gridW, stage.gridH);
 
     this.lives = 3;

@@ -245,7 +245,7 @@ export class SceneCoordinator extends PIXI.Container {
       this.dailyChallengeScene.visible = false;
       this.gameScene.visible = true;
       this.activeScene = this.gameScene;
-      this.gameScene.loadStage(stage);
+      this.gameScene.loadStage(stage, this.windowWidth, this.windowHeight);
       this.gameScene.resize(this.windowWidth, this.windowHeight);
     });
     this.gameplayStarted = true;
