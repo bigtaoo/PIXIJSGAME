@@ -14,26 +14,35 @@ declare namespace CrazyGames {
     adFinished?: () => void;
   }
 
-  interface BannerSize {
+  interface AdModule {
+    /** Request an interstitial or rewarded ad. */
+    requestAd(type: AdType, callbacks: AdCallbacks): void;
+    /** Whether the current environment has an adblocker active. */
+    hasAdblock: boolean;
+  }
+
+  // ── Banner module ─────────────────────────────────────────────────
+  // In SDK v3 banners are a separate module (SDK.banner), NOT part of SDK.ad.
+
+  interface BannerOptions {
+    /** DOM element id of the container the banner is rendered into. */
+    id: string;
     width: number;
     height: number;
   }
 
-  interface BannerOptions {
-    id: string;
-    containerId: string;
-    size?: [number, number]; // [width, height]
-  }
-
-  interface AdModule {
-    /** Request an interstitial or rewarded ad. */
-    requestAd(type: AdType, callbacks: AdCallbacks): void;
-    /** Request a banner ad. The container element must exist in the DOM. */
-    requestBanner(options: BannerOptions): void;
-    /** Remove a banner ad by id. */
-    clearBanner(id: string): void;
-    /** Whether the current environment supports ads. */
-    hasAdblock: boolean;
+  interface BannerModule {
+    /**
+     * Request a fixed-size banner into a container element.
+     * Rejects on error (e.g. refreshed too often, banners disabled).
+     */
+    requestBanner(options: BannerOptions | BannerOptions[]): Promise<void>;
+    /** Request a banner that fills the given container responsively. */
+    requestResponsiveBanner(containerId: string | string[]): Promise<void>;
+    /** Remove the banner in the given container. */
+    clearBanner(containerId: string): void;
+    /** Remove all banners. */
+    clearAllBanners(): void;
   }
 
   // ── Game module ───────────────────────────────────────────────────
@@ -108,6 +117,7 @@ declare namespace CrazyGames {
     init(): Promise<void>;
 
     ad: AdModule;
+    banner: BannerModule;
     game: GameModule;
     user: UserModule;
     environment: EnvironmentModule;

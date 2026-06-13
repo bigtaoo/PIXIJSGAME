@@ -161,19 +161,32 @@ export class CrazyGamesService {
   }
 
   /**
-   * Request a banner ad.
-   * @param id       Unique banner id from the CrazyGames dashboard.
+   * Request a banner ad into a DOM container.
+   * Never throws — banner failures (refresh throttling, banners disabled
+   * during basic launch, adblock) are caught and logged.
    * @param containerId  DOM element id of the container div.
-   * @param size     Optional [width, height] in pixels.
+   * @param size         Optional [width, height] in px. Omit for responsive.
    */
-  requestBanner(id: string, containerId: string, size?: [number, number]): void {
+  async requestBanner(containerId: string, size?: [number, number]): Promise<void> {
     if (!this.sdk) return;
-    this.sdk.ad.requestBanner({ id, containerId, size });
+    try {
+      if (size) {
+        await this.sdk.banner.requestBanner({
+          id: containerId,
+          width: size[0],
+          height: size[1],
+        });
+      } else {
+        await this.sdk.banner.requestResponsiveBanner(containerId);
+      }
+    } catch (err) {
+      console.warn('[CrazyGames] Banner request failed:', err);
+    }
   }
 
-  /** Remove a banner ad. */
-  clearBanner(id: string): void {
-    this.sdk?.ad.clearBanner(id);
+  /** Remove a banner ad from its container. */
+  clearBanner(containerId: string): void {
+    this.sdk?.banner.clearBanner(containerId);
   }
 
   /** Whether the player has an adblocker active. */

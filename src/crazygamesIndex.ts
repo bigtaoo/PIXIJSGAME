@@ -61,8 +61,8 @@ window.onload = async () => {
   await playSplash(app, assets);
 
   // ── 5a. Request banner ad ─────────────────────────────────────────
-  // Replace 'banner-bottom' with the actual banner ID from the CrazyGames dashboard.
-  crazyGames.requestBanner('banner-bottom', 'cg-banner', [728, 90]);
+  // 'cg-banner' is the DOM container id (must exist in the HTML).
+  void crazyGames.requestBanner('cg-banner', [728, 90]);
 
   // ── 6. Build scene graph ──────────────────────────────────────────
   const audio = new AudioManager(prefs);
@@ -108,7 +108,7 @@ window.onload = async () => {
   // Notify CrazyGames before the page reloads or navigates away so it
   // doesn't count the session as a crash.
   window.addEventListener('beforeunload', () => {
-    crazyGames.clearBanner('banner-bottom');
+    crazyGames.clearBanner('cg-banner');
     crazyGames.sdkGameLoadingStart();
   });
 
@@ -127,3 +127,4 @@ window.onload = async () => {
     });
   }
 };
+
