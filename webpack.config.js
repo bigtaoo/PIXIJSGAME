@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
-// const CopyPlugin = require('copy-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const ASSETS_DIR        = path.resolve(__dirname, 'src/assets');
 const MOBILE_ASSETS_DIR = path.resolve(__dirname, 'src/mobileAssets');
@@ -61,6 +61,12 @@ module.exports = (env, argv) => {
       htmlTemplate: './public/crazygames.html',
       useMobileAssets: false,
     },
+    telegram: {
+      entry: './src/telegramIndex.ts',
+      outputPath: path.resolve(__dirname, 'telegram'),
+      htmlTemplate: './public/telegram.html',
+      useMobileAssets: false,
+    },
   };
 
   const platform = platformConfig[targetPlatform] ?? platformConfig.web;
@@ -92,6 +98,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({ template: platform.htmlTemplate }),
+      new CopyPlugin({ patterns: [{ from: 'public/favicon.png', to: 'favicon.png' }] }),
       new webpack.DefinePlugin({
         TARGET: JSON.stringify(targetPlatform),
       }),
