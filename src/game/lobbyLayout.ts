@@ -6,21 +6,18 @@
  * Coordinate system: game logical pixels, origin at top-left.
  *   Portrait:  width GAME_WIDTH = 1080, height GAME_HEIGHT = 1920
  *   Landscape: width GAME_HEIGHT = 1920, height GAME_WIDTH = 1080
- *              (background image is always stretched to 1920×1080; node coordinates align to it)
+ *              (background image is always stretched to 1920x1080; node coordinates align to it)
  *
  * Two independent sets of coordinates:
- *   PORTRAIT_NODE_POSITIONS  — portrait
- *   LANDSCAPE_NODE_POSITIONS — landscape (computed from the 16:9 ratio; can be fine-tuned manually)
- *
- * Baseline formula for landscape coordinates (used only when first generated):
- *   x = round(portraitX * GAME_HEIGHT / GAME_WIDTH)   // × 16/9
- *   y = round(portraitY * GAME_WIDTH  / GAME_HEIGHT)  // × 9/16
+ *   PORTRAIT_NODE_POSITIONS  - portrait
+ *   LANDSCAPE_NODE_POSITIONS - landscape (computed from the 16:9 ratio; can be fine-tuned manually)
  */
 
 import { ScreenConfig } from './screenConfig';
 import { Orientation } from './enums';
+import { GAME_HEIGHT } from './consts';
 
-// ── Portrait node coordinates ─────────────────────────────────────────────────
+// -- Portrait node coordinates ------------------------------------------------
 
 export interface LobbyNodePos {
   /** 1-based stage number, matching StageData.stageIndex */
@@ -57,15 +54,9 @@ const PORTRAIT_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex: 19, x: 906, y: 100 },
 ];
 
-// x: left margin 50px = 50 + DAILY_SIZE/2 (127).
-// y: panel vertical centre aligned with stage-11 node (y=920). The panel centre
-//    sits 26px above the daily icon centre (music button 109px on top vs.
-//    trophy row 59px below, see getPanelBounds in lobbyScene.ts), so icon y = 870.
 const PORTRAIT_DAILY_POS = { x: 177, y: 870 } as const;
 
-// ── Landscape node coordinates (background 1920×1080, strictly aligned to the stretched background) ──
-// Baseline formula: x = round(portraitX * 16/9), y = round(portraitY * 9/16)
-// To fine-tune, change the values here directly without affecting portrait.
+// -- Landscape node coordinates (background 1920x1080) ------------------------
 
 const LANDSCAPE_NODE_POSITIONS: readonly LobbyNodePos[] = [
   { stageIndex: 1, x: 960, y: 950 },
@@ -91,14 +82,14 @@ const LANDSCAPE_NODE_POSITIONS: readonly LobbyNodePos[] = [
 
 const LANDSCAPE_DAILY_POS = { x: 260, y: 390 } as const;
 
-// ── Layout interface ──────────────────────────────────────────────────────────
+// -- Layout interface ---------------------------------------------------------
 
 export interface LobbyLayout {
   nodePositions: readonly LobbyNodePos[];
   dailyChallengePos: { x: number; y: number };
 }
 
-// ── Layout functions ──────────────────────────────────────────────────────────
+// -- Layout functions ---------------------------------------------------------
 
 export function portraitLobbyLayout(): LobbyLayout {
   return {
@@ -107,7 +98,7 @@ export function portraitLobbyLayout(): LobbyLayout {
   };
 }
 
-/** Landscape layout: returns the pre-computed coordinates, strictly aligned to the 1920×1080 background. */
+/** Landscape layout: returns the pre-computed coordinates, aligned to the 1920x1080 background. */
 export function landscapeLobbyLayout(): LobbyLayout {
   return {
     nodePositions: LANDSCAPE_NODE_POSITIONS,
@@ -115,9 +106,53 @@ export function landscapeLobbyLayout(): LobbyLayout {
   };
 }
 
+// -- Long-axis fit ------------------------------------------------------------
+// The node maps are authored for a long-axis of GAME_HEIGHT (1920) logical px,
+// with the short axis locked to GAME_WIDTH (1080). On devices whose aspect ratio
+// is squarer than the design (e.g. iPad: portrait logical height ~1440), the
+// long axis is shorter than 1920, so the last stage nodes (1-5 in portrait, the
+// right-most in landscape) fall off-screen. Contract the long axis to fit so the
+// whole map stays visible. Never scale up (capped at 1) so taller phones keep the
+// original spacing untouched.
+
+// Room reserved past the last node centre on the long axis: node radius (75) plus
+// the star pill below it plus a small margin (portrait), or radius + margin
+// (landscape, where the star pill sits on the short axis).
+const PORTRAIT_END_PAD = 140;
+const LANDSCAPE_END_PAD = 110;
+
+function fitLongAxis(layout: LobbyLayout, screen: ScreenConfig): LobbyLayout {
+  const landscape = screen.orientation === Orientation.Landscape;
+  const actualLong = landscape ? screen.width : screen.height;
+  // Tall/wide enough for the authored layout - return it unchanged.
+  if (actualLong >= GAME_HEIGHT) return layout;
+
+  const axisOf = (p: { x: number; y: number }): number => (landscape ? p.x : p.y);
+  const vals = layout.nodePositions.map(axisOf);
+  const srcMin = Math.min(...vals);
+  const srcMax = Math.max(...vals);
+  const endPad = landscape ? LANDSCAPE_END_PAD : PORTRAIT_END_PAD;
+
+  // Portrait: anchor the top node at its authored y so the map only contracts
+  // downward-to-fit (and stays identical when no contraction is needed).
+  // Landscape: the daily-challenge panel sits left of every node, so anchor at
+  // the origin and contract the whole map toward the left edge.
+  const anchor = landscape ? 0 : srcMin;
+  const dstMax = actualLong - endPad;
+  const scale = Math.min(1, (dstMax - anchor) / (srcMax - anchor));
+  const tx = (v: number): number => anchor + (v - anchor) * scale;
+
+  const nodePositions = layout.nodePositions.map((p) =>
+    landscape ? { ...p, x: tx(p.x) } : { ...p, y: tx(p.y) }
+  );
+  const d = layout.dailyChallengePos;
+  const dailyChallengePos = landscape ? { x: tx(d.x), y: d.y } : { x: d.x, y: tx(d.y) };
+  return { nodePositions, dailyChallengePos };
+}
+
 /** Return the layout for the current orientation from the given ScreenConfig. */
 export function getLobbyLayout(screen: ScreenConfig): LobbyLayout {
-  return screen.orientation === Orientation.Landscape
-    ? landscapeLobbyLayout()
-    : portraitLobbyLayout();
+  const base =
+    screen.orientation === Orientation.Landscape ? landscapeLobbyLayout() : portraitLobbyLayout();
+  return fitLongAxis(base, screen);
 }

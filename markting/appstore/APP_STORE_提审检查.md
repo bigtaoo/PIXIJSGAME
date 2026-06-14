@@ -13,8 +13,8 @@
 | 加密出口合规 | ✅ | `ITSAppUsesNonExemptEncryption = false` 已在 Info.plist |
 | 权限用途字符串 | ✅ | 不申请任何权限，无需 `NS...UsageDescription` |
 | 追踪 / ATT | ✅ | 无任何追踪、广告、分析 SDK，无需 ATT 弹窗 |
-| iPhone 6.9" 截图 | ✅ | 4 张已生成（见第 2 节） |
-| iPad 截图 | ⚠️ | 当前是 Universal 构建（iPhone+iPad），**iPad 截图为必填**，需决策 |
+| iPhone 6.5" 截图 | ✅ | 5 张 1284×2778（见第 2 节） |
+| iPad 截图 | ✅ | 5 张 2064×2752，已修复关卡裁切与文字重合（见第 2 节） |
 | 隐私政策 URL | ⚠️ | 所有 App 必填，需你提供一个可访问链接 |
 | 白屏修复在提交构建里复测 | ⚠️ | 06-09 已在 iPhone 13 确认；上传 TestFlight 后再真机跑一次 |
 | App Privacy 问卷 | ✅ 可直接填 | 选「Data Not Collected」 |
@@ -33,25 +33,39 @@
 该图 alpha 全为 255（无真实透明），已就地转为 `RGB` 并覆盖原文件，同时在
 `markting/appstore/AppIcon-1024-noalpha.png` 留了一份副本。下次 `cap sync ios` 后请确认未被覆盖回 RGBA。
 
+
+### 大厅关卡在 iPad 比例下被裁切（会影响真实 iPad 用户 → 已处理）
+`src/game/lobbyLayout.ts` 的关卡节点坐标写死在 1080×1920 竖屏空间（关卡 19 在 y=100，
+关卡 1 在 y=1790）。iPad 比例更方，竖屏逻辑高度只有约 1440，导致 y>1440 的关卡 1–5 掉到
+屏幕外（手机比例细长，逻辑高 2300+，所以正常）。
+
+已加入 `fitLongAxis()`：当实际长边短于 1920 时，按比例把整张地图沿长边收缩到可见区域，
+永不放大（手机布局不变）。竖屏顶端锚定关卡 19，横屏锚定左侧。现在 iPhone/iPad 都能看到关卡 1。
+
 ---
 
 ## 2. 截图素材（已交付）
 
-来源：`markting/crazy games/portrait.mov`（最新水彩风实录，888×1920）。
-目标尺寸取 **1290×2796**（iPhone 6.9" 槽位通用接受值），缩放到 cover 后居中裁切，去 alpha，RGB PNG，尺寸零误差。
+由修复后的构建直接无头渲染游戏原始画面，再用脚本合成背景渐变 + 圆角设备边框 + 标题文案。
+每机型 5 张，逐张校验：精确尺寸 / RGB / 无 alpha；标题与设备边框留有间距，**不再重合**。
 
-目录：`markting/appstore/iphone_6.9/`
+| 机型 | 目录 | 尺寸 | 文件 |
+|------|------|------|------|
+| iPhone 6.5" | `markting/appstore/iphone_6.5/` | 1284×2778 | `1284x2778.png` … `1284x2778-4.png` |
+| iPad 13" | `markting/appstore/ipad_13/` | 2064×2752 | `2064x2752.png` … `2064x2752-4.png` |
 
-| 文件 | 画面 |
-|------|------|
-| `01_board.png` | 满盘对局（217 分） |
-| `02_celebrate.png` | 过关庆祝（金色粒子爆发） |
-| `03_levelmap.png` | 关卡地图大厅 |
-| `04_board2.png` | 满盘对局（176 分） |
+五个画面（两机型一致）：对局（Add up to the target）、大盘对局（Boards grow as you go）、
+每日挑战（A new puzzle every day）、关卡大厅（19 cozy levels，已含关卡 1）、过关（Clear it, earn 3 stars）。
 
-规格已逐张校验：1290×2796 / RGB / 无 alpha。每个机型 1–10 张，当前 4 张满足。
+> iPhone 旧的 `iphone_6.9/`（1290×2796）仍保留且对 6.9" 槽位有效；6.5" 槽位请用新的 `iphone_6.5/`。
 
-> 进 App Store Connect 时，6.9" 这一组传这 4 张即可；旧机型槽位苹果会自动缩放复用，无需单独准备。
+### 重新生成截图（流程已脚本化）
+1. `npm run build:mobile` 出最新 `dist/`。
+2. `node tools/capture-store-screenshots.mjs` 渲染原始画面到 `markting/appstore/_raw/<device>/<scene>.png`
+   （场景 id：`stage1` `stage3` `daily` `lobby` `win`）。
+3. `python tools/compose-store-screenshots.py` 合成最终图（文案/配色/排版都在该脚本顶部表里，改完直接重跑，无需重渲染）。
+
+> 注：本次 iPad 过关画面在无头环境下因软件 GL + 连续粒子动画偶发卡住；在你本机带真实 GPU 的 Chrome 下不受影响。
 
 ### 预览视频（可选，本次建议跳过）
 现有 `.mov` 是 888×1920，**不是** App Preview 接受的设备分辨率，且预览对编码/帧率/时长（15–30s, H.264/HEVC）有硬性要求。预览非必填，v1 先不传，上线后再补。
