@@ -10,6 +10,11 @@ wechatgame/project.config.json
 *.kdbx
 *.7z
 
+# Android signing - NEVER commit keys or their base64
+*.keystore
+*.jks
+*.keystore.b64
+
 # OS / editor artifacts
 .DS_Store
 *.xcf

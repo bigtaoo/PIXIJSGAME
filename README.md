@@ -80,9 +80,9 @@ cap open android           # 在 Android Studio 中打开
 |--------|------|------|
 | `deploy.yml` | push main | GitHub Pages |
 | `release-ios.yml` | tag | App Store Connect |
-| `release-android.yml` | tag | Google Play |
+| `release-android.yml` | tag / 手动 | Google Play（AAB）+ universal APK |
 
-iOS 发布详见 `design/IOS_DEPLOY.md`。
+iOS 发布详见 `design/IOS_DEPLOY.md`，Android 详见 `docs/ANDROID_DEPLOY.md`。
 
 ---
 

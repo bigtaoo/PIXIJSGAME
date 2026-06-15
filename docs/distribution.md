@@ -1,6 +1,6 @@
 # SumQuest 平台分发计划
 
-> 维护游戏在各 Web/社交平台的上架状态与接入顺序。最后更新：2026-06-14
+> 维护游戏在各 Web/社交平台的上架状态与接入顺序。最后更新：2026-06-15
 
 ## 当前状态
 
@@ -10,11 +10,12 @@
 | CrazyGames | 🔄 审核中 | SDK v3 已接入（`crazygamesIndex.ts`），`build:crazygames` |
 | Poki | 🔄 开发者申请中 | ⚠️ 见下方独占说明 |
 | Telegram Mini App | 🔧 代码已搭好，待托管+BotFather | `build:telegram`，见下方指南 |
-| Facebook（Instant Games） | ⬜ 计划中 | Telegram 之后 |
-| GameDistribution | ⬜ 计划中 | 一次接入，分发到大量小站 |
+| ~~Facebook Instant Games~~ | ❌ 已弃用 | Meta 将于 **2026-09-30 关停**整个 Web Games 平台，不再投入 |
+| Discord Activities | 💡 可选 | 西方「社交即玩」最有活力的新平台，见文末 |
+| GameDistribution | 🔧 代码已搭好，待填 gameId + 上传 | `build:gamedistribution`，gameId 占位 `__GD_GAME_ID__` |
 | 微信小游戏 | ⏸ 已有 build，未发布 | `build:wechat` |
 | iOS | 🔄 审核中 | App Store 已提交审核 |
-| Android | ⏸ Capacitor 壳，未发布 | `build:mobile` + `deploy:android` |
+| Android | 🔧 平台已生成，CI 出 AAB+APK，待配 keystore/Play | 见 `docs/ANDROID_DEPLOY.md`；AAB 上 Google Play，universal APK 测试/其他商店 |
 
 ### ⚠️ Poki Web 独占冲突
 Poki 默认要求 **open web 独占**（仅在 Poki 发布），默认锁 **5 年**。Steam、手机应用商店不算独占，但 **itch.io 和 CrazyGames 都属于 open web**。
@@ -36,8 +37,10 @@ Poki 默认要求 **open web 独占**（仅在 Poki 发布），默认锁 **5 �
 ## 接入顺序（多平台路线）
 
 1. **Telegram Mini App** — 不同流量源（社交裂变），个人可发，无 web 独占冲突
-2. **Facebook Instant Games** — Messenger / Feed 内即玩
-3. **GameDistribution** — 铺量渠道，一次接入分发到数千小站
+2. **GameDistribution** — 铺量渠道，一次接入分发到数千合作小站
+3. **（可选）Discord Activities** — 西方现存最有活力的「社交内即玩」平台
+
+> ~~Facebook Instant Games~~ 已从计划移除：Meta 宣布 **2026-09-30 关停** Web Games 平台，SDK 文档 2026-06 底即停更，不值得为只剩数月寿命的平台投入。详见文末。
 
 ---
 
@@ -150,13 +153,66 @@ BotFather 无沙箱，直接在 Telegram（桌面或手机）打开链接测试�
 
 ---
 
-# Facebook Instant Games（待办占位）
-- 平台：Messenger / Feed 内即玩，HTML5。
-- 需 Facebook 开发者账号 + App Review；接 Instant Games SDK（`FBInstant`）。
-- 同样建隔离入口 `facebookIndex.ts` + build target。
-- 细节待 Telegram 完成后展开。
+# GameDistribution 接入流程
 
-# GameDistribution（待办占位）
-- 铺量渠道：接入 GD SDK（`gdsdk`，广告钩子），上传到后台，自动分发到合作小站。
-- 个人可注册，广告分成。
-- 同样建隔离入口 + build target。
+铺量型聚合平台：一次接入，自动分发到数千个合作小游戏站。个人可注册、免费、广告分成、无独占。沿用 crazygames/telegram 的隔离入口模式。
+
+## 流程
+1. **注册** — gamedistribution.com 开发者后台（个人即可，免费），创建游戏条目，拿到 `gameId`。
+2. **接 GD HTML5 SDK**（隔离入口 `src/gdIndex.ts` + `public/gamedistribution.html` + webpack `gamedistribution` target）。SDK 通过全局 `GD_OPTIONS` 配置 + 脚本加载，核心是几个广告 / 生命周期钩子：
+   - 配置 `GD_OPTIONS = { gameId, onEvent }`，监听 `SDK_READY` / `SDK_GAME_START` / `SDK_GAME_PAUSE`
+   - 插屏广告：关卡切换时 `gdsdk.showAd('interstitial')`
+   - 激励广告（换命）：`gdsdk.preloadAd('rewarded')` + `gdsdk.showAd('rewarded')`
+   - 广告播放期间静音并暂停游戏，`SDK_GAME_START` 回调里恢复
+   - 映射到 `AppContext.platform`：`requestInterstitialAd` / `requestExtraLife` / `gameplayStart` / `gameplayStop`（接口已存在，见 `appContext.ts`）
+
+   > ⚠️ GD SDK 的具体方法名 / 事件名以当前 GD 官方 HTML5 SDK 文档为准，接入前核对一遍，不要照抄本文。
+3. **上传** — 把 `build:gamedistribution` 产物打 zip 传到后台。
+4. **审核 → 分发** — 通过内容审核后自动分发到合作网络，广告分成被动结算。
+
+## 适配清单（最小集）
+- [x] `public/gamedistribution.html`（含 `GD_OPTIONS` + SDK 脚本，gameId 占位 `__GD_GAME_ID__`）
+- [x] `src/gdIndex.ts` + `src/platform/gdService.ts`（init + 广告钩子映射到 `platform`，SDK 事件经 `gd-sdk-event` 路由）
+- [x] webpack `gamedistribution` target + `build:gamedistribution`
+- [ ] **待你做**：后台创建游戏 → 把 `public/gamedistribution.html` 里的 `__GD_GAME_ID__` 换成真实 gameId → 上传 zip → 完整看完一次 pre-roll 激活集成 → 过审
+
+---
+
+# Discord Activities（可选 — 西方社交即玩）
+
+西方「社交平台内即玩」里目前最有活力的是 **Discord Activities**（不是衰退中的 FB / Snapchat）。游戏跑在 Discord 语音频道内，天然多人 / 社交。
+
+- 用 **Embedded App SDK**（`@discord/embedded-app-sdk`）包装现有 Web build，通常几百行 glue code。
+- 需 Discord 开发者应用 + OAuth 流程；托管在自己的 HTTPS。
+- 适合之后想做多人 / 社交玩法时再上；单机消除可先放后面。
+- 参考：[Discord Activities Overview](https://docs.discord.com/developers/activities/overview) · [embedded-app-sdk](https://github.com/discord/embedded-app-sdk)
+
+---
+
+# 附：Facebook 关停说明 & 欧美 Web Game 平台对标
+
+## Facebook Instant Games 关停时间线
+- **2025-08-01**：所有新 Instant Game 必须用 Zero Permissions（NEZP）体系。
+- **2026-06 底**：Instant Games SDK 文档停止维护。
+- **2026-09-30**：整个 Web Games 平台关停，未迁移到 Zero Permissions 的游戏全部下架。
+
+## 已在 FB 上运营的游戏怎么办？
+- 关停前：只能迁到 Zero Permissions 续命到 9-30，之后平台整体消失，**没有「保留」选项**。
+- Meta 未提供完善的数据 / 玩家迁移工具；FB 排行榜、好友数据等绑死在其 API 上，基本**带不走**，到新平台等于重开。
+- 唯一能带走的是你自己的 **HTML5 build 和资产**（本就归你）。务实做法：把 build 重新部署到 CrazyGames / GameDistribution / Telegram / Discord / 自有站点。
+- 对 SumQuest 的意义：幸好我们**还没**在 FB 投入，直接跳过即可。
+
+## 欧美对标平台一览
+西方社交平台（FB Instant Games、Snapchat Games、甚至 TikTok）都试图复制亚洲（微信小游戏）的即玩生态，但**基本都没成功**，多数已衰退或停摆。当前真正活跃的分两类：
+
+**纯 H5 门户 / 聚合（铺量为主）**
+- CrazyGames、Poki（头部，策展型）
+- GameDistribution、GamePix、Softgames、CoolGames、Playgama（聚合 / 铺量型）
+- Coolmath Games、Y8、Newgrounds、itch.io（社区 / 长尾）
+
+**社交内即玩（FB Instant Games 的真正对标）**
+- **Discord Activities** — 上升期，西方最接近的「社交即玩」
+- **Telegram Mini Apps** — 全球化、裂变强（你已在做）
+- ~~Facebook Instant Games / Snapchat Games~~ — 衰退 / 关停
+
+**结论**：西方没有一个像微信那样繁荣的「社交即玩」巨头。务实路线就是你现在走的——CrazyGames + 聚合平台铺量，配 Telegram（+ 可选 Discord）拿社交流量。
