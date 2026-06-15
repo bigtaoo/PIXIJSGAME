@@ -83,7 +83,7 @@ window.onload = async () => {
           user = await crazyGames.showAuthPrompt();
         }
         if (user) {
-          await crazyGames.saveScore('daily-challenge', score);
+          await crazyGames.submitScore(score);
         }
       },
     },

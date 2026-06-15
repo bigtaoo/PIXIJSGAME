@@ -67,6 +67,12 @@ module.exports = (env, argv) => {
       htmlTemplate: './public/telegram.html',
       useMobileAssets: false,
     },
+    gamedistribution: {
+      entry: './src/gdIndex.ts',
+      outputPath: path.resolve(__dirname, 'gamedistribution'),
+      htmlTemplate: './public/gamedistribution.html',
+      useMobileAssets: false,
+    },
   };
 
   const platform = platformConfig[targetPlatform] ?? platformConfig.web;

@@ -81,6 +81,12 @@ declare namespace CrazyGames {
     showAccountLinkPrompt(): Promise<void>;
     /** Subscribe to auth state changes. Returns unsubscribe function. */
     addAuthListener(callback: (user: CrazyGamesUser | null) => void): () => void;
+    /**
+     * Submit a leaderboard score (MVP). Pass both the AES-GCM encrypted score
+     * and the plaintext score. The API never reports success/failure to the
+     * client (anti-cheat validation happens server-side).
+     */
+    submitScore(args: { encryptedScore: string; score: number }): Promise<void>;
   }
 
   // ── Environment ───────────────────────────────────────────────────
@@ -94,22 +100,6 @@ declare namespace CrazyGames {
     country: string;
   }
 
-  // ── Leaderboard ───────────────────────────────────────────────────
-
-  interface LeaderboardScore {
-    userId: string;
-    username: string;
-    score: number;
-    profilePictureUrl?: string;
-  }
-
-  interface LeaderboardModule {
-    /** Save a score for the current user. */
-    saveScore(levelId: string, score: number): Promise<void>;
-    /** Get the top scores for a level. */
-    getScores(levelId: string, maxCount?: number): Promise<LeaderboardScore[]>;
-  }
-
   // ── Top-level SDK ─────────────────────────────────────────────────
 
   interface ISDK {
@@ -121,7 +111,6 @@ declare namespace CrazyGames {
     game: GameModule;
     user: UserModule;
     environment: EnvironmentModule;
-    leaderboard: LeaderboardModule;
   }
 }
 

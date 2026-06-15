@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>SumQuest</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <!--
+      GameDistribution HTML5 SDK. Must be defined + loaded BEFORE the game bundle.
+      Replace __GD_GAME_ID__ with the game hash from your GameDistribution control panel.
+      onEvent re-dispatches every SDK event as a DOM CustomEvent ('gd-sdk-event')
+      that src/platform/gdService.ts listens to.
+      Docs: https://github.com/GameDistribution/GD-HTML5/wiki/SDK-Implementation
+    -->
+    <script>
+      window.GD_OPTIONS = {
+        gameId: "__GD_GAME_ID__",
+        onEvent: function (event) {
+          window.dispatchEvent(new CustomEvent("gd-sdk-event", { detail: event }));
+        },
+      };
+      (function (d, s, id) {
+        var js,
+          fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://html5.api.gamedistribution.com/main.min.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      })(document, "script", "gamedistribution-jssdk");
+    </script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <script>
+      // Prevent page scroll / zoom interfering with gameplay inside portal iframes.
+      window.addEventListener("wheel", function (e) { e.preventDefault(); }, { passive: false });
+      window.addEventListener("keydown", function (e) {
+        if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
+      });
+      document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    </script>
+  </body>
+</html>

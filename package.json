@@ -11,6 +11,7 @@
     "build:wechat": "rollup -c && node -e \"const fs=require('fs'),path=require('path');const src='src/assets',dst='wechatgame/assets';if(fs.existsSync(dst))fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).filter(f=>!f.endsWith('.webp')).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dst,f)));console.log('assets copied')\"",
     "build:crazygames": "webpack --mode production --env TARGET=crazygames",
     "build:telegram": "webpack --mode production --env TARGET=telegram",
+    "build:gamedistribution": "webpack --mode production --env TARGET=gamedistribution",
     "format": "prettier --write .",
     "build:mobile": "webpack --mode production --env TARGET=mobile",
     "deploy:ios": "npm run build:mobile && cap sync ios",

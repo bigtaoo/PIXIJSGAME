@@ -7,10 +7,13 @@
 ## Phase 1 — 变现与平台基础（上架后立刻）
 
 ### CrazyGames 排行榜接通
-- 填写 `ENCRYPTION_KEY`（`dailyChallengeResult.ts` 第17行）
-- 将 `saveDailyScore` 之后调用 `crazyGames.saveScore(levelId, score)`
-- 结果页显示"今日排名第X"
-- **影响：** CrazyGames 平台对接入排行榜的游戏有流量加权
+- ✅ 代码已更新到当前 v3 接口：`crazyGames.submitScore(score)` → 客户端 AES-GCM 加密后调 `SDK.user.submitScore({ encryptedScore, score })`（见 `crazygamesService.ts`）。
+- `ENCRYPTION_KEY`（`crazygamesService.ts` 顶部常量，**自己生成**：`openssl rand -base64 32`）。不是平台发的，随时可生成。
+- **前置条件（真正的卡点）**：排行榜是 CrazyGames **MVP 功能，仅对被选中的游戏开放**。配置（含同一把 key、排序、min/max、cooldown、metric）需由 CrazyGames admin 手动登记 —— 过审上架、有对接人后，主动找联系人申请纳入 MVP，并把这些参数发过去。
+- key 为空时 `submitScore()` 静默 no-op，安全；进 MVP 后填入即可。
+- 排行榜展示走 CrazyGames 官方 widget，无需自己拉取/渲染（旧的 `getScores` 已移除）。
+- **影响：** CrazyGames 对接入排行榜的游戏有流量加权。
+- 参考：https://docs.crazygames.com/sdk/leaderboards-client/
 
 ### 微信端激励广告
 - WeChat 构建中实现 `AppContext.platform`（目前为 `undefined`）
@@ -68,7 +71,7 @@
 
 | 项目 | 位置 | 说明 |
 |------|------|------|
-| `ENCRYPTION_KEY` 为空 | `dailyChallengeResult.ts:17` | 排行榜提分功能目前静默失败 |
+| `ENCRYPTION_KEY` 为空 | `crazygamesService.ts` 顶部 | 自己生成（`openssl rand -base64 32`）；空值时 `submitScore` 静默 no-op，需进 CrazyGames 排行榜 MVP 后填入并登记给对接人 |
 | Auth 状态只打 log | `crazygamesIndex.ts:84` | 登录状态未与 UI 联动 |
 | Banner 广告未接入 | `crazygamesService.ts` | API 已实现，未在任何场景调用 |
 

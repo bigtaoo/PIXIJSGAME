@@ -25,6 +25,36 @@
  *   if (watched) grantReward();
  */
 
+/**
+ * CrazyGames leaderboard encryption key — a 32-byte, base64-encoded AES key.
+ * Generate your own (e.g. `openssl rand -base64 32`) and register the SAME key
+ * with your CrazyGames contact when the leaderboard MVP is enabled for this
+ * game. While blank, submitScore() is a safe no-op.
+ */
+const ENCRYPTION_KEY = '';
+
+/**
+ * AES-GCM encrypt a numeric score with a 32-byte base64 key and return base64
+ * of (iv || ciphertext), as expected by the CrazyGames leaderboard backend.
+ * See https://docs.crazygames.com/sdk/leaderboards-client/
+ */
+async function encryptScore(score: number, encryptionKey: string): Promise<string> {
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const algorithm = { name: 'AES-GCM', iv };
+  const keyBytes = Uint8Array.from(atob(encryptionKey), (c) => c.charCodeAt(0));
+  const cryptoKey = await window.crypto.subtle.importKey('raw', keyBytes, algorithm, false, [
+    'encrypt',
+  ]);
+  const dataBuffer = new TextEncoder().encode(score.toString());
+  const encryptedBuffer = await window.crypto.subtle.encrypt(algorithm, cryptoKey, dataBuffer);
+  const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(encryptedBuffer), iv.length);
+  let binary = '';
+  for (const byte of combined) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 export class CrazyGamesService {
   private sdk: CrazyGames.ISDK | null = null;
   private _initialized = false;
@@ -237,26 +267,32 @@ export class CrazyGamesService {
     return this.sdk.user.addAuthListener(callback);
   }
 
-  // ── Leaderboard ───────────────────────────────────────────────────
+  // ── Leaderboard (MVP) ─────────────────────────────────────────────
+  // The CrazyGames leaderboard is an MVP feature enabled only for selected
+  // games. During the MVP the config (encryption key, sorting, min/max,
+  // cooldown, metric type) is registered by a CrazyGames admin — send those
+  // values, including ENCRYPTION_KEY above, to your CrazyGames contact.
+  // Scores are submitted client-side, AES-GCM encrypted.
+  // Docs: https://docs.crazygames.com/sdk/leaderboards-client/
 
   /**
-   * Submit a score for the current user.
-   * @param levelId  Level/board identifier configured in the CrazyGames dashboard.
-   * @param score    The score value to save.
+   * Submit a score to the CrazyGames weekly leaderboard. The SDK requires both
+   * the AES-GCM encrypted score (anti-cheat) and the plaintext score. The API
+   * never returns success/failure to the client. No-ops until ENCRYPTION_KEY
+   * is set and the leaderboard is enabled for this game.
    */
-  async saveScore(levelId: string, score: number): Promise<void> {
+  async submitScore(score: number): Promise<void> {
     if (!this.sdk) return;
-    await this.sdk.leaderboard.saveScore(levelId, score);
-  }
-
-  /**
-   * Retrieve the top scores for a level.
-   * @param levelId   Level/board identifier.
-   * @param maxCount  Max number of scores to return (default 10).
-   */
-  async getScores(levelId: string, maxCount = 10): Promise<CrazyGames.LeaderboardScore[]> {
-    if (!this.sdk) return [];
-    return this.sdk.leaderboard.getScores(levelId, maxCount);
+    if (!ENCRYPTION_KEY) {
+      this.log('Leaderboard ENCRYPTION_KEY not set — skipping submitScore.');
+      return;
+    }
+    try {
+      const encryptedScore = await encryptScore(score, ENCRYPTION_KEY);
+      await this.sdk.user.submitScore({ encryptedScore, score });
+    } catch (err) {
+      console.warn('[CrazyGames] submitScore failed:', err);
+    }
   }
 
   // ── Page lifecycle ────────────────────────────────────────────────
