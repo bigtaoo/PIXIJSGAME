@@ -107,6 +107,7 @@ module.exports = (env, argv) => {
       new CopyPlugin({ patterns: [{ from: 'public/favicon.png', to: 'favicon.png' }] }),
       new webpack.DefinePlugin({
         TARGET: JSON.stringify(targetPlatform),
+        HOT_UPDATE_NATIVE_BUILD: JSON.stringify(Number(process.env.NATIVE_BUILD_NUMBER || 1)),
       }),
       ...(platform.useMobileAssets ? [new MobileAssetReplacementPlugin()] : []),
     ],

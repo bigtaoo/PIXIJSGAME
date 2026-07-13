@@ -120,7 +120,7 @@ git push origin v1.0.0
 ## 七、Workflow 执行流程概览
 
 ```
-Checkout → npm ci → build:crazygames → cap sync ios
+Checkout → npm ci → build:mobile → cap sync ios
   → 导入签名证书（import-codesign-certs）
   → 手动安装 Provisioning Profile（base64 decode → ~/Library/MobileDevice/Provisioning Profiles/）
   → xcodebuild archive → xcodebuild -exportArchive (IPA)

@@ -13,7 +13,8 @@
     "build:telegram": "webpack --mode production --env TARGET=telegram",
     "build:gamedistribution": "webpack --mode production --env TARGET=gamedistribution",
     "format": "prettier --write .",
-    "build:mobile": "webpack --mode production --env TARGET=mobile",
+    "build:mobile": "webpack --mode production --env TARGET=mobile && npm run generate:manifest",
+    "generate:manifest": "node scripts/generate-manifest.js dist --min-native-build=1",
     "deploy:ios": "npm run build:mobile && cap sync ios",
     "deploy:android": "npm run build:mobile && cap sync android",
     "cap:open:ios": "cap open ios",
@@ -64,7 +65,9 @@
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
     "@pixi/unsafe-eval": "^7.4.3",
     "pixi.js-legacy": "^7.4.3"
   }

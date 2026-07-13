@@ -12,6 +12,7 @@ import { setPlayerPrefsImpl } from './playerPrefs/playerPrefs';
 import { WebPlayerPrefs } from './playerPrefs/webPlayerPrefs';
 import { MobileAudioManager } from './game/mobileAudioManager';
 import { STAGES } from './game/stageConfig';
+import { runHotUpdateCheck } from './hotUpdate/runHotUpdate';
 
 window.onload = async () => {
   const loadingOverlay = TARGET !== 'mobile' ? new LoadingOverlay() : null;
@@ -51,6 +52,10 @@ window.onload = async () => {
 
   // Branded splash, shown on every launch before the first scene appears.
   await playSplash(app, assets);
+
+  // Non-blocking: checks for a newer hot-update bundle in the background.
+  // No-op outside Capacitor native builds. Any update found applies on next cold start.
+  if (TARGET === 'mobile') void runHotUpdateCheck();
 
   const input = new InputManager();
   setupWebInput(canvas, input);
