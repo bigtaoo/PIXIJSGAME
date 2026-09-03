@@ -121,19 +121,42 @@ jobs:
 
       # A successful upload is not a served page. Both custom domains and the hot-update
       # manifest, so a broken deploy cannot look green.
+      #
+      # Two things the first version of this got wrong, both worth keeping in mind:
+      #
+      #   - GitHub runs `run:` blocks with `bash -e`. A failing curl therefore killed the whole
+      #     step at the assignment, before it could print anything or retry -- which is exactly
+      #     what happened while the custom domains were still provisioning (curl exit 6, host
+      #     not yet resolvable). `|| true` keeps curl's exit code away from errexit.
+      #   - `--retry` does not help with that either, and 5 retries was nowhere near enough:
+      #     a brand-new custom domain took minutes to get DNS plus an edge certificate.
+      #
+      # Hence a deadline shared across all three URLs, so the total wait is bounded no matter
+      # how many hosts are checked.
       - name: verify the deployed hosts
         run: |
-          set -uo pipefail
+          deadline=$(( $(date +%s) + 360 ))
           fail=0
           for url in https://c.gamestao.com/ https://sumquest.gamestao.com/ https://c.gamestao.com/mobile/latest/manifest.json; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 --retry 5 --retry-delay 10 --retry-all-errors "$url")
+            code=000
+            while :; do
+              # `|| true`, not `|| echo 000`: on a resolution failure curl already prints
+              # 000 itself, so echoing another one produced "000000" in the log.
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" || true)
+              code=${code:-000}
+              [ "$code" = 200 ] && break
+              [ "$(date +%s)" -ge "$deadline" ] && break
+              echo "  waiting: $code  $url"
+              sleep 10
+            done
             echo "$code  $url"
             [ "$code" = 200 ] || fail=1
           done
           if [ "$fail" != 0 ]; then
-            echo "::error::a deployed host did not answer 200. On the FIRST deploy of a new"
-            echo "custom domain this can be DNS or the edge certificate still provisioning —"
-            echo "check the Worker's domains in the Cloudflare dashboard before assuming the"
-            echo "deploy itself failed."
+            echo "::error::a deployed host did not answer 200 within 6 minutes. On the FIRST"
+            echo "deploy of a new custom domain this can still be DNS or the edge certificate"
+            echo "provisioning -- check the Worker's domains in the Cloudflare dashboard, and"
+            echo "curl with --resolve to rule out a stale negative DNS cache, before assuming"
+            echo "the deploy itself failed."
             exit 1
           fi
