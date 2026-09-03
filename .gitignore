@@ -4,6 +4,13 @@ wechatgame/project.config.json
 # Web build outputs
 /dist
 /crazygames
+# Staging tree the Cloudflare deploy publishes (web build + mobile hot-update
+# payload merged; see wrangler/client.jsonc). Built in CI, same steps run locally.
+/cf-root
+# `wrangler dev` local state. It writes one at the cwd and one next to the config
+# it was given, hence both paths.
+/.wrangler
+/wrangler/.wrangler
 
 
 # Sensitive files

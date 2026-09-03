@@ -1,0 +1,38 @@
+{
+  // SumQuest（web 包）的静态托管（Cloudflare Workers static assets），对外
+  // c.gamestao.com（沿用 a/b/c 入口序列）+ sumquest.gamestao.com（品牌域名）。
+  //
+  // 迁移自 GitHub Pages：原先由 .github/workflows/deploy.yml 发到 gamestao.com（apex）。
+  // 两条管线暂时并存 —— 先把 Cloudflare 这条验证通过，再摘掉 Pages 的自定义域名。
+  //
+  // 构建（web 包和移动端热更新载荷都输出到 dist/，所以要分两次 stage 到同一棵树）：
+  //   npm run build:web      → dist/  →  cf-root/
+  //   npm run build:mobile   → dist/  →  cf-root/mobile/latest/
+  // 部署（从仓库根读本文件，把 cf-root 作为静态资源发布，无 Worker 脚本）：
+  //   npx wrangler deploy -c wrangler/client.jsonc
+  //
+  // routes.custom_domain=true 会自动建 DNS + 边缘证书（橙云代理）。
+  // 与 funny/wrangler/client.jsonc 同构；账号与 zone 见 funny 的
+  // design/product/deploy-cloudflare.md §6。
+  "name": "sumquest-client",
+  "compatibility_date": "2026-09-03",
+
+  "assets": {
+    // 不是 dist/：dist 会被 build:web 和 build:mobile 先后覆盖，cf-root 才是
+    // 两者合并后要发布的那棵树，布局和 Pages 管线的 pages-root 一致。
+    "directory": "../cf-root",
+
+    // 和三个游戏客户端一致：游戏本身是单文档 canvas 应用。
+    //
+    // 注意这和 GitHub Pages 的行为有一处不同：Pages 对不存在的路径返回真 404，
+    // 而 SPA 处理会返回 200 + 游戏 HTML。对 /mobile/latest/ 下缺失的热更新资源
+    // 来说，客户端拿到的会是一段 HTML 而不是 404 —— 解析失败的报错会比较难看，
+    // 但不会造成新的线上故障。
+    "not_found_handling": "single-page-application"
+  },
+
+  "routes": [
+    { "pattern": "c.gamestao.com", "custom_domain": true },
+    { "pattern": "sumquest.gamestao.com", "custom_domain": true }
+  ]
+}

@@ -1,0 +1,128 @@
+name: client-deploy
+
+# Auto-publish the SumQuest web client (Worker sumquest-client) to Cloudflare, served at
+# c.gamestao.com + sumquest.gamestao.com.
+# Trigger: push to main touching the game source or this workflow/config, or manual Run from
+# the Actions page.
+# Flow: npm ci → npm run build:web → stage → npm run build:mobile → stage under /mobile/latest/
+#       → wrangler deploy.
+# Mirrors funny/.github/workflows/client-deploy.yml — see funny's
+# design/product/deploy-cloudflare.md §6 for the account/pattern this reuses.
+#
+# One deliberate divergence from funny's version: that one triggers on `workflow_run` after a
+# workflow named "CI", because funny's e2e suite takes ~25 minutes and a plain push trigger
+# would race a still-red CI and could ship a broken commit. This repo has no workflow named
+# "CI" (only lint.yml and vitest), so `workflow_run` would never fire here. Push + path filter
+# is the other house variant, same as daydayup's animator-deploy.yml.
+#
+# This does NOT replace .github/workflows/deploy.yml yet. That one still publishes the same
+# build to GitHub Pages at the apex, on purpose: the two pipelines run side by side until
+# c.gamestao.com is verified playable, because moving the Pages custom domain takes the apex
+# away the moment it is saved.
+#
+# Reuses the gamestao.com Cloudflare account (same secrets as every other repo's deploy):
+#   CLOUDFLARE_API_TOKEN   — repo secret. An "Edit Cloudflare Workers" token; the same value
+#                            covers every Worker on the account, so the token made for
+#                            bigtaoo/goodgoodstudy works here unchanged — no new token needed.
+#   CLOUDFLARE_ACCOUNT_ID  — repo secret, e64b61f1629ebcc49ee9b6eea2a95b82
+# NOTE: as of 2026-09-03 this repo has NEITHER of those. It holds only the nine Apple/ASC
+# secrets used by release-ios.yml, so both have to be added before this can run.
+# Enable switch: repo variable CLIENT_DEPLOY_ENABLED = true (job skipped if not set, to avoid
+# red builds before setup is complete).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'audio/**'
+      - 'public/**'
+      - 'webpack.config.js'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/generate-manifest.js'
+      - 'wrangler/client.jsonc'
+      - '.github/workflows/client-deploy.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Only one client deployment runs at a time; a new run cancels the old one to prevent
+# concurrent deploy conflicts.
+concurrency:
+  group: client-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Skip the entire job if repo variable CLIENT_DEPLOY_ENABLED is not 'true'.
+    if: ${{ vars.CLIENT_DEPLOY_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20, matching the GitHub Pages workflow that currently produces the live build.
+      # The point of this workflow is to move where the artifact is served, not to change how
+      # it is built — three dependencies (canvas, puppeteer, sharp) have native install steps,
+      # and npm 11's allowScripts gate would block them on a newer Node.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm ci rather than the Pages workflow's npm install: the lockfile is in sync (verified
+      # 2026-09-03), and a deploy should install exactly what is locked.
+      - run: npm ci
+
+      # Outputs dist/.
+      - name: build web bundle
+        run: npm run build:web
+
+      # dist/ is about to be overwritten by the mobile build, so move it aside first. Same
+      # two-stage shuffle the Pages workflow does with pages-root.
+      - name: stage web output
+        run: mv dist cf-root
+
+      # The hot-update payload shipped iOS/Android builds fetch. Same env the Pages workflow
+      # passes, so generate-manifest.js produces the same manifest.
+      - name: build mobile hot-update payload
+        run: npm run build:mobile
+        env:
+          BUILD_ID: ${{ github.sha }}
+          NATIVE_BUILD_NUMBER: 1
+
+      - name: stage mobile output under /mobile/latest/
+        run: |
+          mkdir -p cf-root/mobile/latest
+          cp -r dist/. cf-root/mobile/latest/
+
+      # Run from repo root using -c to specify the client config (assets point to ./cf-root, no
+      # Worker script). Uses npx wrangler directly (not wrangler-action) so errors are visible
+      # as-is, pinned so a wrangler release cannot change what a deploy does without a commit.
+      - name: deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx -y wrangler@4.128.0 deploy -c wrangler/client.jsonc
+
+      # A successful upload is not a served page. Both custom domains and the hot-update
+      # manifest, so a broken deploy cannot look green.
+      - name: verify the deployed hosts
+        run: |
+          set -uo pipefail
+          fail=0
+          for url in https://c.gamestao.com/ https://sumquest.gamestao.com/ https://c.gamestao.com/mobile/latest/manifest.json; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 --retry 5 --retry-delay 10 --retry-all-errors "$url")
+            echo "$code  $url"
+            [ "$code" = 200 ] || fail=1
+          done
+          if [ "$fail" != 0 ]; then
+            echo "::error::a deployed host did not answer 200. On the FIRST deploy of a new"
+            echo "custom domain this can be DNS or the edge certificate still provisioning —"
+            echo "check the Worker's domains in the Cloudflare dashboard before assuming the"
+            echo "deploy itself failed."
+            exit 1
+          fi
