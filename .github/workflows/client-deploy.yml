@@ -15,10 +15,11 @@ name: client-deploy
 # "CI" (only lint.yml and vitest), so `workflow_run` would never fire here. Push + path filter
 # is the other house variant, same as daydayup's animator-deploy.yml.
 #
-# This does NOT replace .github/workflows/deploy.yml yet. That one still publishes the same
-# build to GitHub Pages at the apex, on purpose: the two pipelines run side by side until
-# c.gamestao.com is verified playable, because moving the Pages custom domain takes the apex
-# away the moment it is saved.
+# This is now the only web deploy. deploy.yml published the same build to GitHub Pages at
+# gamestao.com; the two ran side by side until c.gamestao.com was verified playable, then the
+# apex went to the studio site (bigtaoo/goodgoodstudy) and Pages had no domain left to serve.
+# The last Pages build is still reachable at bigtaoo.github.io/PIXIJSGAME/ if a fallback is
+# ever wanted, and restoring the pipeline is a git revert.
 #
 # Reuses the gamestao.com Cloudflare account (same secrets as every other repo's deploy):
 #   CLOUDFLARE_API_TOKEN   — repo secret. An "Edit Cloudflare Workers" token; the same value
@@ -64,13 +65,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Node 20, matching the GitHub Pages workflow that currently produces the live build.
-      # The point of this workflow is to move where the artifact is served, not to change how
-      # it is built — three dependencies (canvas, puppeteer, sharp) have native install steps,
-      # and npm 11's allowScripts gate would block them on a newer Node.
+      # Node 22. It used to be 20 here with a second setup-node before the deploy step,
+      # because wrangler 4.x refuses to start below 22 while the build wanted parity with the
+      # GitHub Pages pipeline that produced the live artifact. Pages is retired, so there is
+      # nothing left to keep parity with and one version does for both.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       # npm ci rather than the Pages workflow's npm install: the lockfile is in sync (verified
@@ -98,17 +99,6 @@ jobs:
         run: |
           mkdir -p cf-root/mobile/latest
           cp -r dist/. cf-root/mobile/latest/
-
-      # Second Node setup, on purpose. wrangler 4.x refuses to start on anything below Node 22
-      # ("Wrangler requires at least Node.js v22.0.0"), but the build above stays on 20 to match
-      # the GitHub Pages pipeline that currently produces the live artifact — during the
-      # migration, byte-parity with what Pages serves is what makes "c.gamestao.com plays the
-      # same game" a meaningful check. Only the deploy tool gets the newer Node; nothing is
-      # rebuilt after this point. Once deploy.yml is retired this can collapse into a single
-      # node-version: 22 at the top of the job.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       # Run from repo root using -c to specify the client config (assets point to ./cf-root, no
       # Worker script). Uses npx wrangler directly (not wrangler-action) so errors are visible
