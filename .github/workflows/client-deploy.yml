@@ -99,6 +99,17 @@ jobs:
           mkdir -p cf-root/mobile/latest
           cp -r dist/. cf-root/mobile/latest/
 
+      # Second Node setup, on purpose. wrangler 4.x refuses to start on anything below Node 22
+      # ("Wrangler requires at least Node.js v22.0.0"), but the build above stays on 20 to match
+      # the GitHub Pages pipeline that currently produces the live artifact — during the
+      # migration, byte-parity with what Pages serves is what makes "c.gamestao.com plays the
+      # same game" a meaningful check. Only the deploy tool gets the newer Node; nothing is
+      # rebuilt after this point. Once deploy.yml is retired this can collapse into a single
+      # node-version: 22 at the top of the job.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       # Run from repo root using -c to specify the client config (assets point to ./cf-root, no
       # Worker script). Uses npx wrangler directly (not wrangler-action) so errors are visible
       # as-is, pinned so a wrangler release cannot change what a deploy does without a commit.
