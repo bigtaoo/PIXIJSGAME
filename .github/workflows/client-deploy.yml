@@ -100,6 +100,23 @@ jobs:
           mkdir -p cf-root/mobile/latest
           cp -r dist/. cf-root/mobile/latest/
 
+      # Shipped apps fetch this payload from the Capacitor WebView (capacitor://localhost on
+      # iOS, https://localhost on Android) with plain fetch, so it is a cross-origin request.
+      # GitHub Pages sent Access-Control-Allow-Origin: * on everything and the client never had
+      # to think about it; Workers static assets sends no CORS headers at all, so moving the
+      # host without this file would fail every update with a CORS error rather than a status
+      # code. Only /mobile/latest/* — the game itself is same-origin and needs nothing.
+      #
+      # cf-root is a staging tree built here and not committed, so the file is written here
+      # rather than living in the repo.
+      - name: allow cross-origin hot-update fetches
+        run: |
+          cat > cf-root/_headers <<'HEADERS'
+          /mobile/latest/*
+            Access-Control-Allow-Origin: *
+          HEADERS
+          cat cf-root/_headers
+
       # Run from repo root using -c to specify the client config (assets point to ./cf-root, no
       # Worker script). Uses npx wrangler directly (not wrangler-action) so errors are visible
       # as-is, pinned so a wrangler release cannot change what a deploy does without a commit.
@@ -148,5 +165,21 @@ jobs:
             echo "provisioning -- check the Worker's domains in the Cloudflare dashboard, and"
             echo "curl with --resolve to rule out a stale negative DNS cache, before assuming"
             echo "the deploy itself failed."
+            exit 1
+          fi
+
+      # A 200 on the manifest is not enough: without this header the WebView rejects the
+      # response before the client ever sees it, and the failure looks like a silent no-op in
+      # the app while CI stays green. Checked separately so the error message can say so.
+      - name: verify the hot-update manifest is fetchable cross-origin
+        run: |
+          headers=$(curl -sI --max-time 10 https://c.gamestao.com/mobile/latest/manifest.json)
+          acao=$(echo "$headers" | grep -i '^access-control-allow-origin:' || true)
+          echo "${acao:-no Access-Control-Allow-Origin header}"
+          if ! echo "$acao" | grep -qF '*'; then
+            echo "::error::the hot-update manifest is served without Access-Control-Allow-Origin."
+            echo "Shipped iOS/Android builds fetch it cross-origin from the Capacitor WebView and"
+            echo "will fail with a CORS error, not a status code -- the app just silently stops"
+            echo "updating. Check that cf-root/_headers was staged and that the deploy uploaded it."
             exit 1
           fi
